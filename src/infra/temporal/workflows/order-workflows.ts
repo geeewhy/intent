@@ -15,9 +15,16 @@ interface OrderActivities {
 }
 
 // Create a proxy to the activities
-const { recordCommand, notifyUser, updateOrderStatus, scheduleReminder, markCommandAsProcessed } = proxyActivities<OrderActivities>({
+const { recordCommand, notifyUser, updateOrderStatus: updateOrderStatusActivity, scheduleReminder, markCommandAsProcessed } = proxyActivities<OrderActivities>({
   startToCloseTimeout: '1 minute',
 });
+
+/**
+ * Workflow for creating an order (matches the command type 'createOrder')
+ */
+export async function createOrder(cmd: Command): Promise<void> {
+  return processOrderCreated(cmd);
+}
 
 /**
  * Workflow for processing an order created event
@@ -51,11 +58,18 @@ export async function processOrderCreated(cmd: Command): Promise<void> {
 
     // Check if the order has been confirmed (this would require a query to the database)
     // For now, we'll just update the status to cancelled if it's still pending
-    await updateOrderStatus(orderId, tenantId, 'cancelled');
+    await updateOrderStatusActivity(orderId, tenantId, 'cancelled');
   }
 
   // Mark the command as processed (workflow successfully finished)
   await markCommandAsProcessed(cmd.id, tenantId);
+}
+
+/**
+ * Workflow for updating order status (matches the command type 'updateOrderStatus')
+ */
+export async function updateOrderStatus(cmd: Command): Promise<void> {
+  return processOrderStatusUpdated(cmd);
 }
 
 /**
@@ -85,7 +99,7 @@ export async function processOrderStatusUpdated(cmd: Command): Promise<void> {
         await new Promise(resolve => setTimeout(resolve, timeUntilScheduled));
 
         // Remind the cook to start cooking
-        await updateOrderStatus(orderId, tenantId, 'cooking');
+        await updateOrderStatusActivity(orderId, tenantId, 'cooking');
       }
       break;
 
@@ -118,6 +132,13 @@ export async function processOrderStatusUpdated(cmd: Command): Promise<void> {
 }
 
 /**
+ * Workflow for cancelling an order (matches the command type 'cancelOrder')
+ */
+export async function cancelOrder(cmd: Command): Promise<void> {
+  return processOrderCancelled(cmd);
+}
+
+/**
  * Workflow for processing an order cancelled event
  */
 export async function processOrderCancelled(cmd: Command): Promise<void> {
@@ -134,6 +155,26 @@ export async function processOrderCancelled(cmd: Command): Promise<void> {
     : `Your order ${orderId} has been cancelled.`;
 
   await notifyUser(cmd.payload.userId, message);
+
+  // Mark the command as processed (workflow successfully finished)
+  await markCommandAsProcessed(cmd.id, tenantId);
+}
+
+/**
+ * Workflow for executing a test (matches the command type 'executeTest')
+ */
+export async function executeTest(cmd: Command): Promise<void> {
+  // Record the command in the database
+  await recordCommand(cmd);
+
+  // Extract data from the command
+  const { testId, testName, parameters } = cmd.payload;
+  const tenantId = cmd.tenant_id;
+
+  console.log(`Executing test: ${testName} (${testId})`, parameters);
+
+  // In a real implementation, we would execute the test here
+  // For now, we'll just log the test execution
 
   // Mark the command as processed (workflow successfully finished)
   await markCommandAsProcessed(cmd.id, tenantId);
