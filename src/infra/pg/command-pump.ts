@@ -114,10 +114,10 @@ export class CommandPump {
                   // Start a Temporal workflow for the command
                   await this.scheduler.schedule(cmd);
 
-                  // Mark the command as consumed
+                  // Mark the command as consumed (workflow started)
                   await this.markCommandAsConsumed(cmd.id);
 
-                  console.log(`[CommandPump] Command consumed: ${cmd.id}, type: ${cmd.type}`);
+                  console.log(`[CommandPump] Command consumed (workflow started): ${cmd.id}, type: ${cmd.type}`);
                 } catch (error) {
                   console.error('[CommandPump] Error processing command:', error);
                 }
@@ -152,7 +152,7 @@ export class CommandPump {
           return;
         }
 
-        console.log('[CommandPump] Sending heartbeat...');
+        //console.log('[CommandPump] Sending heartbeat...');
 
         // Simple query to verify database connectivity (no aggregation)
         // Use Promise.resolve() to ensure we have a full Promise implementation
@@ -164,7 +164,7 @@ export class CommandPump {
                 console.error('[CommandPump] Error in heartbeat query:', error.message);
                 this.handleDisconnect();
               } else {
-                console.log('[CommandPump] Heartbeat successful');
+                //console.log('[CommandPump] Heartbeat successful');
               }
             })
             .catch((error: Error) => {
@@ -223,7 +223,7 @@ export class CommandPump {
   }
 
   /**
-   * Mark a command as consumed
+   * Mark a command as consumed (workflow started)
    */
   private async markCommandAsConsumed(commandId: string): Promise<void> {
     try {

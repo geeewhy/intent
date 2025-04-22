@@ -70,7 +70,7 @@ export class SupabaseServer {
       // Create a command with tenant ID and client ID
       const command: Command = {
         id: uuidv4(),
-        tenant: tenantId as UUID,
+        tenant_id: tenantId as UUID,
         type: validatedData.type,
         payload: validatedData.payload,
         metadata: {

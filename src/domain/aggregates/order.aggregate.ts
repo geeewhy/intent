@@ -145,7 +145,7 @@ export class OrderAggregate {
     // Create event
     const event: Event<OrderCreatedPayload> = {
       id: crypto.randomUUID(),
-      tenant: cmd.tenant,
+      tenant_id: cmd.tenant_id,
       type: OrderEventType.ORDER_CREATED,
       aggregateId: cmd.payload.orderId,
       version: this.version + 1,
@@ -195,7 +195,7 @@ export class OrderAggregate {
     // Create event
     const event: Event<OrderStatusUpdatedPayload> = {
       id: crypto.randomUUID(),
-      tenant: cmd.tenant,
+      tenant_id: cmd.tenant_id,
       type: OrderEventType.ORDER_STATUS_UPDATED,
       aggregateId: cmd.payload.orderId,
       version: this.version + 1,
@@ -239,7 +239,7 @@ export class OrderAggregate {
     // Create event
     const event: Event<OrderCancelledPayload> = {
       id: crypto.randomUUID(),
-      tenant: cmd.tenant,
+      tenant_id: cmd.tenant_id,
       type: OrderEventType.ORDER_CANCELLED,
       aggregateId: cmd.payload.orderId,
       version: this.version + 1,
@@ -308,7 +308,7 @@ export class OrderAggregate {
     // Create event
     const event: Event<TestExecutedPayload> = {
       id: crypto.randomUUID(),
-      tenant: cmd.tenant,
+      tenant_id: cmd.tenant_id,
       type: OrderEventType.TEST_EXECUTED,
       aggregateId: this.id || cmd.payload.testId,
       version: this.version + 1,

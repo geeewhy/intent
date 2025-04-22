@@ -36,7 +36,7 @@ export class SupabasePublisher implements EventPublisherPort {
       try {
         // Broadcast the event to the tenant-specific channel
         await this.client
-          .channel(`tenant-${event.tenant}`)
+          .channel(`tenant-${event.tenant_id}`)
           .send({
             type: 'broadcast',
             event: 'event',

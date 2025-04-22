@@ -8,15 +8,12 @@ export type UUID = string;
 /**
  * Base command interface
  */
-/**
- * Base command interface
- */
 export interface Command<T = any> {
   id: UUID;
-  tenant: UUID; // Household ID for multi-tenancy
+  tenant_id: UUID; // Household ID for multi-tenancy
   type: string;
   payload: T;
-  status?: 'pending' | 'consumed' | 'failed'; // Add this status field
+  status?: 'pending' | 'consumed' | 'processed' | 'failed'; // Status field with processed state
   metadata?: {
     userId: UUID;
     timestamp: Date;
@@ -30,7 +27,7 @@ export interface Command<T = any> {
  */
 export interface Event<T = any> {
   id: UUID;
-  tenant: UUID; // Household ID for multi-tenancy
+  tenant_id: UUID; // Household ID for multi-tenancy
   type: string;
   payload: T;
   aggregateId: UUID;

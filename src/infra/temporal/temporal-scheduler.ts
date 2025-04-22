@@ -47,10 +47,10 @@ export class TemporalScheduler implements JobSchedulerPort {
       console.log(`[TemporalScheduler] Scheduling workflow for command: ${cmd.type}`);
 
       // Create a workflow ID that includes the tenant ID for isolation
-      const workflowId = `${cmd.tenant}-${cmd.id}`;
+      const workflowId = `${cmd.tenant_id}_${cmd.id}`;
 
       // Create a task queue that includes the tenant ID for isolation
-      const taskQueue = `tenant-${cmd.tenant}`;
+      const taskQueue = `tenant-${cmd.tenant_id}`;
 
       // Get the client
       const client = await this.getClient();

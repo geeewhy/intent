@@ -91,15 +91,15 @@ export class PgEventStore implements EventStorePort {
         ALTER TABLE events ENABLE ROW LEVEL SECURITY;
         ALTER TABLE aggregates ENABLE ROW LEVEL SECURITY;
         ALTER TABLE commands ENABLE ROW LEVEL SECURITY;
-        
+
         DROP POLICY IF EXISTS events_tenant_isolation ON events;
         CREATE POLICY events_tenant_isolation ON events
           USING (tenant_id = current_setting('app.tenant_id')::UUID);
-          
+
         DROP POLICY IF EXISTS aggregates_tenant_isolation ON aggregates;
         CREATE POLICY aggregates_tenant_isolation ON aggregates
           USING (tenant_id = current_setting('app.tenant_id')::UUID);
-          
+
         DROP POLICY IF EXISTS commands_tenant_isolation ON commands;
         CREATE POLICY commands_tenant_isolation ON commands
           USING (tenant_id = current_setting('app.tenant_id')::UUID);
@@ -126,7 +126,7 @@ export class PgEventStore implements EventStorePort {
       await client.query('BEGIN');
 
       // Set tenant context for RLS
-      await this.setTenantContext(client, events[0].tenant);
+      await this.setTenantContext(client, events[0].tenant_id);
 
       // Insert events
       for (const event of events) {
@@ -135,7 +135,7 @@ export class PgEventStore implements EventStorePort {
             tenant_id, id, aggregate_id, type, payload, version, metadata, created_at
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         `, [
-          event.tenant,
+          event.tenant_id,
           event.id,
           event.aggregateId,
           event.type,
@@ -147,7 +147,7 @@ export class PgEventStore implements EventStorePort {
 
         // Notify subscribers about the new event
         await client.query(`
-          NOTIFY events_${event.tenant}, '${JSON.stringify(event)}'
+          NOTIFY events_${event.tenant_id}, '${JSON.stringify(event)}'
         `);
       }
 
@@ -159,7 +159,7 @@ export class PgEventStore implements EventStorePort {
         ON CONFLICT (tenant_id, id) DO UPDATE
         SET snapshot = $4, version = $5, updated_at = $6
       `, [
-        lastEvent.tenant,
+        lastEvent.tenant_id,
         lastEvent.aggregateId,
         lastEvent.type.split('.')[0], // Extract aggregate type from event type
         JSON.stringify({ 
@@ -200,7 +200,7 @@ export class PgEventStore implements EventStorePort {
       // Convert rows to Event objects
       return result.rows.map(row => ({
         id: row.id,
-        tenant: row.tenant_id,
+        tenant_id: row.tenant_id,
         type: row.type,
         aggregateId: row.aggregate_id,
         version: row.version,

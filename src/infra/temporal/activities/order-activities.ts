@@ -9,7 +9,7 @@ import { PgEventStore } from '../../pg/pg-event-store';
  * Record a command in the database
  */
 export async function recordCommand(cmd: Command): Promise<void> {
-  console.log(`[OrderActivities] Recording command: ${cmd.type} for tenant: ${cmd.tenant}`);
+  console.log(`[OrderActivities] Recording command: ${cmd.type} for tenant: ${cmd.tenant_id}`);
 
   try {
     // Connect to the database
@@ -27,7 +27,7 @@ export async function recordCommand(cmd: Command): Promise<void> {
         ON CONFLICT (id) DO UPDATE
         SET status = $5, updated_at = $7
       `, [
-        cmd.tenant,
+        cmd.tenant_id,
         cmd.id,
         cmd.type,
         JSON.stringify(cmd.payload),
@@ -96,6 +96,39 @@ export async function scheduleReminder(orderId: string, tenantId: string, delayI
     console.log(`[OrderActivities] Reminder scheduled: ${orderId} in ${delayInMinutes} minutes`);
   } catch (error) {
     console.error(`[OrderActivities] Error scheduling reminder:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Mark a command as processed (workflow successfully finished)
+ */
+export async function markCommandAsProcessed(commandId: string, tenantId: string): Promise<void> {
+  console.log(`[OrderActivities] Marking command as processed: ${commandId} for tenant: ${tenantId}`);
+
+  try {
+    // Connect to the database
+    const eventStore = new PgEventStore();
+
+    // Update the command status in the database
+    const client = await eventStore['pool'].connect();
+
+    try {
+      await client.query(`
+        UPDATE commands
+        SET status = 'processed', updated_at = $1
+        WHERE id = $2
+      `, [
+        new Date(),
+        commandId
+      ]);
+    } finally {
+      client.release();
+    }
+
+    console.log(`[OrderActivities] Command marked as processed: ${commandId}`);
+  } catch (error) {
+    console.error(`[OrderActivities] Error marking command as processed: ${commandId}`, error);
     throw error;
   }
 }
