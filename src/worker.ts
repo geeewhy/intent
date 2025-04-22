@@ -4,7 +4,6 @@
 
 import { Worker } from '@temporalio/worker';
 import * as activities from './infra/temporal/activities/order-activities';
-import { processOrderCreated, processOrderStatusUpdated, processOrderCancelled } from './infra/temporal/workflows/order-workflows';
 
 /**
  * Start the Temporal worker
@@ -16,7 +15,7 @@ async function run() {
     // For now, we'll use a hardcoded list of tenant IDs
     const activeTenants = process.env.ACTIVE_TENANTS 
       ? process.env.ACTIVE_TENANTS.split(',') 
-      : ['tenant1', 'tenant2', 'tenant3'];
+      : ['0af03580-98d5-4884-96e4-e75168d8b887'];
 
     console.log(`Starting workers for ${activeTenants.length} tenants`);
 

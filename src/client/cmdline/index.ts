@@ -11,7 +11,7 @@ dotenv.config();
 // Parse command-line arguments
 function parseArgs(): { tenant: string; mode: 'test-user' | 'superuser' } {
   const tenantIndex = process.argv.indexOf('--tenant');
-  const tenant = tenantIndex !== -1 && process.argv[tenantIndex + 1];
+  const tenant = tenantIndex !== -1 && process.argv[tenantIndex + 1] || process.env.TEST_TENANT_ID;
 
   const modeIndex = process.argv.indexOf('--mode');
   const mode = (modeIndex !== -1 && process.argv[modeIndex + 1]) as 'test-user' | 'superuser' || 'test-user';
