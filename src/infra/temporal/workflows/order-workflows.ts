@@ -15,7 +15,7 @@ interface OrderActivities {
 }
 
 // Create a proxy to the activities
-const { recordCommand, notifyUser, updateOrderStatus: updateOrderStatusActivity, scheduleReminder, markCommandAsProcessed } = proxyActivities<OrderActivities>({
+const { notifyUser, updateOrderStatus: updateOrderStatusActivity, scheduleReminder, markCommandAsProcessed } = proxyActivities<OrderActivities>({
   startToCloseTimeout: '1 minute',
 });
 
@@ -29,12 +29,9 @@ export async function createOrder(cmd: Command): Promise<void> {
 /**
  * Workflow for processing an order created event
  */
-export async function processOrderCreated(cmd: Command): Promise<void> {
-  // Record the command in the database
-  await recordCommand(cmd);
-
+export async function processOrderCreated(cmd: Command): Promise<any> {
   // Extract data from the command
-  const { orderId, userId, scheduledFor } = cmd.payload;
+  const { orderId, userId } = cmd.payload;
   const tenantId = cmd.tenant_id;
 
   // Notify the user that their order has been received
@@ -43,26 +40,13 @@ export async function processOrderCreated(cmd: Command): Promise<void> {
   // Schedule a reminder for the cook to confirm the order
   await scheduleReminder(orderId, tenantId, 30); // 30 minutes
 
-  // If the order is not confirmed within 2 hours, cancel it
-  const twoHoursInMs = 2 * 60 * 60 * 1000;
-  const now = Date.now();
-  const scheduledTime = new Date(scheduledFor).getTime();
-  const timeUntilScheduled = scheduledTime - now;
-
-  // Wait for 2 hours or until the scheduled time, whichever is sooner
-  const waitTime = Math.min(twoHoursInMs, Math.max(0, timeUntilScheduled - 2 * 60 * 60 * 1000));
-
-  if (waitTime > 0) {
-    // Sleep for the wait time
-    await new Promise(resolve => setTimeout(resolve, waitTime));
-
-    // Check if the order has been confirmed (this would require a query to the database)
-    // For now, we'll just update the status to cancelled if it's still pending
-    await updateOrderStatusActivity(orderId, tenantId, 'cancelled');
-  }
-
   // Mark the command as processed (workflow successfully finished)
   await markCommandAsProcessed(cmd.id, tenantId);
+  return {
+    status: "success",
+    commandId: cmd.id,
+    processedAt: new Date().toISOString()
+  };
 }
 
 /**
@@ -76,9 +60,6 @@ export async function updateOrderStatus(cmd: Command): Promise<void> {
  * Workflow for processing an order status updated event
  */
 export async function processOrderStatusUpdated(cmd: Command): Promise<void> {
-  // Record the command in the database
-  await recordCommand(cmd);
-
   // Extract data from the command
   const { orderId, status } = cmd.payload;
   const tenantId = cmd.tenant_id;
@@ -142,9 +123,6 @@ export async function cancelOrder(cmd: Command): Promise<void> {
  * Workflow for processing an order cancelled event
  */
 export async function processOrderCancelled(cmd: Command): Promise<void> {
-  // Record the command in the database
-  await recordCommand(cmd);
-
   // Extract data from the command
   const { orderId, reason } = cmd.payload;
   const tenantId = cmd.tenant_id;
@@ -164,9 +142,6 @@ export async function processOrderCancelled(cmd: Command): Promise<void> {
  * Workflow for executing a test (matches the command type 'executeTest')
  */
 export async function executeTest(cmd: Command): Promise<void> {
-  // Record the command in the database
-  await recordCommand(cmd);
-
   // Extract data from the command
   const { testId, testName, parameters } = cmd.payload;
   const tenantId = cmd.tenant_id;

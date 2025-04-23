@@ -4,6 +4,10 @@
 
 import { Worker } from '@temporalio/worker';
 import * as activities from './infra/temporal/activities/order-activities';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 /**
  * Start the Temporal worker

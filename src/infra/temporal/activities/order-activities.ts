@@ -2,50 +2,6 @@
  * Temporal activities for order processing
  */
 
-import { Command } from '../../../domain/contracts';
-import { PgEventStore } from '../../pg/pg-event-store';
-
-/**
- * Record a command in the database
- */
-export async function recordCommand(cmd: Command): Promise<void> {
-  console.log(`[OrderActivities] Recording command: ${cmd.type} for tenant: ${cmd.tenant_id}`);
-
-  try {
-    // Connect to the database
-    const eventStore = new PgEventStore();
-
-    // Insert the command into the commands table
-    // This would typically be done through a dedicated CommandStore adapter
-    // but for simplicity, we're using direct SQL queries
-    const client = await eventStore['pool'].connect();
-
-    try {
-      await client.query(`
-        INSERT INTO commands (tenant_id, id, type, payload, status, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        ON CONFLICT (id) DO UPDATE
-        SET status = $5, updated_at = $7
-      `, [
-        cmd.tenant_id,
-        cmd.id,
-        cmd.type,
-        JSON.stringify(cmd.payload),
-        'processing',
-        cmd.metadata?.timestamp || new Date(),
-        new Date()
-      ]);
-    } finally {
-      client.release();
-    }
-
-    console.log(`[OrderActivities] Command recorded: ${cmd.type}`);
-  } catch (error) {
-    console.error(`[OrderActivities] Error recording command:`, error);
-    throw error;
-  }
-}
-
 /**
  * Notify a user with a message
  */
@@ -107,23 +63,42 @@ export async function markCommandAsProcessed(commandId: string, tenantId: string
   console.log(`[OrderActivities] Marking command as processed: ${commandId} for tenant: ${tenantId}`);
 
   try {
-    // Connect to the database
-    const eventStore = new PgEventStore();
+    // Use Supabase client with service role key to bypass RLS
+    const supabaseUrl = process.env.SUPABASE_URL || '';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('[OrderActivities] Supabase URL and service role key are required. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.');
+    }
+
+    // Import createClient dynamically to avoid circular dependencies
+    const { createClient } = await import('@supabase/supabase-js');
+
+    // Initialize Supabase client with service role key to bypass RLS
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false, // No need to refresh with service role
+      },
+      global: {
+        headers: {
+          // Set header to identify this as a service and bypass RLS
+          'x-supabase-auth-role': 'service_role'
+        }
+      }
+    });
 
     // Update the command status in the database
-    const client = await eventStore['pool'].connect();
+    const { error } = await supabase
+      .from('commands')
+      .update({
+        status: 'processed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', commandId);
 
-    try {
-      await client.query(`
-        UPDATE commands
-        SET status = 'processed', updated_at = $1
-        WHERE id = $2
-      `, [
-        new Date(),
-        commandId
-      ]);
-    } finally {
-      client.release();
+    if (error) {
+      throw error;
     }
 
     console.log(`[OrderActivities] Command marked as processed: ${commandId}`);

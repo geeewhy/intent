@@ -22,6 +22,17 @@ export class CommandPump {
   private subscription: any = null;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
+  private healthy: boolean = false;
+
+  // Command batching properties
+  private batchSize: number = 1;
+  private processingBatch: boolean = false;
+  private commandQueue: Command[] = [];
+
+  // Metrics properties
+  private processedCommands: number = 0;
+  private failedCommands: number = 0;
+  private startTime: number = Date.now();
 
   /**
    * Constructor
@@ -58,7 +69,8 @@ export class CommandPump {
 
     this.scheduler = new TemporalScheduler();
 
-    console.log('[CommandPump] Initialized with Supabase client (service role)');
+    // Set up metrics logging every 5 minutes
+    setInterval(() => this.logMetrics(), 5 * 60 * 1000);
   }
 
   /**
@@ -86,6 +98,7 @@ export class CommandPump {
       }
 
       console.log('[CommandPump] Database connection verified successfully');
+      this.healthy = true;
 
       // Set up the real-time subscription to the commands table
       const channel = this.supabase
@@ -108,18 +121,22 @@ export class CommandPump {
                     return;
                   }
 
-                  console.log(`[CommandPump] Processing command: ${cmd.id}, type: ${cmd.type}`);
-
-                  console.log("Command is...", cmd);
-                  // Start a Temporal workflow for the command
-                  await this.scheduler.schedule(cmd);
-
-                  // Mark the command as consumed (workflow started)
-                  await this.markCommandAsConsumed(cmd.id);
-
-                  console.log(`[CommandPump] Command consumed (workflow started): ${cmd.id}, type: ${cmd.type}`);
+                  // Validate command
+                  if (!this.validateCommand(cmd)) {
+                    await this.markCommandAsConsumed(cmd.id, new Error('Invalid command structure or payload'));
+                    this.failedCommands++;
+                    return;
+                  }
+                  console.log(`[CommandPump] Processing command: ${cmd.id}, type: ${cmd.type}, tenant: ${cmd.tenant_id}`);
+                  // Add to command queue for batch processing
+                  this.commandQueue.push(cmd);
+                  if (this.commandQueue.length >= this.batchSize) {
+                    console.log("[CommandPump] Command queue size reached batch size, processing batch");
+                    this.processBatch();
+                  }
                 } catch (error) {
                   console.error('[CommandPump] Error processing command:', error);
+                  this.failedCommands++;
                 }
               }
           )
@@ -127,17 +144,16 @@ export class CommandPump {
             console.log(`[CommandPump] Subscription status: ${status}${err ? `, Error: ${err.message}` : ''}`);
 
             if (status === 'SUBSCRIBED') {
-              console.log('[CommandPump] Successfully subscribed to commands table changes');
               this.reconnectAttempts = 0; // Reset counter on successful connection
             } else if (status === 'CHANNEL_ERROR') {
-              console.error('[CommandPump] Error subscribing to commands table changes', err);
+              this.healthy = false;
               this.handleDisconnect();
             } else if (status === 'TIMED_OUT') {
-              console.error('[CommandPump] Subscription timed out');
+              this.healthy = false;
               this.handleDisconnect();
             } else if (status === 'CLOSED') {
-              console.log('[CommandPump] Channel closed');
               if (this.isRunning) {
+                this.healthy = false;
                 this.handleDisconnect();
               }
             }
@@ -152,8 +168,6 @@ export class CommandPump {
           return;
         }
 
-        //console.log('[CommandPump] Sending heartbeat...');
-
         // Simple query to verify database connectivity (no aggregation)
         // Use Promise.resolve() to ensure we have a full Promise implementation
         Promise.resolve(
@@ -162,13 +176,13 @@ export class CommandPump {
             .then(({ error }) => {
               if (error) {
                 console.error('[CommandPump] Error in heartbeat query:', error.message);
+                this.healthy = false;
                 this.handleDisconnect();
-              } else {
-                //console.log('[CommandPump] Heartbeat successful');
               }
             })
             .catch((error: Error) => {
               console.error('[CommandPump] Error in heartbeat:', error);
+              this.healthy = false;
               this.handleDisconnect();
             });
       }, 30000); // Every 30 seconds
@@ -180,10 +194,27 @@ export class CommandPump {
         process.exit(0);
       });
 
+      // Add more graceful shutdown handling
+      process.on('SIGTERM', async () => {
+        console.log('[CommandPump] Received SIGTERM, shutting down gracefully');
+        this.healthy = false;
+
+        // Wait for in-flight commands to complete (up to 10 seconds)
+        const shutdownTimeout = setTimeout(() => {
+          console.log('[CommandPump] Shutdown timeout reached, forcing exit');
+          process.exit(1);
+        }, 10000);
+
+        await this.stop();
+        clearTimeout(shutdownTimeout);
+        process.exit(0);
+      });
+
       console.log('[CommandPump] Listening for new commands');
     } catch (error) {
       console.error('[CommandPump] Error starting command pump:', error);
       this.isRunning = false;
+      this.healthy = false;
 
       // Try to restart with exponential backoff
       const backoffTime = Math.min(5000 * Math.pow(2, this.reconnectAttempts), 60000);
@@ -225,22 +256,113 @@ export class CommandPump {
   /**
    * Mark a command as consumed (workflow started)
    */
-  private async markCommandAsConsumed(commandId: string): Promise<void> {
+  private async markCommandAsConsumed(commandId: string, error?: Error): Promise<void> {
     try {
-      const { error } = await this.supabase
-          .from('commands')
-          .update({
+      const updateData = error
+          ? {
+            status: 'failed',
+            error_message: error.message,
+            updated_at: new Date().toISOString()
+          }
+          : {
             status: 'consumed',
             updated_at: new Date().toISOString()
-          })
+          };
+
+      const { error: dbError } = await this.supabase
+          .from('commands')
+          .update(updateData)
           .eq('id', commandId);
 
-      if (error) {
-        throw error;
+      if (dbError) {
+        throw dbError;
       }
     } catch (error) {
-      console.error(`[CommandPump] Error marking command as consumed: ${commandId}`, error);
+      console.error(`[CommandPump] Error updating command ${commandId}:`, error);
     }
+  }
+
+  /**
+   * Process a batch of commands
+   */
+  private async processBatch(): Promise<void> {
+    if (this.processingBatch || this.commandQueue.length === 0) {
+      return;
+    }
+
+    this.processingBatch = true;
+
+    try {
+      console.log(`[CommandPump] Processing batch of ${this.commandQueue.length} commands`);
+
+      const batchToProcess = this.commandQueue.splice(0, this.batchSize);
+
+      for (const cmd of batchToProcess) {
+        const processingTimeout = setTimeout(() => {
+          console.error(`[CommandPump] Processing timeout for command: ${cmd.id}`);
+          this.markCommandAsConsumed(cmd.id, new Error('Processing timeout exceeded'));
+          this.failedCommands++;
+        }, 30000); // 30 second timeout
+
+        try {
+          await this.scheduler.schedule(cmd);
+          await this.markCommandAsConsumed(cmd.id);
+          this.processedCommands++;
+          clearTimeout(processingTimeout);
+        } catch (error) {
+          clearTimeout(processingTimeout);
+          console.error(`[CommandPump] Error processing command in batch: ${cmd.id}`, error);
+          await this.markCommandAsConsumed(cmd.id, error as Error);
+          this.failedCommands++;
+        }
+      }
+    } finally {
+      this.processingBatch = false;
+
+      // Process next batch if there are more commands
+      if (this.commandQueue.length > 0) {
+        await this.processBatch();
+      }
+    }
+  }
+
+  /**
+   * Validate command structure and payload
+   */
+  private validateCommand(cmd: Command): boolean {
+    if (!cmd.id || !cmd.type || !cmd.tenant_id) {
+      console.error(`[CommandPump] Invalid command structure: ${JSON.stringify(cmd)}`);
+      return false;
+    }
+
+    // Add validation for required command payload based on type
+    switch (cmd.type) {
+      case 'createOrder':
+        const payload = cmd.payload as any;
+        if (!payload.orderId || !payload.userId || !payload.items) {
+          console.error(`[CommandPump] Invalid createOrder payload: ${JSON.stringify(payload)}`);
+          return false;
+        }
+        break;
+        // Add other command type validations as needed
+    }
+
+    return true;
+  }
+
+  /**
+   * Log metrics for monitoring
+   */
+  private logMetrics(): void {
+    const uptime = Math.floor((Date.now() - this.startTime) / 1000);
+    console.log(`[CommandPump] Metrics - Uptime: ${uptime}s, Processed: ${this.processedCommands}, Failed: ${this.failedCommands}`);
+  }
+
+  /**
+   * Health check method
+   */
+  public isHealthy(): boolean {
+    return this.healthy && this.isRunning;
   }
 
   /**
@@ -253,6 +375,7 @@ export class CommandPump {
 
     console.log('[CommandPump] Stopping command pump worker');
     this.isRunning = false;
+    this.healthy = false;
 
     if (this.subscription) {
       this.supabase.removeChannel(this.subscription);
