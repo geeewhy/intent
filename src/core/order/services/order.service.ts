@@ -2,28 +2,49 @@
  * Order service - application service for handling order commands and events
  */
 
-import { Command, Event, UUID } from '../contracts';
-import { CommandPort, EventPort, EventStorePort, JobSchedulerPort, EventPublisherPort } from '../ports';
+import { Command, Event, UUID } from '../../contracts';
+import { CommandPort, EventPort, EventStorePort, EventPublisherPort } from '../../ports';
 import { OrderAggregate } from '../aggregates/order.aggregate';
+import { CommandHandler } from '../../command-bus';
 
 /**
  * Order service - implements the inbound ports (CommandPort, EventPort)
- * and uses the outbound ports (EventStorePort, JobSchedulerPort, EventPublisherPort)
+ * and uses the outbound ports (EventStorePort, EventPublisherPort)
  */
-export class OrderService implements CommandPort, EventPort {
+export class OrderService implements CommandPort, EventPort, CommandHandler {
   /**
    * Constructor with all required ports
    */
   constructor(
     private readonly store: EventStorePort,
-    private readonly scheduler: JobSchedulerPort,
     private readonly publisher: EventPublisherPort,
   ) {}
 
   /**
-   * Handle an incoming command
+   * Check if this handler supports the given command
+   * @param cmd The command to check
+   * @returns True if this handler supports the command, false otherwise
+   */
+  supports(cmd: Command): boolean {
+    return cmd.type.startsWith('order.') || 
+           cmd.type === 'createOrder' || 
+           cmd.type === 'updateOrderStatus' || 
+           cmd.type === 'cancelOrder' || 
+           cmd.type === 'executeTest';
+  }
+
+  /**
+   * Handle an incoming command (CommandPort implementation)
    */
   async dispatch(cmd: Command): Promise<void> {
+    console.log(`[OrderService] Dispatching command: ${cmd.type} for tenant: ${cmd.tenant_id}`);
+    return this.handle(cmd);
+  }
+
+  /**
+   * Handle an incoming command (CommandHandler implementation)
+   */
+  async handle(cmd: Command): Promise<void> {
     console.log(`[OrderService] Handling command: ${cmd.type} for tenant: ${cmd.tenant_id}`);
 
     try {
@@ -43,9 +64,6 @@ export class OrderService implements CommandPort, EventPort {
 
       // Publish events to clients
       await this.publisher.publish(events);
-
-      // Schedule workflows for events that require them
-      await this.scheduleWorkflows(events, cmd.tenant_id);
 
       console.log(`[OrderService] Command handled successfully: ${cmd.type}`);
     } catch (error) {
@@ -101,29 +119,4 @@ export class OrderService implements CommandPort, EventPort {
     }
   }
 
-  /**
-   * Schedule workflows for events that require them
-   */
-  private async scheduleWorkflows(events: Event[], tenant_id: UUID): Promise<void> {
-    // Filter events that require a workflow
-    const jobEvents = events.filter(event => event.requiresJob);
-
-    // Schedule a workflow for each event
-    for (const event of jobEvents) {
-      // Convert event to command for the workflow
-      const command: Command = {
-        id: crypto.randomUUID(),
-        tenant_id: tenant_id,
-        type: `process${event.type.charAt(0).toUpperCase() + event.type.slice(1)}`, // e.g., processOrderCreated
-        payload: {
-          eventId: event.id,
-          aggregateId: event.aggregateId,
-          ...event.payload
-        }
-      };
-
-      // Schedule the workflow
-      await this.scheduler.schedule(command);
-    }
-  }
 }

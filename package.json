@@ -14,7 +14,8 @@
     "start:cmdline": "node dist/client/cmdline/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "dev:worker": "ts-node-dev --respawn --transpile-only src/worker.ts",
-    "dev:command-pump": "ts-node-dev --respawn --transpile-only src/infra/pg/command-pump.ts",
+    "dev:command-pump": "ts-node-dev --respawn --transpile-only src/infra/pump/command-pump.ts",
+    "dev:event-pump": "ts-node-dev --respawn --transpile-only src/infra/pump/event-pump.ts",
     "dev:cmdline": "ts-node src/client/cmdline/index.ts",
     "test": "jest"
   },

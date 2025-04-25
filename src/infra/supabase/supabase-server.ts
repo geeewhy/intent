@@ -5,9 +5,9 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { Command, Event, UUID } from '../../domain/contracts';
-import { CommandPort } from '../../domain/ports';
-import { OrderService } from '../../domain/services/order.service';
+import { Command, Event, UUID } from '../../core/contracts';
+import { CommandPort } from '../../core/ports';
+import { OrderService } from '../../core/order';
 import { PgEventStore } from '../pg/pg-event-store';
 import { PgNotifyListener } from '../pg/pg-notify-listener';
 import { TemporalScheduler } from '../temporal/temporal-scheduler';
@@ -128,11 +128,11 @@ export class SupabaseServer {
 
     // Create adapters
     const eventStore = new PgEventStore();
-    const scheduler = new TemporalScheduler();
+    const scheduler = await TemporalScheduler.create();
     const publisher = new SupabasePublisher(this.supabaseUrl, this.supabaseKey);
 
     // Create domain service
-    const service = new OrderService(eventStore, scheduler, publisher);
+    const service = new OrderService(eventStore, publisher);
 
     // Create event listener
     const eventListener = new PgNotifyListener(tenantId, service);

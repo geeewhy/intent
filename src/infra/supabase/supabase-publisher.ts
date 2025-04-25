@@ -3,8 +3,8 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Event, UUID } from '../../domain/contracts';
-import { EventPublisherPort } from '../../domain/ports';
+import { Event, UUID } from '../../core/contracts';
+import { EventPublisherPort } from '../../core/ports';
 
 /**
  * Supabase implementation of the EventPublisherPort

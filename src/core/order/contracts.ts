@@ -6,49 +6,12 @@
 export type UUID = string;
 
 /**
- * Base command interface
- */
-export interface Command<T = any> {
-  id: UUID;
-  tenant_id: UUID; // Household ID for multi-tenancy
-  type: string;
-  payload: T;
-  status?: 'pending' | 'consumed' | 'processed' | 'failed'; // Status field with processed state
-  metadata?: {
-    userId: UUID;
-    timestamp: Date;
-    correlationId?: UUID;
-    causationId?: UUID;
-  };
-}
-
-/**
- * Base event interface
- */
-export interface Event<T = any> {
-  id: UUID;
-  tenant_id: UUID; // Household ID for multi-tenancy
-  type: string;
-  payload: T;
-  aggregateId: UUID;
-  version: number;
-  metadata?: {
-    userId?: UUID;
-    timestamp: Date;
-    correlationId?: UUID;
-    causationId?: UUID;
-  };
-  requiresJob?: boolean; // Flag to indicate if this event should trigger a Temporal workflow
-}
-
-/**
  * Order-specific command types
  */
 export enum OrderCommandType {
   CREATE_ORDER = 'createOrder',
   UPDATE_ORDER_STATUS = 'updateOrderStatus',
   CANCEL_ORDER = 'cancelOrder',
-  EXECUTE_TEST = 'executeTest',
 }
 
 /**

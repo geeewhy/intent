@@ -3,8 +3,8 @@
  */
 
 import { Pool, PoolClient } from 'pg';
-import { Event, UUID } from '../../domain/contracts';
-import { EventStorePort } from '../../domain/ports';
+import { Event, UUID } from '../../core/contracts';
+import { EventStorePort } from '../../core/ports';
 
 /**
  * PostgreSQL implementation of the EventStorePort
@@ -73,6 +73,7 @@ export class PgEventStore implements EventStorePort {
           id UUID PRIMARY KEY,
           type TEXT NOT NULL,
           payload JSONB NOT NULL,
+          metadata JSONB NOT NULL,
           status TEXT NOT NULL,
           error TEXT,
           created_at TIMESTAMPTZ DEFAULT NOW(),

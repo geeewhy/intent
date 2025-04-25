@@ -2,11 +2,14 @@
  * Order aggregate - core domain logic for orders
  */
 
+import {
+  Event,
+  Command,
+} from '../../contracts';
+
 import { 
   UUID, 
-  Event, 
-  Command, 
-  OrderCommandType, 
+  OrderCommandType,
   OrderEventType,
   CreateOrderPayload,
   UpdateOrderStatusPayload,
@@ -89,8 +92,6 @@ export class OrderAggregate {
         return this.handleUpdateOrderStatus(cmd as Command<UpdateOrderStatusPayload>);
       case OrderCommandType.CANCEL_ORDER:
         return this.handleCancelOrder(cmd as Command<CancelOrderPayload>);
-      case OrderCommandType.EXECUTE_TEST:
-        return this.handleExecuteTest(cmd as Command<ExecuteTestPayload>);
       default:
         throw new Error(`Unknown command type: ${cmd.type}`);
     }
@@ -162,8 +163,7 @@ export class OrderAggregate {
         timestamp: new Date(),
         correlationId: cmd.metadata?.correlationId,
         causationId: cmd.id
-      },
-      requiresJob: true // This event will trigger a Temporal workflow
+      }
     };
 
     // Apply the event to update the aggregate state
@@ -209,8 +209,7 @@ export class OrderAggregate {
         timestamp: new Date(),
         correlationId: cmd.metadata?.correlationId,
         causationId: cmd.id
-      },
-      requiresJob: cmd.payload.status === 'confirmed' // Trigger workflow for confirmed orders
+      }
     };
 
     // Apply the event to update the aggregate state

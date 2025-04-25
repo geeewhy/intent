@@ -6,7 +6,7 @@
 
 import { createTestClient } from '../../client/auth/test-auth';
 import { v4 as uuidv4 } from 'uuid';
-import { OrderCommandType } from '../../domain/contracts';
+import { OrderCommandType } from '../../core/order/contracts';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -55,35 +55,6 @@ async function main(): Promise<void> {
         }
       )
       .subscribe();
-
-    console.log('Event subscription active. Waiting for events...');
-
-    // Send executeTest command
-    const testId = uuidv4();
-    const command = {
-      id: uuidv4(),
-      tenant_id: tenantId,
-      type: OrderCommandType.EXECUTE_TEST,
-      payload: {
-        testId,
-        testName: 'Integration Test',
-        parameters: {
-          timestamp: new Date().toISOString(),
-          description: 'Testing the executeTest command and testExecuted event'
-        }
-      },
-      status: 'pending',
-    };
-
-    console.log('Sending executeTest command:', JSON.stringify(command, null, 2));
-
-    const { error } = await supabase.from('commands').insert(command);
-    if (error) {
-      console.error('Error sending executeTest command:', error);
-      process.exit(1);
-    }
-
-    console.log('Command sent successfully. Waiting for testExecuted event...');
 
     // Keep the process running to wait for events
     // The process will exit after receiving the testExecuted event

@@ -1,65 +1,53 @@
-/**
- * Temporal worker entry point
- */
-
 import { Worker } from '@temporalio/worker';
-import * as activities from './infra/temporal/activities/order-activities';
+import { SagaRegistry } from './core/domains'; // central registry
 import dotenv from 'dotenv';
+import path from 'path';
+import * as order from './core/order';
+import * as coreActivities from './infra/temporal/activities/coreActivities';
+import * as domainActivities from './core/activities';
+import * as workflows from './infra/temporal/workflows';
 
-// Load environment variables
+const activities = {
+  ...order.activities,
+  ...coreActivities,
+  ...domainActivities
+}
+
 dotenv.config();
 
 /**
- * Start the Temporal worker
+ * Start all tenant workers
  */
 async function run() {
-  try {
-    // Get active tenants from the database
-    // In a real implementation, this would query the database for active tenants
-    // For now, we'll use a hardcoded list of tenant IDs
-    const activeTenants = process.env.ACTIVE_TENANTS 
-      ? process.env.ACTIVE_TENANTS.split(',') 
-      : ['0af03580-98d5-4884-96e4-e75168d8b887'];
+  const activeTenants = process.env.ACTIVE_TENANTS
+      ? process.env.ACTIVE_TENANTS.split(',')
+      : ['default'];
 
-    console.log(`Starting workers for ${activeTenants.length} tenants`);
+  console.log(`[Worker] Starting workers for tenants: ${activeTenants.join(', ')}`);
 
-    // Create a worker for each tenant
+  console.log('[Worker] Loaded workflows:', Object.keys(workflows));
+
     const workers = await Promise.all(
       activeTenants.map(async (tenantId) => {
-        const taskQueue = `tenant-${tenantId}`;
-        console.log(`Creating worker for tenant ${tenantId} with task queue ${taskQueue}`);
-
+        const taskQueue = `saga-orderSaga`; //todo dont hardcode. should have tenantId
+        const workflowsPath = path.resolve(__dirname, 'infra/temporal/workflows');
         return Worker.create({
-          workflowsPath: require.resolve('./infra/temporal/workflows/order-workflows'),
+          workflowsPath: workflowsPath, // register all workflows
           activities,
           taskQueue,
-          // Optional: use a namespace per tenant for stronger isolation
-          // namespace: tenantId,
         });
       })
-    );
+  );
 
-    // Also create a default worker for handling tasks not specific to a tenant
-    const defaultWorker = await Worker.create({
-      workflowsPath: require.resolve('./infra/temporal/workflows/order-workflows'),
-      activities,
-      taskQueue: 'default',
-    });
+  await Promise.all(workers.map((w) => {
+      console.log(`[Worker] Starting worker for queue`, w.options.taskQueue);
+      return w.run();
+  }));
 
-    workers.push(defaultWorker);
-
-    // Start all workers
-    await Promise.all(workers.map(worker => worker.run()));
-
-    console.log(`${workers.length} workers started successfully`);
-  } catch (error) {
-    console.error('Error starting workers:', error);
-    process.exit(1);
-  }
+  console.log(`[Worker] All workers started (${workers.length})`);
 }
 
-// Run the worker
 run().catch((err) => {
-  console.error(err);
+  console.error('[Worker] Fatal error:', err);
   process.exit(1);
 });

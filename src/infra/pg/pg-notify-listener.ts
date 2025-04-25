@@ -3,8 +3,8 @@
  */
 
 import { Pool } from 'pg';
-import { Event, UUID } from '../../domain/contracts';
-import { EventPort } from '../../domain/ports';
+import { Event, UUID } from '../../core/contracts';
+import { EventPort } from '../../core/ports';
 
 /**
  * PgNotifyListener listens for PostgreSQL NOTIFY events for a specific tenant

@@ -1,148 +1,58 @@
-/**
- * Temporal scheduler adapter
- */
+// infra/temporal/temporal-scheduler.ts
+import { WorkflowClient, WorkflowHandle } from '@temporalio/client';
+import { Command } from '../../core/contracts';
+import { WorkflowRouter } from './workflow-router';
+import { JobSchedulerPort } from '../../core/ports';
+import {markConsumed} from "../pump/helpers/command-helpers";
 
-import { Connection, WorkflowClient, WorkflowHandle } from '@temporalio/client';
-import { Command, UUID } from '../../domain/contracts';
-import { JobSchedulerPort } from '../../domain/ports';
-
-/**
- * Temporal implementation of the JobSchedulerPort
- */
 export class TemporalScheduler implements JobSchedulerPort {
-  private client: WorkflowClient | null = null;
-  private connectionConfig?: any;
-  private workflowHandles: Map<string, WorkflowHandle<any>> = new Map();
+  private workflowHandles = new Map<string, WorkflowHandle>();
 
-  /**
-   * Constructor
-   */
-  constructor(connectionConfig?: any) {
-    this.connectionConfig = connectionConfig;
-    console.log(`[TemporalScheduler] Initializing Temporal Scheduler...`);
+  private constructor(
+      private readonly router: WorkflowRouter,
+      private readonly client: WorkflowClient
+  ) {}
+
+  /** async builder */
+  static async create(cfg?: any) {
+    const router  = await WorkflowRouter.create(cfg);
+    const client  = (router as any)['client'] as WorkflowClient; // reuse same client
+    return new TemporalScheduler(router, client);
   }
 
-  /**
-   * Get or create the workflow client
-   */
-  private async getClient(): Promise<WorkflowClient> {
-    if (!this.client) {
-      // Connect to the Temporal server
-      const connection = await Connection.connect(this.connectionConfig || {
-        address: process.env.TEMPORAL_ADDRESS || 'localhost:7233',
-      });
+  /* ---------- main API ---------- */
 
-      // Create a workflow client
-      this.client = new WorkflowClient({
-        connection,
-      });
-    }
+  async schedule(cmd: Command) {
+    console.log(`[TemporalScheduler] routing ${cmd.type}`);
+    await this.router.handle(cmd);
 
-    return this.client;
+    const workflowId = `${cmd.tenant_id}_${cmd.id}`;
+    const handle     = this.client.getHandle(workflowId);
+    this.workflowHandles.set(workflowId, handle);
+
+    /* non-blocking result tracking */
+    this.track(handle, workflowId, cmd).catch(console.error);
   }
 
-  /**
-   * Schedule a command as a Temporal workflow
-   */
-  /**
-   * Schedule a command as a Temporal workflow
-   */
-  async schedule(cmd: Command): Promise<void> {
+  /* ---------- helpers ---------- */
+
+  private async track(handle: WorkflowHandle, id: string, cmd: Command) {
     try {
-      console.log(`[TemporalScheduler] Scheduling workflow for command: ${cmd.type}`);
-
-      // Create a workflow ID that includes the tenant ID for isolation
-      const workflowId = `${cmd.tenant_id}_${cmd.id}`;
-
-      // Create a task queue that includes the tenant ID for isolation
-      const taskQueue = `tenant-${cmd.tenant_id}`;
-
-      // Get the client
-      const client = await this.getClient();
-
-      // Start the workflow
-      const handle = await client.start(cmd.type, {
-        args: [cmd],
-        taskQueue,
-        workflowId,
-      });
-
-      // Store the workflow handle for later tracking
-      this.workflowHandles.set(workflowId, handle);
-
-      console.log(`[TemporalScheduler] Workflow scheduled: ${workflowId}`);
-
-      // Set up completion tracking for this workflow - make sure not to await it
-      // so we don't block the command processing
-      this.trackWorkflowCompletion(handle, workflowId, cmd.type)
-          .catch(err => {
-            console.error(`[TemporalScheduler] Error tracking workflow completion for ${workflowId}:`, err);
-          });
-
-      // Also add a direct listener for workflow completion as a backup
-      handle.result()
-          .then(result => {
-            console.log(`[TemporalScheduler] Workflow completed (direct): ${workflowId} (${cmd.type})`);
-          })
-          .catch(err => {
-            console.error(`[TemporalScheduler] Workflow failed (direct): ${workflowId} (${cmd.type})`, err);
-          });
-
-    } catch (error) {
-      console.error(`[TemporalScheduler] Error scheduling workflow:`, error);
-      throw error;
+      await handle.result();
+      console.log(`[TemporalScheduler] completed ${id}`);
+      await markConsumed(cmd.id);
+    } catch (e: any) {
+      if (e.name === 'WorkflowNotFoundError') {
+        console.warn(`[TemporalScheduler] Workflow ${id} not found — possibly completed early`);
+      } else {
+        console.error(`[TemporalScheduler] failed ${id}`, e);
+      }
+    } finally {
+      this.workflowHandles.delete(id);
     }
   }
 
-  /**
-   * Track workflow execution and completion
-   */
-  /**
-   * Track workflow execution and completion
-   */
-  private async trackWorkflowCompletion(
-      handle: WorkflowHandle<any>,
-      workflowId: string,
-      workflowType: string
-  ): Promise<void> {
-    try {
-      // Get the execution description
-      const description = await handle.describe();
-      console.log(`[TemporalScheduler] Workflow state update: ${workflowId} (${workflowType}) is now ${description.status.name}`);
-
-      // Wait for the workflow to complete
-      const result = await handle.result();
-      console.log(`[TemporalScheduler] Workflow completed successfully: ${workflowId} (${workflowType})`);
-      console.log(`[TemporalScheduler] Workflow completion details - ID: ${workflowId}, Type: ${workflowType}, Result: ${JSON.stringify(result)}`);
-
-      // Clean up our local reference
-      this.workflowHandles.delete(workflowId);
-    } catch (error) {
-      console.error(`[TemporalScheduler] Workflow failed: ${workflowId} (${workflowType})`, error);
-      // Clean up our local reference even on failure
-      this.workflowHandles.delete(workflowId);
-    }
-  }
-
-  /**
-   * Get the current state of a workflow
-   */
-  async getWorkflowState(workflowId: string): Promise<string> {
-    try {
-      const client = await this.getClient();
-      const handle = client.getHandle(workflowId);
-      const description = await handle.describe();
-      return description.status.name;
-    } catch (error) {
-      console.error(`[TemporalScheduler] Error getting workflow state for ${workflowId}:`, error);
-      return 'UNKNOWN';
-    }
-  }
-
-  /**
-   * Get handles for all active workflows
-   */
-  async getActiveWorkflows(): Promise<string[]> {
-    return Array.from(this.workflowHandles.keys());
+  async getActiveWorkflows() {
+    return [...this.workflowHandles.keys()];
   }
 }
