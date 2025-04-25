@@ -190,7 +190,7 @@ export const sbAdmin = createClient(
 // helpers/command-helpers.ts
 import { WorkflowClient } from '@temporalio/client';
 import { sbAdmin } from './supabase-client';
-import { Command } from '../../../domain/contracts';
+import { Command } from '../../../core/contracts';
 
 const temporal = new WorkflowClient({ address: process.env.TEMPORAL_ADDR! });
 
@@ -218,7 +218,7 @@ export const markFailed   = (id: string, err: Error) =>
 ```ts
 import { RealtimePumpBase } from './realtime-pump-base';
 import { scheduleWorkflow, markConsumed, markFailed } from './helpers/command-helpers';
-import { Command } from '../../domain/contracts';
+import { Command } from '../../core/contracts';
 
 new RealtimePumpBase<Command>({
   channel   : 'commands-pump',
@@ -242,7 +242,7 @@ new RealtimePumpBase<Command>({
 
 ```ts
 import { RealtimePumpBase } from './realtime-pump-base';
-import { Event } from '../../domain/contracts';
+import { Event } from '../../core/contracts';
 import { eventBus } from '../bootstrap-event-bus';   // EventBus instance
 
 new RealtimePumpBase<Event>({
