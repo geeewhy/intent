@@ -1,3 +1,4 @@
+//core/event-bus.ts
 /**
  * Event bus and event handler interfaces
  */

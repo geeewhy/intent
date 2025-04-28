@@ -1,3 +1,4 @@
+//core/order/contracts.ts
 /**
  * Core domain contracts for commands and events
  */
@@ -12,6 +13,9 @@ export enum OrderCommandType {
   CREATE_ORDER = 'createOrder',
   UPDATE_ORDER_STATUS = 'updateOrderStatus',
   CANCEL_ORDER = 'cancelOrder',
+  EXECUTE_TEST = 'executeTest',
+  ACCEPT_ORDER_MANUALLY = 'acceptOrderManually',
+  ACCEPT_ORDER_AUTO = 'acceptOrderAuto',
 }
 
 /**
@@ -22,6 +26,8 @@ export enum OrderEventType {
   ORDER_STATUS_UPDATED = 'orderStatusUpdated',
   ORDER_CANCELLED = 'orderCancelled',
   TEST_EXECUTED = 'testExecuted',
+  ORDER_MANUALLY_ACCEPTED_BY_COOK = 'orderManuallyAcceptedByCook',
+  ORDER_AUTO_ACCEPTED = 'orderAutoAccepted',
 }
 
 /**
@@ -46,6 +52,15 @@ export interface UpdateOrderStatusPayload {
 export interface CancelOrderPayload {
   orderId: UUID;
   reason?: string;
+}
+
+export interface AcceptOrderManuallyPayload {
+  orderId: UUID;
+  userId: UUID; // Cook's user ID
+}
+
+export interface AcceptOrderAutoPayload {
+  orderId: UUID;
 }
 
 /**
@@ -86,6 +101,23 @@ export interface ExecuteTestPayload {
 }
 
 /**
+ * Order manually accepted by cook event payload
+ */
+export interface OrderManuallyAcceptedByCookPayload {
+  orderId: UUID;
+  userId: UUID; // Cook's user ID
+  acceptedAt: Date;
+}
+
+/**
+ * Order auto accepted event payload
+ */
+export interface OrderAutoAcceptedPayload {
+  orderId: UUID;
+  acceptedAt: Date;
+}
+
+/**
  * Test event payload
  */
 export interface TestExecutedPayload {
@@ -95,4 +127,18 @@ export interface TestExecutedPayload {
   message?: string;
   executedAt: Date;
   parameters?: Record<string, any>;
+}
+
+/**
+ * Order status type
+ */
+export type OrderStatus = 'pending' | 'confirmed' | 'cooking' | 'ready' | 'completed' | 'cancelled';
+
+/**
+ * Order item type
+ */
+export interface OrderItem {
+  menuItemId: UUID;
+  quantity: number;
+  specialInstructions?: string;
 }

@@ -1,3 +1,4 @@
+//core/order/services/order.service.ts
 /**
  * Order service - application service for handling order commands and events
  */
@@ -6,11 +7,30 @@ import { Command, Event, UUID } from '../../contracts';
 import { CommandPort, EventPort, EventStorePort, EventPublisherPort } from '../../ports';
 import { OrderAggregate } from '../aggregates/order.aggregate';
 import { CommandHandler } from '../../command-bus';
+import { EventHandler } from '../../event-bus';
 
 /**
  * Order service - implements the inbound ports (CommandPort, EventPort)
  * and uses the outbound ports (EventStorePort, EventPublisherPort)
  */
+// Create a separate event handler class to avoid method name conflicts
+class OrderEventHandler implements EventHandler {
+  constructor(private service: OrderService) {}
+
+  supports(event: Event): event is Event {
+    return event.type.startsWith('order.') && 
+           (event.type.includes('Created') || 
+            event.type.includes('Updated') || 
+            event.type.includes('Cancelled') ||
+            event.type.includes('Accepted') ||
+            event.type.includes('Executed'));
+  }
+
+  async handle(event: Event): Promise<void> {
+    return this.service.on(event);
+  }
+}
+
 export class OrderService implements CommandPort, EventPort, CommandHandler {
   /**
    * Constructor with all required ports
@@ -30,7 +50,17 @@ export class OrderService implements CommandPort, EventPort, CommandHandler {
            cmd.type === 'createOrder' || 
            cmd.type === 'updateOrderStatus' || 
            cmd.type === 'cancelOrder' || 
-           cmd.type === 'executeTest';
+           cmd.type === 'executeTest' ||
+           cmd.type === 'acceptOrderManually' ||
+           cmd.type === 'acceptOrderAuto';
+  }
+
+  /**
+   * Create an event handler for this service
+   * @returns An event handler that delegates to this service
+   */
+  createEventHandler(): EventHandler {
+    return new OrderEventHandler(this);
   }
 
   /**

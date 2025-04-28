@@ -1,3 +1,4 @@
+//core/order/aggregates/order.aggregate.ts
 /**
  * Order aggregate - core domain logic for orders
  */
@@ -18,18 +19,14 @@ import {
   OrderStatusUpdatedPayload,
   OrderCancelledPayload,
   ExecuteTestPayload,
-  TestExecutedPayload
+  TestExecutedPayload,
+  AcceptOrderManuallyPayload,
+  AcceptOrderAutoPayload,
+  OrderManuallyAcceptedByCookPayload,
+  OrderAutoAcceptedPayload,
+  OrderStatus,
+  OrderItem
 } from '../contracts';
-
-// Order status type
-type OrderStatus = 'pending' | 'confirmed' | 'cooking' | 'ready' | 'completed' | 'cancelled';
-
-// Order item type
-interface OrderItem {
-  menuItemId: UUID;
-  quantity: number;
-  specialInstructions?: string;
-}
 
 /**
  * Order aggregate - represents the state and behavior of an order
@@ -92,6 +89,12 @@ export class OrderAggregate {
         return this.handleUpdateOrderStatus(cmd as Command<UpdateOrderStatusPayload>);
       case OrderCommandType.CANCEL_ORDER:
         return this.handleCancelOrder(cmd as Command<CancelOrderPayload>);
+      case OrderCommandType.EXECUTE_TEST:
+        return this.handleExecuteTest(cmd as Command<ExecuteTestPayload>);
+      case OrderCommandType.ACCEPT_ORDER_MANUALLY:
+        return this.handleAcceptOrderManually(cmd as Command<AcceptOrderManuallyPayload>);
+      case OrderCommandType.ACCEPT_ORDER_AUTO:
+        return this.handleAcceptOrderAuto(cmd as Command<AcceptOrderAutoPayload>);
       default:
         throw new Error(`Unknown command type: ${cmd.type}`);
     }
@@ -113,6 +116,12 @@ export class OrderAggregate {
         break;
       case OrderEventType.TEST_EXECUTED:
         this.applyTestExecuted(event as Event<TestExecutedPayload>);
+        break;
+      case OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK:
+        this.applyOrderManuallyAcceptedByCook(event as Event<OrderManuallyAcceptedByCookPayload>);
+        break;
+      case OrderEventType.ORDER_AUTO_ACCEPTED:
+        this.applyOrderAutoAccepted(event as Event<OrderAutoAcceptedPayload>);
         break;
       default:
         throw new Error(`Unknown event type: ${event.type}`);
@@ -301,6 +310,24 @@ export class OrderAggregate {
   }
 
   /**
+   * Apply order manually accepted by cook event
+   */
+  private applyOrderManuallyAcceptedByCook(event: Event<OrderManuallyAcceptedByCookPayload>): void {
+    // Update the order status to confirmed when a cook accepts it
+    this.status = 'confirmed';
+    this.updatedAt = new Date(event.payload.acceptedAt);
+  }
+
+  /**
+   * Apply order auto accepted event
+   */
+  private applyOrderAutoAccepted(event: Event<OrderAutoAcceptedPayload>): void {
+    // Update the order status to confirmed when it's auto-accepted
+    this.status = 'confirmed';
+    this.updatedAt = new Date(event.payload.acceptedAt);
+  }
+
+  /**
    * Handle execute test command
    */
   private handleExecuteTest(cmd: Command<ExecuteTestPayload>): Event[] {
@@ -318,6 +345,83 @@ export class OrderAggregate {
         message: 'Test executed successfully',
         executedAt: new Date(),
         parameters: cmd.payload.parameters
+      },
+      metadata: {
+        userId: cmd.metadata?.userId,
+        timestamp: new Date(),
+        correlationId: cmd.metadata?.correlationId,
+        causationId: cmd.id
+      }
+    };
+
+    // Apply the event to update the aggregate state
+    this.apply(event);
+
+    return [event];
+  }
+
+  /**
+   * Handle accept order manually command
+   */
+  private handleAcceptOrderManually(cmd: Command<AcceptOrderManuallyPayload>): Event[] {
+    // Validate command
+    if (this.version === 0) {
+      throw new Error('Order does not exist');
+    }
+
+    if (this.status !== 'pending') {
+      throw new Error('Only pending orders can be accepted');
+    }
+
+    // Create event
+    const event: Event<OrderManuallyAcceptedByCookPayload> = {
+      id: crypto.randomUUID(),
+      tenant_id: cmd.tenant_id,
+      type: OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK,
+      aggregateId: cmd.payload.orderId,
+      version: this.version + 1,
+      payload: {
+        orderId: cmd.payload.orderId,
+        userId: cmd.payload.userId,
+        acceptedAt: new Date()
+      },
+      metadata: {
+        userId: cmd.metadata?.userId,
+        timestamp: new Date(),
+        correlationId: cmd.metadata?.correlationId,
+        causationId: cmd.id
+      }
+    };
+
+    // Apply the event to update the aggregate state
+    this.apply(event);
+
+    return [event];
+  }
+
+  /**
+   * Handle accept order auto command
+   */
+  private handleAcceptOrderAuto(cmd: Command<AcceptOrderAutoPayload>): Event[] {
+    // Validate command
+    if (this.version === 0) {
+      throw new Error('Order does not exist');
+    }
+
+    if (this.status !== 'pending') {
+      throw new Error('Only pending orders can be accepted');
+    }
+
+    // Create event
+    const event: Event<OrderAutoAcceptedPayload> = {
+      id: crypto.randomUUID(),
+      tenant_id: cmd.tenant_id,
+      type: OrderEventType.ORDER_AUTO_ACCEPTED,
+      aggregateId: cmd.payload.orderId,
+      version: this.version + 1,
+      payload: {
+        orderId: cmd.payload.orderId,
+        acceptedAt: new Date()
       },
       metadata: {
         userId: cmd.metadata?.userId,

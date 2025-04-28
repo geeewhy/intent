@@ -1,4 +1,4 @@
-//order.saga.ts
+//core/order/sagas/order.saga.ts
 import {Command, Event, ProcessPlan, SagaContext} from '../../contracts';
 
 import {
@@ -60,6 +60,49 @@ export class OrderSaga {
             case OrderCommandType.CANCEL_ORDER:
                 // Nothing to follow; cancel is terminal
                 break;
+
+            case 'order.' + OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK: {
+                const { orderId, userId } = input.payload;
+                const tenantId = input.tenant_id;
+
+                // When an order is manually accepted by a cook, we might want to schedule
+                // a reminder to start cooking if they don't start within a certain time
+                const reminderCmd: Command = {
+                    id: await ctx.nextId(),
+                    tenant_id: tenantId,
+                    type: OrderCommandType.UPDATE_ORDER_STATUS,
+                    payload: { orderId, status: 'cooking' },
+                    metadata: {
+                        userId,
+                        timestamp: new Date(),
+                        causationId: input.id,
+                    },
+                };
+
+                plan.delays = [{ cmd: reminderCmd, ms: 15 * 60 * 1000 }]; // 15 minutes
+                break;
+            }
+
+            case 'order.' + OrderEventType.ORDER_AUTO_ACCEPTED: {
+                const { orderId } = input.payload;
+                const tenantId = input.tenant_id;
+
+                // When an order is auto-accepted, we might want to schedule
+                // an automatic transition to cooking status
+                const autoStartCmd: Command = {
+                    id: await ctx.nextId(),
+                    tenant_id: tenantId,
+                    type: OrderCommandType.UPDATE_ORDER_STATUS,
+                    payload: { orderId, status: 'cooking' },
+                    metadata: {
+                        timestamp: new Date(),
+                        causationId: input.id,
+                    },
+                };
+
+                plan.delays = [{ cmd: autoStartCmd, ms: 5 * 60 * 1000 }]; // 5 minutes
+                break;
+            }
 
             default:
                 break;
