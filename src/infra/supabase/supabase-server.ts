@@ -129,7 +129,10 @@ export class SupabaseServer {
     // Create adapters
     const eventStore = new PgEventStore();
     const scheduler = await TemporalScheduler.create();
-    const publisher = new SupabasePublisher(this.supabaseUrl, this.supabaseKey);
+
+    // Use the TemporalScheduler as both JobSchedulerPort and EventPublisherPort
+    // This ensures events are published to the appropriate aggregate workflows
+    const publisher = scheduler;
 
     // Create domain service
     const service = new OrderService(eventStore, publisher);

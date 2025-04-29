@@ -1,4 +1,4 @@
-//core/order/services/order.service.ts
+// core/order/services/order.service.ts
 /**
  * Order service - application service for handling order commands and events
  */
@@ -8,145 +8,84 @@ import { CommandPort, EventPort, EventStorePort, EventPublisherPort } from '../.
 import { OrderAggregate } from '../aggregates/order.aggregate';
 import { CommandHandler } from '../../command-bus';
 import { EventHandler } from '../../event-bus';
+import { createAggregatePayload } from '../../aggregates';
 
 /**
  * Order service - implements the inbound ports (CommandPort, EventPort)
  * and uses the outbound ports (EventStorePort, EventPublisherPort)
  */
-// Create a separate event handler class to avoid method name conflicts
-class OrderEventHandler implements EventHandler {
-  constructor(private service: OrderService) {}
 
-  supports(event: Event): event is Event {
-    return event.type.startsWith('order.') && 
-           (event.type.includes('Created') || 
-            event.type.includes('Updated') || 
-            event.type.includes('Cancelled') ||
-            event.type.includes('Accepted') ||
-            event.type.includes('Executed'));
-  }
-
-  async handle(event: Event): Promise<void> {
-    return this.service.on(event);
-  }
-}
-
-export class OrderService implements CommandPort, EventPort, CommandHandler {
-  /**
-   * Constructor with all required ports
-   */
+// Aggregate type constant to avoid hardcoding
+const AGGREGATE_TYPE = 'order';
+export class OrderService implements CommandPort, EventPort, CommandHandler, EventHandler {
   constructor(
-    private readonly store: EventStorePort,
-    private readonly publisher: EventPublisherPort,
+      private readonly store: EventStorePort,
+      private readonly publisher: EventPublisherPort
   ) {}
 
-  /**
-   * Check if this handler supports the given command
-   * @param cmd The command to check
-   * @returns True if this handler supports the command, false otherwise
-   */
-  supports(cmd: Command): boolean {
-    return cmd.type.startsWith('order.') || 
-           cmd.type === 'createOrder' || 
-           cmd.type === 'updateOrderStatus' || 
-           cmd.type === 'cancelOrder' || 
-           cmd.type === 'executeTest' ||
-           cmd.type === 'acceptOrderManually' ||
-           cmd.type === 'acceptOrderAuto';
+  /* ---------- Port Implementations ---------- */
+
+  /** Check if this service supports a command */
+  supportsCommand(cmd: Command): boolean {
+    return cmd.type.startsWith(`${AGGREGATE_TYPE}.`);
   }
 
-  /**
-   * Create an event handler for this service
-   * @returns An event handler that delegates to this service
-   */
-  createEventHandler(): EventHandler {
-    return new OrderEventHandler(this);
+  /** Check if this service supports an event */
+  supportsEvent(event: Event): event is Event {
+    return event.type.startsWith(`${AGGREGATE_TYPE}.`);
   }
 
-  /**
-   * Handle an incoming command (CommandPort implementation)
-   */
+  /** Dispatch a command */
   async dispatch(cmd: Command): Promise<void> {
-    console.log(`[OrderService] Dispatching command: ${cmd.type} for tenant: ${cmd.tenant_id}`);
     return this.handle(cmd);
   }
 
-  /**
-   * Handle an incoming command (CommandHandler implementation)
-   */
+  /** Handle a command (CommandHandler) */
   async handle(cmd: Command): Promise<void> {
     console.log(`[OrderService] Handling command: ${cmd.type} for tenant: ${cmd.tenant_id}`);
 
-    try {
-      // Load the aggregate
-      const aggregate = await this.loadAggregate(cmd.tenant_id, cmd.payload.orderId);
+    const aggregateId = cmd.payload.orderId || cmd.payload.testId;
+    const aggregate = await this.loadAggregate(cmd.tenant_id, aggregateId);
 
-      // Handle the command and get resulting events
-      const events = aggregate.handle(cmd);
+    const events = aggregate.handle(cmd);
 
-      // If no events were produced, nothing to do
-      if (events.length === 0) {
-        return;
-      }
+    if (events.length === 0) return;
 
-      // Persist events to the event store
-      await this.store.append(events);
+    await this.store.append(
+        cmd.tenant_id,
+        AGGREGATE_TYPE,
+        aggregateId,
+        events,
+        aggregate.getVersion()
+    );
 
-      // Publish events to clients
-      await this.publisher.publish(events);
+    await this.publisher.publish(events);
 
-      console.log(`[OrderService] Command handled successfully: ${cmd.type}`);
-    } catch (error) {
-      console.error(`[OrderService] Error handling command: ${cmd.type}`, error);
-      throw error;
-    }
+    console.log(`[OrderService] Command handled: ${cmd.type}`);
   }
 
-  /**
-   * Handle an incoming event (e.g., from external systems)
-   */
+  /** Handle an event (EventHandler) */
   async on(event: Event): Promise<void> {
     console.log(`[OrderService] Handling event: ${event.type} for tenant: ${event.tenant_id}`);
 
-    try {
-      // Load the aggregate
-      const aggregate = await this.loadAggregate(event.tenant_id, event.aggregateId);
+    const aggregate = await this.loadAggregate(event.tenant_id, event.aggregateId);
 
-      // Apply the event to the aggregate
-      aggregate.apply(event);
+    aggregate.apply(event);
 
-      // No need to persist the event as it's already in the store
-      // But we might need to publish it to clients
-      await this.publisher.publish([event]);
+    await this.publisher.publish([event]);
 
-      console.log(`[OrderService] Event handled successfully: ${event.type}`);
-    } catch (error) {
-      console.error(`[OrderService] Error handling event: ${event.type}`, error);
-      throw error;
-    }
+    console.log(`[OrderService] Event handled: ${event.type}`);
   }
 
-  /**
-   * Load an aggregate from the event store
-   */
-  private async loadAggregate(tenant_id: UUID, aggregateId: UUID): Promise<OrderAggregate> {
-    try {
-      // Load events for this aggregate
-      const events = await this.store.load(tenant_id, aggregateId);
+  /* ---------- Helpers ---------- */
 
-      // If no events, create a new aggregate
-      if (events.length === 0) {
-        return OrderAggregate.create({ 
-          payload: { orderId: aggregateId } 
-        } as any); // Type assertion for simplicity
-      }
+  private async loadAggregate(tenantId: UUID, aggregateId: UUID): Promise<OrderAggregate> {
+    const result = await this.store.load(tenantId, AGGREGATE_TYPE, aggregateId);
 
-      // Rehydrate the aggregate from events
-      return OrderAggregate.rehydrate(events);
-    } catch (error) {
-      console.error(`[OrderService] Error loading aggregate: ${aggregateId}`, error);
-      throw error;
+    if (!result || result.events.length === 0) {
+      return OrderAggregate.create(createAggregatePayload(AGGREGATE_TYPE, aggregateId));
     }
-  }
 
+    return OrderAggregate.rehydrate(result.events);
+  }
 }

@@ -12,8 +12,9 @@ export class OrderSaga {
         const plan: ProcessPlan = { commands: [] };
 
         switch (input.type) {
-            case 'order.' + OrderCommandType.CREATE_ORDER: {
-                console.log("TRIGGERED", input);
+            // Saga now reacts to OrderCreated event instead of createOrder command
+            case 'order.' + OrderEventType.ORDER_CREATED: {
+                console.log("TRIGGERED by OrderCreated event", input);
                 const { orderId, userId } = input.payload;
                 const tenantId = input.tenant_id;
 
@@ -29,7 +30,14 @@ export class OrderSaga {
                     },
                 };
 
-                plan.delays = [{ cmd: cancelCmd, ms: 2000 }]; // 30 minutes
+                plan.delays = [{ cmd: cancelCmd, ms: 2000 }];
+                break;
+            }
+
+            // Keep this case for backward compatibility, but it's no longer the primary path
+            case 'order.' + OrderCommandType.CREATE_ORDER: {
+                console.log("TRIGGERED by createOrder command (deprecated path)", input);
+                // No action needed - we now react to the OrderCreated event instead
                 break;
             }
 

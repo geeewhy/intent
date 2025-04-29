@@ -10,7 +10,7 @@ import { OrderCommandType, OrderEventType } from '../contracts';
 // Mock event store
 const mockEventStore = {
   append: jest.fn().mockResolvedValue(undefined),
-  load: jest.fn().mockResolvedValue([])
+  load: jest.fn().mockResolvedValue({ events: [], version: 0 })
 };
 
 // Mock event publisher
@@ -307,7 +307,12 @@ describe('Order Domain', () => {
         expect(mockEventStore.append).toHaveBeenCalledTimes(1);
         expect(mockEventPublisher.publish).toHaveBeenCalledTimes(1);
 
-        const events = mockEventStore.append.mock.calls[0][0];
+        // Check that append was called with the correct arguments
+        expect(mockEventStore.append.mock.calls[0][0]).toBe(tenantId); // tenantId
+        expect(mockEventStore.append.mock.calls[0][1]).toBe('order'); // aggregateType
+        expect(mockEventStore.append.mock.calls[0][2]).toBe(orderId); // aggregateId
+
+        const events = mockEventStore.append.mock.calls[0][3]; // events array is now the 4th argument
         expect(events).toHaveLength(1);
         expect(events[0].type).toBe(OrderEventType.ORDER_CREATED);
         expect(events[0].aggregateId).toBe(orderId);
@@ -342,7 +347,12 @@ describe('Order Domain', () => {
         expect(mockEventStore.append).toHaveBeenCalledTimes(1);
         expect(mockEventPublisher.publish).toHaveBeenCalledTimes(1);
 
-        const events = mockEventStore.append.mock.calls[0][0];
+        // Check that append was called with the correct arguments
+        expect(mockEventStore.append.mock.calls[0][0]).toBe(tenantId); // tenantId
+        expect(mockEventStore.append.mock.calls[0][1]).toBe('order'); // aggregateType
+        expect(mockEventStore.append.mock.calls[0][2]).toBe(testId); // aggregateId
+
+        const events = mockEventStore.append.mock.calls[0][3]; // events array is now the 4th argument
         expect(events).toHaveLength(1);
         expect(events[0].type).toBe(OrderEventType.TEST_EXECUTED);
         expect(events[0].aggregateId).toBe(testId);
@@ -381,7 +391,7 @@ describe('Order Domain', () => {
         await orderService.on(event);
 
         // THEN
-        expect(mockEventStore.load).toHaveBeenCalledWith(tenantId, orderId);
+        expect(mockEventStore.load).toHaveBeenCalledWith(tenantId, 'order', orderId);
         expect(mockEventPublisher.publish).toHaveBeenCalledTimes(1);
         expect(mockEventPublisher.publish).toHaveBeenCalledWith([event]);
       });
@@ -393,11 +403,11 @@ describe('Order Domain', () => {
         // OrderService is already created in beforeEach
 
         // WHEN
-        const eventHandler = orderService.createEventHandler();
+        const eventHandler = orderService;
 
         // THEN
         expect(eventHandler).toBeDefined();
-        expect(typeof eventHandler.supports).toBe('function');
+        expect(typeof eventHandler.supportsEvent).toBe('function');
         expect(typeof eventHandler.handle).toBe('function');
 
         // Verify it supports order events
@@ -409,7 +419,7 @@ describe('Order Domain', () => {
           version: 1,
           payload: {} as any
         };
-        expect(eventHandler.supports(orderEvent)).toBe(true);
+        expect(eventHandler.supportsEvent(orderEvent)).toBe(true);
 
         // Verify it doesn't support non-order events
         const nonOrderEvent: Event = {
@@ -420,7 +430,7 @@ describe('Order Domain', () => {
           version: 1,
           payload: {} as any
         };
-        expect(eventHandler.supports(nonOrderEvent)).toBe(false);
+        expect(eventHandler.supportsEvent(nonOrderEvent)).toBe(false);
       });
     });
   });

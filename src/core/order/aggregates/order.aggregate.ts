@@ -8,6 +8,8 @@ import {
   Command,
 } from '../../contracts';
 
+import { BusinessRuleViolation } from '../../errors';
+
 import { 
   UUID, 
   OrderCommandType,
@@ -32,6 +34,7 @@ import {
  * Order aggregate - represents the state and behavior of an order
  */
 export class OrderAggregate {
+  public aggregateType = 'order'
   private id: UUID;
   private userId: UUID;
   private items: OrderItem[] = [];
@@ -57,8 +60,7 @@ export class OrderAggregate {
    * Create a new order aggregate from a command
    */
   public static create(cmd: Command<CreateOrderPayload>): OrderAggregate {
-    const order = new OrderAggregate(cmd.payload.orderId);
-    return order;
+    return new OrderAggregate(cmd.payload.orderId);
   }
 
   /**
@@ -129,7 +131,7 @@ export class OrderAggregate {
 
     // Update version if this is a new event
     if (isNew) {
-      this.version++;
+      this.version = 0;
     } else {
       this.version = event.version;
     }
@@ -141,15 +143,15 @@ export class OrderAggregate {
   private handleCreateOrder(cmd: Command<CreateOrderPayload>): Event[] {
     // Validate command
     if (this.version > 0) {
-      throw new Error('Order already exists');
+      throw new BusinessRuleViolation('Order already exists');
     }
 
     if (!cmd.payload.items || cmd.payload.items.length === 0) {
-      throw new Error('Order must have at least one item');
+      throw new BusinessRuleViolation('Order must have at least one item');
     }
 
     if (!cmd.payload.scheduledFor) {
-      throw new Error('Order must have a scheduled time');
+      throw new BusinessRuleViolation('Order must have a scheduled time');
     }
 
     // Create event
@@ -187,11 +189,11 @@ export class OrderAggregate {
   private handleUpdateOrderStatus(cmd: Command<UpdateOrderStatusPayload>): Event[] {
     // Validate command
     if (this.version === 0) {
-      throw new Error('Order does not exist');
+      throw new BusinessRuleViolation('Order does not exist');
     }
 
     if (this.status === 'cancelled') {
-      throw new Error('Cannot update status of a cancelled order');
+      throw new BusinessRuleViolation('Cannot update status of a cancelled order');
     }
 
     if (this.status === cmd.payload.status) {
@@ -233,7 +235,7 @@ export class OrderAggregate {
   private handleCancelOrder(cmd: Command<CancelOrderPayload>): Event[] {
     // Validate command
     if (this.version === 0) {
-      throw new Error('Order does not exist');
+      throw new BusinessRuleViolation('Order does not exist');
     }
 
     if (this.status === 'cancelled') {
@@ -241,7 +243,7 @@ export class OrderAggregate {
     }
 
     if (this.status === 'completed') {
-      throw new Error('Cannot cancel a completed order');
+      throw new BusinessRuleViolation('Cannot cancel a completed order');
     }
 
     // Create event
@@ -366,11 +368,11 @@ export class OrderAggregate {
   private handleAcceptOrderManually(cmd: Command<AcceptOrderManuallyPayload>): Event[] {
     // Validate command
     if (this.version === 0) {
-      throw new Error('Order does not exist');
+      throw new BusinessRuleViolation('Order does not exist');
     }
 
     if (this.status !== 'pending') {
-      throw new Error('Only pending orders can be accepted');
+      throw new BusinessRuleViolation('Only pending orders can be accepted');
     }
 
     // Create event
@@ -405,11 +407,11 @@ export class OrderAggregate {
   private handleAcceptOrderAuto(cmd: Command<AcceptOrderAutoPayload>): Event[] {
     // Validate command
     if (this.version === 0) {
-      throw new Error('Order does not exist');
+      throw new BusinessRuleViolation('Order does not exist');
     }
 
     if (this.status !== 'pending') {
-      throw new Error('Only pending orders can be accepted');
+      throw new BusinessRuleViolation('Only pending orders can be accepted');
     }
 
     // Create event
@@ -451,7 +453,7 @@ export class OrderAggregate {
     };
 
     if (!validTransitions[this.status].includes(newStatus)) {
-      throw new Error(`Invalid status transition from ${this.status} to ${newStatus}`);
+      throw new BusinessRuleViolation(`Invalid status transition from ${this.status} to ${newStatus}`);
     }
   }
 

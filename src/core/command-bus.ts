@@ -14,7 +14,7 @@ export interface CommandHandler<C extends Command = Command> {
    * @param cmd The command to check
    * @returns True if this handler supports the command, false otherwise
    */
-  supports(cmd: Command): boolean;
+  supportsCommand(cmd: Command): boolean;
 
   /**
    * Handle the command
@@ -44,7 +44,7 @@ export class CommandBus {
    * @throws Error if no handler is found for the command
    */
   async dispatch(cmd: Command): Promise<void> {
-    const handler = this.handlers.find(h => h.supports(cmd));
+    const handler = this.handlers.find(h => h.supportsCommand(cmd));
     if (!handler) {
       throw new Error(`No handler for command type: ${cmd.type}`);
     }

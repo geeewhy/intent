@@ -1,8 +1,5 @@
 // src/client/auth/test-auth.ts
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
 
 type AuthMode = 'test-user' | 'superuser';
 

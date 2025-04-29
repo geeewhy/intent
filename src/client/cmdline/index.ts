@@ -170,24 +170,24 @@ async function sendCreateOrderCommand(supabase: SupabaseClient, tenantId: string
     try {
         const orderId = uuidv4();
         const command = {
-            id: uuidv4(),
-            tenant_id: tenantId,
-            type: 'order.' + OrderCommandType.CREATE_ORDER, //todo dont hardcore. get domain name from mapped domain
-            payload: {
-                orderId,
-                userId: `user-${Math.floor(Math.random() * 1000)}`,
-                items: [
-                    {
-                        menuItemId: `menu-item-${Math.floor(Math.random() * 100)}`,
-                        quantity: Math.floor(Math.random() * 5) + 1,
-                    },
-                ],
-                scheduledFor: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
-            },
-            status: 'pending',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        };
+                id: uuidv4(),
+                tenant_id: tenantId,
+                type: `order.${OrderCommandType.CREATE_ORDER}`, // keep domain prefix properly
+                payload: {
+                    orderId,
+                    userId: `user-${Math.floor(Math.random() * 1000)}`,
+                    items: [
+                        {
+                            menuItemId: `menu-item-${Math.floor(Math.random() * 100)}`,
+                            quantity: Math.floor(Math.random() * 5) + 1,
+                        },
+                    ],
+                    scheduledFor: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
+                    status: 'pending',
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                },
+            };
 
         console.log('Sending createOrder command:', JSON.stringify(command, null, 2));
 

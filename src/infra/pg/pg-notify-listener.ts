@@ -27,11 +27,11 @@ export class PgNotifyListener {
     connectionConfig?: any
   ) {
     this.pool = new Pool(connectionConfig || {
-      host: process.env.POSTGRES_HOST || 'localhost',
-      port: parseInt(process.env.POSTGRES_PORT || '5432'),
-      user: process.env.POSTGRES_USER || 'postgres',
-      password: process.env.POSTGRES_PASSWORD || 'postgres',
-      database: process.env.POSTGRES_DB || 'kitcheneats',
+      host: process.env.SUPABASE_DB_HOST || 'localhost',
+      port: parseInt(process.env.SUPABASE_DB_PORT || '5432'),
+      user: process.env.SUPABASE_DB_USER || 'postgres',
+      password: process.env.SUPABASE_DB_PASSWORD || 'postgres',
+      database: process.env.SUPABASE_DB_NAME || 'postgres',
     });
   }
 

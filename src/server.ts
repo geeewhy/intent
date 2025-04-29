@@ -41,7 +41,6 @@ async function initDatabase() {
   try {
     console.log('Initializing database schema...');
     const eventStore = new PgEventStore();
-    await eventStore.initSchema();
     console.log('Database schema initialized successfully');
   } catch (error) {
     console.error('Error initializing database schema:', error);

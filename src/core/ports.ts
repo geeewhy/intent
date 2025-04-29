@@ -22,8 +22,26 @@ export interface EventPort {
  * Outbound port for storing events
  */
 export interface EventStorePort {
-  append(events: Event[]): Promise<void>;
-  load(tenant: UUID, aggregateId: UUID): Promise<Event[]>;
+  /**
+   * Append events to the event store
+   * @param tenantId Tenant ID
+   * @param aggregateType Type of the aggregate
+   * @param aggregateId ID of the aggregate
+   * @param events Events to append
+   * @param expectedVersion Expected version of the aggregate (for optimistic concurrency)
+   */
+  append(tenantId: UUID, aggregateType: string, aggregateId: UUID, events: Event[], expectedVersion: number): Promise<void>;
+
+  /**
+   * Load events for an aggregate
+   * First checks if a snapshot exists. If so, loads snapshot + replays only newer events.
+   * Otherwise, replays from event 0.
+   * @param tenantId Tenant ID
+   * @param aggregateType Type of the aggregate
+   * @param aggregateId ID of the aggregate
+   * @returns Events and version, or null if aggregate doesn't exist
+   */
+  load(tenantId: UUID, aggregateType: string, aggregateId: UUID): Promise<{ events: Event[]; version: number } | null>;
 }
 
 /**

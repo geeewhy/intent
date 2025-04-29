@@ -18,4 +18,5 @@ module.exports = {
     '!src/infra/pg/command-pump.ts',
   ],
   verbose: true,
+  setupFiles: ['<rootDir>/src/infra/integration-tests/setup.ts'],
 };

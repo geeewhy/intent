@@ -15,7 +15,7 @@ export interface EventHandler<E extends Event = Event> {
    * @param event The event to check
    * @returns True if this handler supports the event, false otherwise
    */
-  supports(event: Event): event is E;
+  supportsEvent(event: Event): event is E;
 
   /**
    * Handle the event
@@ -55,7 +55,7 @@ export class EventBus {
     for (const event of events) {
       await Promise.all(
         this.handlers
-          .filter(handler => handler.supports(event))
+          .filter(handler => handler.supportsEvent(event))
           .map(handler => handler.handle(event))
       );
     }
