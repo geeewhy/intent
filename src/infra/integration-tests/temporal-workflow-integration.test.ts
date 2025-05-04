@@ -4,6 +4,14 @@ import { Command, Event } from '../../core/contracts';
 import { OrderCommandType, OrderEventType } from '../../core/order/contracts';
 import { createAuthenticatedClient } from '../../client/cmdline/test-auth';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { 
+  getSagaWorkflowId, 
+  getProcessEventWorkflowId, 
+  getWorkflowsById,
+  verifyWorkflowsById,
+  wait,
+  checkForEvents
+} from './utils';
 
 // Test timeout - increase if needed for slower environments
 const TEST_TIMEOUT = 30000; // 30 seconds
@@ -32,37 +40,6 @@ describe('Temporal Workflow Integration Tests', () => {
     // Any cleanup needed
     console.log('Test cleanup complete');
   });
-
-  // Helper function to wait for a specific time
-  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  // Helper function to check if events were created
-  const checkForEvents = async (aggregateId: string, expectedCount: number, maxAttempts = 5): Promise<Event[]> => {
-    let attempts = 0;
-    let events: Event[] = [];
-
-    while (attempts < maxAttempts) {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .eq('aggregate_id', aggregateId)
-        .order('created_at', { ascending: true });
-
-      console.log('Got events:', data);
-
-      if (error) {
-        console.error('Error fetching events:', error);
-      } else if (data && data.length >= expectedCount) {
-        events = data;
-        break;
-      }
-
-      await wait(100);
-      attempts++;
-    }
-
-    return events;
-  };
 
   test('Command should be routed to Aggregate processCommand workflow', async () => {
     // Create a unique order ID for this test
@@ -99,8 +76,55 @@ describe('Temporal Workflow Integration Tests', () => {
     // Schedule the command
     await scheduler.schedule(command);
 
+    // For processEvent workflow, the ID is: ${tenantId}_${aggregateType}-${aggregateId}
+    const aggregateWorkflowId = getProcessEventWorkflowId(tenantId, 'order', orderId);
+
+    // Check for running workflows
+    const workflows = await getWorkflowsById(scheduler, [aggregateWorkflowId]);
+
+    // Verify that the workflow was executed
+    verifyWorkflowsById(workflows, [aggregateWorkflowId], 1);
+
+    console.log('Command test complete');
+  }, TEST_TIMEOUT);
+
+  test('Command should be applying events', async () => {
+    // Create a unique order ID for this test
+    const orderId = uuidv4();
+    const userId = `user-${uuidv4()}`;
+
+    // Create a command
+    const command: Command = {
+      id: uuidv4(),
+      tenant_id: tenantId,
+      type: `${OrderCommandType.CREATE_ORDER}`,
+      payload: {
+        orderId,
+        userId,
+        aggregateId: orderId,
+        aggregateType: 'order',
+        scheduledFor: new Date(),
+        items: [
+          {
+            menuItemId: `menu-item-${Math.floor(Math.random() * 100)}`,
+            quantity: Math.floor(Math.random() * 5) + 1,
+          },
+        ],
+        status: 'pending',
+      },
+      metadata: {
+        userId,
+        timestamp: new Date(),
+      },
+    };
+
+    console.log('Scheduling command:', command.type);
+
+    // Schedule the command
+    await scheduler.schedule(command);
+
     // Wait for events to be created
-    const events = await checkForEvents(orderId, 1);
+    const events = await checkForEvents(supabase, orderId, 1);
 
     // Verify that at least one event was created
     expect(events.length).toBeGreaterThan(0);
@@ -111,7 +135,7 @@ describe('Temporal Workflow Integration Tests', () => {
     console.log('Command test complete');
   }, TEST_TIMEOUT);
 
-  xtest('Event should be routed to both processEvent and processSaga workflows', async () => {
+  test('Event should be routed to both processEvent and processSaga workflows', async () => {
     // Create a unique order ID for this test
     const orderId = uuidv4();
     const userId = `user-${uuidv4()}`;
@@ -120,7 +144,7 @@ describe('Temporal Workflow Integration Tests', () => {
     const event: Event = {
       id: uuidv4(),
       tenant_id: tenantId,
-      type: `order.${OrderEventType.ORDER_CREATED}`,
+      type: `${OrderEventType.ORDER_CREATED}`,
       aggregateId: orderId,
       version: 1,
       payload: {
@@ -138,28 +162,41 @@ describe('Temporal Workflow Integration Tests', () => {
       metadata: {
         userId,
         timestamp: new Date(),
+        // Add a unique tracking ID that we can search for in logs or database
+        causationId: uuidv4()
       },
     };
+    let causationId = event.metadata?.causationId;
+    console.log('Publishing event:', event.type, 'with tracking ID:', causationId);
 
-    console.log('Publishing event:', event.type);
+    try {
+      // Publish the event
+      await scheduler.publish([event]);
+      await wait(100); //tick
 
-    // Publish the event
-    await scheduler.publish([event]);
+      // Generate workflow IDs
+      const sagaWorkflowId = getSagaWorkflowId(tenantId, orderId);
+      const aggregateWorkflowId = getProcessEventWorkflowId(tenantId, 'order', orderId);
 
-    // Wait for a short time to allow the workflows to process
-    await wait(5000);
+      // Check for running workflows
+      const workflows = await getWorkflowsById(
+        scheduler, 
+        [sagaWorkflowId, aggregateWorkflowId]
+      );
 
-    // Check for additional events that might have been created by the saga
-    const events = await checkForEvents(orderId, 1);
+      // Verify that both workflows were executed
+      verifyWorkflowsById(
+        workflows,
+        [sagaWorkflowId, aggregateWorkflowId], 
+        2
+      );
 
-    // Verify that the event was processed
-    // Note: This is a basic check - in a real test, you might want to verify specific outcomes
-    expect(events.length).toBeGreaterThan(0);
-
-    console.log('Event test complete');
+      console.log('Event test complete - both workflows were executed');
+    } finally {
+    }
   }, TEST_TIMEOUT);
 
-  xtest('Command should signal Saga after Aggregate workflow is complete', async () => {
+  test('Command should signal Saga after Aggregate workflow is complete', async () => {
     // Create a unique order ID for this test
     const orderId = uuidv4();
     const userId = `user-${uuidv4()}`;
@@ -168,12 +205,13 @@ describe('Temporal Workflow Integration Tests', () => {
     const command: Command = {
       id: uuidv4(),
       tenant_id: tenantId,
-      type: `order.${OrderCommandType.CREATE_ORDER}`,
+      type: `${OrderCommandType.CREATE_ORDER}`,
       payload: {
         orderId,
         userId,
         aggregateId: orderId,
         aggregateType: 'order',
+        scheduledFor: new Date(),
         items: [
           {
             menuItemId: `menu-item-${Math.floor(Math.random() * 100)}`,
@@ -193,34 +231,199 @@ describe('Temporal Workflow Integration Tests', () => {
     // Schedule the command
     await scheduler.schedule(command);
 
-    // Wait for events to be created
-    const events = await checkForEvents(orderId, 1);
+    // Generate workflow IDs
+    const sagaWorkflowId = getSagaWorkflowId(tenantId, orderId);
+    const aggregateWorkflowId = getProcessEventWorkflowId(tenantId, 'order', orderId);
 
-    // Verify that at least one event was created by the Aggregate
-    expect(events.length).toBeGreaterThan(0);
+    // Check for running workflows
+    const workflows = await getWorkflowsById(
+      scheduler, 
+      [sagaWorkflowId, aggregateWorkflowId]
+    );
 
-    // Wait a bit longer for the Saga to process
-    await wait(5000);
-
-    // Check for delayed commands in the commands table
-    // Note: This is a basic check - in a real test, you might want to verify specific outcomes
-    const { data: delayedCommands, error } = await supabase
-      .from('commands')
-      .select('*')
-      .eq('payload->orderId', orderId)
-      .neq('type', `order.${OrderCommandType.CREATE_ORDER}`);
-
-    if (error) {
-      console.error('Error fetching delayed commands:', error);
-    }
-
-    // The OrderSaga should schedule a delayed CANCEL_ORDER command
-    if (delayedCommands && delayedCommands.length > 0) {
-      console.log('Found delayed commands:', delayedCommands.length);
-      // Optionally verify the command type
-      expect(delayedCommands.some(cmd => cmd.type.includes(OrderCommandType.CANCEL_ORDER))).toBeTruthy();
-    }
+    // Verify that both workflows were executed
+    verifyWorkflowsById(
+      workflows,
+      [sagaWorkflowId, aggregateWorkflowId], 
+      2
+    );
 
     console.log('Saga signal test complete');
+  }, TEST_TIMEOUT);
+
+  test('Sequential commands should signal to the same aggregate instance', async () => {
+    // Create a unique order ID for this test
+    const orderId = uuidv4();
+    const userId = `user-${uuidv4()}`;
+
+    // Create order command
+    const createOrderCommand: Command = {
+      id: uuidv4(),
+      tenant_id: tenantId,
+      type: `${OrderCommandType.CREATE_ORDER}`,
+      payload: {
+        orderId,
+        userId,
+        aggregateId: orderId,
+        aggregateType: 'order',
+        scheduledFor: new Date(),
+        items: [
+          {
+            menuItemId: `menu-item-${Math.floor(Math.random() * 100)}`,
+            quantity: Math.floor(Math.random() * 5) + 1,
+          },
+        ],
+        status: 'pending',
+      },
+      metadata: {
+        userId,
+        timestamp: new Date(),
+      },
+    };
+
+    console.log('Scheduling first command:', createOrderCommand.type);
+
+    // Schedule the create order command
+    let firstCommandHandler = scheduler.schedule(createOrderCommand);
+    await wait(1); //tick
+
+    // Create accept order command
+    const acceptOrderCommand: Command = {
+      id: uuidv4(),
+      tenant_id: tenantId,
+      type: `${OrderCommandType.ACCEPT_ORDER_MANUALLY}`,
+      payload: {
+        orderId,
+        aggregateId: orderId,
+        aggregateType: 'order',
+      },
+      metadata: {
+        userId,
+        timestamp: new Date(),
+      },
+    };
+
+    console.log('Scheduling second command:', acceptOrderCommand.type);
+
+    // Schedule the accept order command immediately after
+    let secondCommandHandler = scheduler.schedule(acceptOrderCommand);
+
+    // For processEvent workflow, the ID is: ${tenantId}_${aggregateType}-${aggregateId}
+    const aggregateWorkflowId = getProcessEventWorkflowId(tenantId, 'order', orderId);
+
+    // Wait a moment for workflows to stabilize
+    await Promise.all([firstCommandHandler, secondCommandHandler]);
+
+    // Check for running workflows - should be only one aggregate instance
+    const workflows = await getWorkflowsById(scheduler, [aggregateWorkflowId]);
+
+    // Verify that only one workflow is running for this aggregate
+    verifyWorkflowsById(workflows, [aggregateWorkflowId], 1);
+
+    // Wait for events to be created
+    const events = await checkForEvents(supabase, orderId, 2, 5000);
+
+    // Verify that exactly two events were created
+    expect(events.length).toBe(2);
+
+    // Verify that the first event is an OrderCreated event
+    expect(events[0].type).toContain(OrderEventType.ORDER_CREATED);
+
+    // Verify that the second event is an OrderManuallyAcceptedByCook event
+    expect(events[1].type).toContain(OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK);
+
+    console.log('Sequential commands test complete');
+  }, TEST_TIMEOUT);
+
+  test('Commands after aggregate lifetime should restart aggregate with hydration', async () => {
+    // Create a unique order ID for this test
+    const orderId = uuidv4();
+    const userId = `user-${uuidv4()}`;
+
+    // Create order command
+    const createOrderCommand: Command = {
+      id: uuidv4(),
+      tenant_id: tenantId,
+      type: `${OrderCommandType.CREATE_ORDER}`,
+      payload: {
+        orderId,
+        userId,
+        aggregateId: orderId,
+        aggregateType: 'order',
+        scheduledFor: new Date(),
+        items: [
+          {
+            menuItemId: `menu-item-${Math.floor(Math.random() * 100)}`,
+            quantity: Math.floor(Math.random() * 5) + 1,
+          },
+        ],
+        status: 'pending',
+      },
+      metadata: {
+        userId,
+        timestamp: new Date(),
+      },
+    };
+
+    console.log('Scheduling create order command:', createOrderCommand.type);
+
+    // Schedule the create order command
+    await scheduler.schedule(createOrderCommand);
+
+    // For processEvent workflow, the ID is: ${tenantId}_${aggregateType}-${aggregateId}
+    const aggregateWorkflowId = getProcessEventWorkflowId(tenantId, 'order', orderId);
+
+    // Verify the first workflow was created
+    const workflowsAfterFirstCommand = await getWorkflowsById(scheduler, [aggregateWorkflowId]);
+    expect(workflowsAfterFirstCommand.length).toBe(1);
+    console.log('First aggregate workflow started as expected');
+
+    // Wait for the first command to complete and the aggregate to die
+    console.log('Waiting for aggregate to complete lifecycle...');
+    await wait(1000);
+
+    // Create cancel order command
+    const cancelOrderCommand: Command = {
+      id: uuidv4(),
+      tenant_id: tenantId,
+      type: `${OrderCommandType.CANCEL_ORDER}`,
+      payload: {
+        orderId,
+        aggregateId: orderId,
+        aggregateType: 'order',
+        reason: 'Testing cancellation'
+      },
+      metadata: {
+        userId,
+        timestamp: new Date(),
+      },
+    };
+
+    console.log('Scheduling cancel order command:', cancelOrderCommand.type);
+
+    // Schedule the cancel order command after aggregate died
+    await scheduler.schedule(cancelOrderCommand);
+
+    // Check for workflows after second command
+    // Should now show two workflows with the same ID pattern (one terminated, one active)
+    const workflowsAfterSecondCommand = await getWorkflowsById(scheduler, [aggregateWorkflowId]);
+
+    // Verify that there are now two workflows with this ID (one completed, one active)
+    expect(workflowsAfterSecondCommand.length).toBe(2);
+    console.log('Second aggregate workflow started as expected');
+
+    // Wait for both events to be created
+    const events = await checkForEvents(supabase, orderId, 2, 5000);
+
+    // Verify that exactly two events were created
+    expect(events.length).toBe(2);
+
+    // Verify that the first event is an OrderCreated event
+    expect(events[0].type).toContain(OrderEventType.ORDER_CREATED);
+
+    // Verify that the second event is an OrderCancelled event
+    expect(events[1].type).toContain(OrderEventType.ORDER_CANCELLED);
+
+    console.log('Commands after aggregate lifetime test complete');
   }, TEST_TIMEOUT);
 });
