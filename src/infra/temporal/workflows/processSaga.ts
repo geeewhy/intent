@@ -4,7 +4,6 @@ import {
     proxyActivities,
     setHandler,
     sleep,
-    workflowInfo as wfInfo,
     condition
 } from '@temporalio/workflow';
 import type { Command, Event } from '../../../core/contracts';
@@ -21,7 +20,8 @@ const { dispatchCommand, generateUUID } = proxyActivities<DomainActivities & typ
 });
 
 // TTL in milliseconds for the workflow to stay alive after last activity
-const WORKFLOW_TTL = 10000; // 10 seconds
+const WORKFLOW_TTL_IN_MS = 3000;
+const WORKFLOW_TTL_INTERVAL_IN_MS = 500;
 
 /**
  * Main saga processor workflow
@@ -56,16 +56,17 @@ export async function processSaga(initialInput: Command | Event): Promise<void> 
         planExecuted = true;
     });
 
-    // Process the initial input (either command or event)
-    console.log(`[processSaga] Processing initial input: ${initialInput.type}`);
-    const initialPlan = await sagaDef.plan(initialInput, { nextId: generateUUID });
-    console.log(`[processSaga] Got initial plan`, initialPlan);
-    await executePlan(initialPlan);
-    planExecuted = true;
-
     // Keep workflow alive until TTL expires
-    await condition(() => planExecuted && Date.now() - lastActivityTime > WORKFLOW_TTL);
-    console.log(`[processSaga] Workflow TTL expired after ${WORKFLOW_TTL}ms of inactivity`);
+    await condition(() => planExecuted);
+
+    //keep it alive for TTL
+    while (true) {
+        await sleep(WORKFLOW_TTL_INTERVAL_IN_MS);
+        if (Date.now() - lastActivityTime > WORKFLOW_TTL_IN_MS) {
+            console.log(`[processSaga] Workflow TTL expired after ${WORKFLOW_TTL_IN_MS}ms of inactivity`);
+            break;
+        }
+    }
 }
 
 /**

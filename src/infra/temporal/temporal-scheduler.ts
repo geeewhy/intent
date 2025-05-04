@@ -26,19 +26,25 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
 
   /* ---------- main API ---------- */
 
+    /**
+     * Get the Temporal client
+     * @returns The Temporal client
+     */
+  async getClient() {
+    return this.client;
+  }
+
   /**
    * Schedule a command for execution via Temporal
    */
   async schedule(cmd: Command): Promise<void> {
     console.log(`[TemporalScheduler] Routing command ${cmd.type}`);
-
-    if (await this.router.supportsCommand(cmd)) {
+    if (this.router.supportsCommand(cmd)) {
       // The router.handle method now starts the workflow and waits for it to complete
       // before signaling any sagas, so we don't need to track it here
-      await this.router.handle(cmd);
-
-      // Mark the command as consumed after it's been handled
-      await markConsumed(cmd.id);
+      return this.router.handle(cmd).then(() => {
+        markConsumed(cmd.id);
+      });
     } else {
       console.warn(`[TemporalScheduler] No router supports command ${cmd.type}`);
     }

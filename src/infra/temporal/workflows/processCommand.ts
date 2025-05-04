@@ -3,8 +3,9 @@ import {
     defineSignal,
     proxyActivities,
     setHandler,
-    workflowInfo as wfInfo,
-    condition
+    condition,
+    allHandlersFinished,
+    sleep
 } from '@temporalio/workflow';
 import type { Command, Event, UUID } from '../../../core/contracts';
 import type { DomainActivities } from '../../../core/activities/types';
@@ -26,7 +27,8 @@ const { executeCommand, loadAggregate, applyEvent } = proxyActivities<DomainActi
 });
 
 // TTL in milliseconds for the workflow to stay alive after last activity
-const WORKFLOW_TTL = 500; // 500 ms
+const WORKFLOW_TTL_IN_MS = 1000;
+const WORKFLOW_TTL_INTERVAL_IN_MS = 500;
 
 /**
  * Process commands for a specific aggregate
@@ -47,66 +49,44 @@ export async function processCommand(
     // Load the aggregate state
     const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId);
     console.log(`[processCommand] Loaded aggregate state: ${aggregate ? 'exists' : 'new'}`, aggregate);
-    let commandExecuted = false;
     let result: CommandResult = { status: 'success', events: [] };
+    const commandQueue: Command[] = [];
 
-    // Set up signal handler for new commands
-    setHandler(commandSignal, async (cmd) => {
+    setHandler(commandSignal, (cmd) => {
         console.log(`[processCommand] Received command signal: ${cmd.type}`);
+        commandQueue.push(cmd);
         lastActivityTime = Date.now();
-
-        // Execute the command on the aggregate
-        const response = await executeCommand(tenantId, aggregateType, aggregateId, cmd);
-
-        // Check if this is a business rule violation
-        if (response.status === 'fail') {
-            console.log(`[processCommand] Business rule violation: ${response.error}`);
-            // We don't fail the workflow for business rule violations
-            commandExecuted = true;
-            return;
-        }
-
-        const events = response.events || [];
-
-        if (events.length > 0) {
-            console.log(`[processCommand] First event produced from signal:`, events[0].type);
-            // Events are already applied in executeCommand, no need to call applyEvent again
-        }
-
-        console.log(`[processCommand] Command executed, produced ${events.length} events`);
-
-        // Update last activity time after command execution
-        lastActivityTime = Date.now();
-        commandExecuted = true;
     });
 
-    // Process the initial command
-    console.log(`[processCommand] Processing initial command: ${initialCommand.type}`);
-    lastActivityTime = Date.now();
-    const response = await executeCommand(tenantId, aggregateType, aggregateId, initialCommand);
+    while (true) {
+        if (commandQueue.length > 0) {
+            const cmd = commandQueue.shift();
+            if (!cmd) continue;
+            console.log(`[processCommand] Processing queued command: ${cmd.type}`);
 
-    // Check if this is a business rule violation
-    if (response.status === 'fail') {
-        console.log(`[processCommand] Business rule violation: ${response.error}`);
-        // We don't fail the workflow for business rule violations
-        result = { status: 'fail', error: response.error };
-        commandExecuted = true;
-    } else {
-        const events = response.events || [];
+            const response = await executeCommand(tenantId, aggregateType, aggregateId, cmd);
 
-        if (events.length > 0) {
-            console.log(`[processCommand] First event produced:`, events[0].type);
-            // Events are already applied in executeCommand, no need to call applyEvent again
+            if (response.status === 'fail') {
+                console.log(`[processCommand] Business rule violation: ${response.error}`);
+            } else {
+                const events = response.events || [];
+                if (events.length > 0) {
+                    console.log(`[processCommand] Events from command:`, events.map(e => e.type));
+                }
+            }
+
+            lastActivityTime = Date.now();
+        } else {
+            // TTL check
+            await sleep(WORKFLOW_TTL_INTERVAL_IN_MS);
+            if (Date.now() - lastActivityTime > WORKFLOW_TTL_IN_MS) {
+                console.log(`[processCommand] ${WORKFLOW_TTL_IN_MS} TTL expired. Exiting.`);
+                break;
+            }
         }
-
-        console.log(`[processCommand] Initial command executed, produced ${events.length} events`);
-        result = { status: 'success', events };
-        commandExecuted = true;
     }
 
-    // Keep workflow alive until TTL expires
-    await condition(() => commandExecuted || Date.now() - lastActivityTime > WORKFLOW_TTL);
-    console.log(`[processSaga] Workflow TTL expired after ${WORKFLOW_TTL}ms of inactivity`);
+    await condition(allHandlersFinished);
 
     return result;
 }

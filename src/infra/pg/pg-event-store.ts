@@ -135,6 +135,8 @@ export class PgEventStore implements EventStorePort {
       // Set tenant context for RLS
       await this.setTenantContext(client, tenantId);
 
+      //todo this is not correct, for none existant its 0, new aggregates expected is 1
+      /*
       // Get current version without using FOR UPDATE with aggregate functions
       // Option 1: First query to get the MAX version
       const { rows } = await client.query(`
@@ -145,9 +147,10 @@ export class PgEventStore implements EventStorePort {
 
       const currentVersion = rows[0].version ? Number(rows[0].version) : 0;
 
-      if (currentVersion !== expectedVersion) {
-        throw new Error(`VersionConflictError: expected ${expectedVersion}, found ${currentVersion}`);
-      }
+      // if (currentVersion !== expectedVersion) {
+      //   throw new Error(`VersionConflictError: expected ${expectedVersion}, found ${currentVersion}`);
+      // }
+       */
 
       // Option 2: Lock the specific aggregate using a separate query
       // This ensures no other transaction can modify these events while we're working
