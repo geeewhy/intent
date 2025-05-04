@@ -25,6 +25,7 @@
     "@supabase/supabase-js": "^2.39.0",
     "@temporalio/activity": "^1.7.4",
     "@temporalio/client": "^1.7.4",
+    "@temporalio/proto": "^1.11.7",
     "@temporalio/worker": "^1.7.4",
     "@temporalio/workflow": "^1.7.4",
     "dotenv": "^16.3.1",
