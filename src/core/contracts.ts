@@ -1,52 +1,69 @@
-// Unique identifier type
 export type UUID = string;
 
 /**
- * Base command interface
+ * Common Metadata across Commands and Events
  */
-export interface Command<T = any> {
-    id: UUID;
-    tenant_id: UUID; // Household ID for multi-tenancy
-    type: string;
-    payload: T;
-    status?: 'pending' | 'consumed' | 'processed' | 'failed';
-    metadata?: {
-        userId?: UUID | undefined;
-        timestamp: Date;
-        correlationId?: UUID;
-        causationId?: UUID;
-    };
+export interface Metadata {
+    userId?: UUID;
+    timestamp: Date;
+    correlationId?: UUID;
+    causationId?: UUID;
+    requestId?: string; // Useful for cross-service tracing
+    source?: string;    // Service or workflow origin
+    tags?: Record<string, string | number>; // For flexible enrichment
 }
 
 /**
- * Base event interface
+ * Base Command interface with lifecycle hints
+ */
+export interface Command<T = any> {
+    id: UUID;
+    tenant_id: UUID;
+    type: string;
+    payload: T;
+    status?: 'pending' | 'consumed' | 'processed' | 'failed';
+    metadata?: Metadata;
+}
+
+/**
+ * Base Event interface with versioning and full trace metadata
  */
 export interface Event<T = any> {
     id: UUID;
-    tenant_id: UUID; // Household ID for multi-tenancy
+    tenant_id: UUID;
     type: string;
     payload: T;
     aggregateId: UUID;
     version: number;
-    metadata?: {
-        userId?: UUID;
-        timestamp: Date;
-        correlationId?: UUID;
-        causationId?: UUID;
-    };
+    metadata?: Metadata;
 }
 
+/**
+ * Process plan emitted by sagas or workflows
+ */
 export interface ProcessPlan {
     commands: Command[];
     delays?: { cmd: Command; ms: number }[];
+    traceContext?: Record<string, any>; // Optional tracing metadata for observability
 }
 
+/**
+ * Contract for defining saga orchestration logic
+ */
 export interface SagaDefinition {
     idFor: (input: Command | Event) => string | undefined;
     plan: (input: Command | Event, ctx: SagaContext) => Promise<ProcessPlan>;
-    workflow?: string; // optional override, defaults to 'processSaga'
+    workflow?: string; // Label for orchestration mechanism ('saga' or 'process')
 }
 
+/**
+ * Context passed to sagas for deterministic orchestration with optional utilities
+ */
 export interface SagaContext {
-    nextId: () => Promise<string>;
+    nextId(): Promise<UUID>;
+    loadAggregate?<T>(aggregateType: string, aggregateId: UUID): Promise<T>;
+    loadEvents?(aggregateType: string, aggregateId: UUID): Promise<Event[]>;
+    getHint?<T = any>(key: string): T | undefined;
+    evaluateCondition?(name: string, args?: any): Promise<boolean>;
+    emitInternalSignal?(name: string, data: Record<string, any>): void;
 }

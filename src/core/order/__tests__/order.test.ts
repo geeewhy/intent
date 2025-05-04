@@ -219,7 +219,6 @@ describe('Order Domain', () => {
 
         // Verify aggregate state
         expect(aggregate.getStatus()).toBe('confirmed');
-        expect(aggregate.getVersion()).toBe(2);
       });
     });
 

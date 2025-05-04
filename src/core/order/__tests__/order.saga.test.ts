@@ -27,10 +27,11 @@ describe('OrderSaga', () => {
       const orderCreatedEvent: Event = {
         id: 'event-123',
         tenant_id: tenantId,
-        type: 'order.' + OrderEventType.ORDER_CREATED,
+        type: OrderEventType.ORDER_CREATED,
         aggregateId: orderId,
         version: 1,
         payload: {
+          scheduledFor: new Date(),
           orderId,
           userId,
           items: [
@@ -70,7 +71,7 @@ describe('OrderSaga', () => {
       const createOrderCommand: Command = {
         id: 'cmd-123',
         tenant_id: tenantId,
-        type: 'order.' + OrderCommandType.CREATE_ORDER,
+        type: OrderCommandType.CREATE_ORDER,
         payload: {
           orderId,
           userId,
@@ -193,7 +194,7 @@ describe('OrderSaga', () => {
       const manuallyAcceptedEvent: Event = {
         id: 'event-123',
         tenant_id: tenantId,
-        type: 'order.' + OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK,
+        type: OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK,
         aggregateId: orderId,
         version: 1,
         payload: {
@@ -230,7 +231,7 @@ describe('OrderSaga', () => {
       const autoAcceptedEvent: Event = {
         id: 'event-123',
         tenant_id: tenantId,
-        type: 'order.' + OrderEventType.ORDER_AUTO_ACCEPTED,
+        type: OrderEventType.ORDER_AUTO_ACCEPTED,
         aggregateId: orderId,
         version: 1,
         payload: {

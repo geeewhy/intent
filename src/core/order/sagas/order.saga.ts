@@ -3,18 +3,27 @@ import {Command, Event, ProcessPlan, SagaContext} from '../../contracts';
 
 import {
     OrderCommandType,
-    OrderEventType,
-    UUID
+    OrderEventType
 } from '../contracts';
 
 export class OrderSaga {
+    static reactsTo(): string[] {
+        return [
+            OrderCommandType.CREATE_ORDER,
+            OrderCommandType.UPDATE_ORDER_STATUS,
+            OrderCommandType.CANCEL_ORDER,
+            OrderEventType.ORDER_CREATED,
+            OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK,
+            OrderEventType.ORDER_AUTO_ACCEPTED,
+        ];
+    }
     static async react(input: Command | Event, ctx: SagaContext): Promise<ProcessPlan> {
         const plan: ProcessPlan = { commands: [] };
 
         switch (input.type) {
             // Saga now reacts to OrderCreated event instead of createOrder command
-            case 'order.' + OrderEventType.ORDER_CREATED: {
-                console.log("TRIGGERED by OrderCreated event", input);
+            case OrderEventType.ORDER_CREATED: {
+                console.log("[OrderSaga] TRIGGERED by OrderCreated event", input);
                 const { orderId, userId } = input.payload;
                 const tenantId = input.tenant_id;
 
@@ -35,8 +44,8 @@ export class OrderSaga {
             }
 
             // Keep this case for backward compatibility, but it's no longer the primary path
-            case 'order.' + OrderCommandType.CREATE_ORDER: {
-                console.log("TRIGGERED by createOrder command (deprecated path)", input);
+            case OrderCommandType.CREATE_ORDER: {
+                console.log("[OrderSaga] TRIGGERED by createOrder command (deprecated path)", input);
                 // No action needed - we now react to the OrderCreated event instead
                 break;
             }
@@ -69,7 +78,7 @@ export class OrderSaga {
                 // Nothing to follow; cancel is terminal
                 break;
 
-            case 'order.' + OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK: {
+            case OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK: {
                 const { orderId, userId } = input.payload;
                 const tenantId = input.tenant_id;
 
@@ -91,7 +100,7 @@ export class OrderSaga {
                 break;
             }
 
-            case 'order.' + OrderEventType.ORDER_AUTO_ACCEPTED: {
+            case OrderEventType.ORDER_AUTO_ACCEPTED: {
                 const { orderId } = input.payload;
                 const tenantId = input.tenant_id;
 

@@ -5,7 +5,7 @@ import { OrderSaga } from './order.saga';
 export const orderSagaRegistry: Record<string, SagaDefinition> = {
     orderSaga: {
         idFor: (msg: Command | Event) =>
-            msg.type.startsWith('order.') ? `${msg.tenant_id}_${msg.payload.orderId}` : undefined,
+            OrderSaga.reactsTo().includes(msg.type) ? `${msg.tenant_id}_${msg.payload.orderId}` : undefined,
         plan: OrderSaga.react,
         workflow: 'processSaga', // optional override
     },

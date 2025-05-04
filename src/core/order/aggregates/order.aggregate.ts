@@ -29,6 +29,7 @@ import {
   OrderStatus,
   OrderItem
 } from '../contracts';
+import {isRetryableError} from "@temporalio/client";
 
 /**
  * Order aggregate - represents the state and behavior of an order
@@ -131,7 +132,7 @@ export class OrderAggregate {
 
     // Update version if this is a new event
     if (isNew) {
-      this.version = 0;
+      this.version++;
     } else {
       this.version = event.version;
     }
@@ -407,11 +408,11 @@ export class OrderAggregate {
   private handleAcceptOrderAuto(cmd: Command<AcceptOrderAutoPayload>): Event[] {
     // Validate command
     if (this.version === 0) {
-      throw new BusinessRuleViolation('Order does not exist');
+      throw new Error('Order does not exist');
     }
 
     if (this.status !== 'pending') {
-      throw new BusinessRuleViolation('Only pending orders can be accepted');
+      throw new Error('Only pending orders can be accepted');
     }
 
     // Create event
@@ -453,7 +454,7 @@ export class OrderAggregate {
     };
 
     if (!validTransitions[this.status].includes(newStatus)) {
-      throw new BusinessRuleViolation(`Invalid status transition from ${this.status} to ${newStatus}`);
+      throw new Error(`Invalid status transition from ${this.status} to ${newStatus}`);
     }
   }
 

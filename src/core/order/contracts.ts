@@ -6,6 +6,29 @@
 // Unique identifier type
 export type UUID = string;
 
+
+/**
+ * Domain roles for Order context
+ */
+export type OrderActorRole = 'customer' | 'cook' | 'system';
+
+/**
+ * Basic access context for authorization decisions
+ */
+export interface OrderAccessContext {
+  userId: UUID;
+  role: OrderActorRole;
+  orderOwnerId?: UUID;
+}
+
+/**
+ * List of access control conditions for Order domain
+ */
+export enum OrderAccessCondition {
+  CAN_AUTO_ACCEPT = 'user.canAutoAcceptOrder',
+  CAN_CANCEL_ORDER = 'user.canCancelOrder',
+}
+
 /**
  * Order-specific command types
  */

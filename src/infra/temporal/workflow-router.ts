@@ -44,48 +44,59 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
   async handle(cmd: Command): Promise<void> {
     if (this.isAggregateCommand(cmd)) {
       const { tenant_id } = cmd;
-      const aggregateType = cmd.payload.aggregateType;
-      const aggregateId = cmd.payload.aggregateId;
+      const aggregateType = cmd.payload?.aggregateType;
+      const aggregateId = cmd.payload?.aggregateId;
       const workflowId = this.getAggregateWorkflowId(tenant_id, aggregateType, aggregateId);
+
+      const searchAttributes = {
+        aggregateType: [`${aggregateType}`],
+        aggregateId: [`${aggregateId}`],
+        tenantId: [`${tenant_id}`],
+        causationId: [`${cmd.metadata?.causationId}`],
+        correlationId: [`${cmd.metadata?.correlationId}`],
+      }
 
       // Start the aggregate workflow
       console.log(`[WorkflowRouter] Starting aggregate workflow for command ${cmd.type}`);
-      const handle = await this.client.start('processCommand', {
+      const handle = this.client.signalWithStart('processCommand', {
         workflowId,
         taskQueue: 'aggregates',
         args: [tenant_id, aggregateType, aggregateId, cmd],
-        workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
+        signal: 'command',
+        signalArgs: [cmd]
       });
 
-      // Wait for the aggregate workflow to complete
-      try {
-        console.log(`[WorkflowRouter] Waiting for aggregate workflow ${workflowId} to complete`);
+      return handle.then( async (handle) => {
+        console.log(`[WorkflowRouter] Aggregate workflow ${workflowId} started successfully`);
         const result = await handle.result() as CommandResult;
+        try {
+          console.log(`[WorkflowRouter] Waiting for aggregate workflow ${workflowId} to complete`);
 
-        // Check if this is a business rule violation
-        if (result.status === 'fail') {
-          console.log(`[WorkflowRouter] Business rule violation in workflow ${workflowId}: ${result.error}`);
-          // We don't consider this a failure, just log it
-        } else {
-          console.log(`[WorkflowRouter] Aggregate workflow ${workflowId} completed successfully`);
-        }
+          // Check if this is a business rule violation
+          if (result.status === 'fail') {
+            console.log(`[WorkflowRouter] Business rule violation in workflow ${workflowId}: ${result.error}`);
+            // We don't consider this a failure, just log it
+          } else {
+            console.log(`[WorkflowRouter] Aggregate workflow ${workflowId} completed successfully`);
+          }
 
-        // If Saga listens to commands too, signal Saga after Aggregate workflow completion
-        if (this.isSagaCommand(cmd)) {
-          console.log(`[WorkflowRouter] Signaling saga for command ${cmd.type} after aggregate workflow completion`);
-          await this.routeSagaCommand(cmd);
+          // If Saga listens to commands too, signal Saga after Aggregate workflow completion
+          if (this.isSagaCommand(cmd)) {
+            console.log(`[WorkflowRouter] Signaling saga for command ${cmd.type} after aggregate workflow completion`);
+            return this.routeSagaCommand(cmd);
+          }
+        } catch (error) {
+          console.error(`[WorkflowRouter] Error waiting for aggregate workflow ${workflowId} to complete:`, error);
+          // Still signal the saga even if the aggregate workflow fails
+          if (this.isSagaCommand(cmd)) {
+            console.log(`[WorkflowRouter] Signaling saga for command ${cmd.type} after aggregate workflow failure`);
+            return this.routeSagaCommand(cmd);
+          }
         }
-      } catch (error) {
-        console.error(`[WorkflowRouter] Error waiting for aggregate workflow ${workflowId} to complete:`, error);
-        // Still signal the saga even if the aggregate workflow fails
-        if (this.isSagaCommand(cmd)) {
-          console.log(`[WorkflowRouter] Signaling saga for command ${cmd.type} after aggregate workflow failure`);
-          await this.routeSagaCommand(cmd);
-        }
-      }
+      });
     } else if (this.isSagaCommand(cmd)) {
       // If it's only a saga command (not an aggregate command), route it to saga
-      await this.routeSagaCommand(cmd);
+      return this.routeSagaCommand(cmd);
     } else {
       console.warn(`[WorkflowRouter] Ignored unsupported command: ${cmd.type}`);
     }
@@ -135,34 +146,25 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
     }
   }
 
-  /** Route a command to an aggregate */
-  private async routeAggregateCommand(cmd: Command): Promise<void> {
-    const { tenant_id } = cmd;
-    const aggregateType = cmd.payload.aggregateType;
-    const aggregateId = cmd.payload.aggregateId;
-    const workflowId = this.getAggregateWorkflowId(tenant_id, aggregateType, aggregateId);
-
-    console.log(`[WorkflowRouter] Routing aggregate command ${cmd.type} to workflow ${workflowId}`);
-
-    await this.client.signalWithStart('processCommand', {
-      workflowId,
-      taskQueue: 'aggregates',
-      args: [tenant_id, aggregateType, aggregateId, cmd],
-      signal: 'command',
-      signalArgs: [cmd],
-      workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
-    });
-  }
-
   /** Route a command to a saga (process manager) */
   private async routeSagaCommand(cmd: Command): Promise<void> {
     const match = Object.values(SagaRegistry).find((s) => s.idFor(cmd));
     if (!match) return;
 
     const workflowId = match.idFor(cmd)!;
-
     const workflow = match.workflow || 'processSaga';
-    const taskQueue = `saga-${Object.keys(SagaRegistry).find(k => SagaRegistry[k] === match)}`;
+    const taskQueue = `sagas`; //dedicated saga queue? ${Object.keys(SagaRegistry).find(k => SagaRegistry[k] === match)}
+    const { tenant_id } = cmd;
+    const aggregateType = cmd.payload?.aggregateType;
+    const aggregateId = cmd.payload?.aggregateId;
+
+    const searchAttributes = {
+      aggregateType: [`${aggregateType}`],
+      aggregateId: [`${aggregateId}`],
+      tenantId: [`${tenant_id}`],
+      causationId: [`${cmd.metadata?.causationId}`],
+      correlationId: [`${cmd.metadata?.correlationId}`],
+    }
 
     console.log(`[WorkflowRouter] Routing saga command ${cmd.type} to workflow ${workflowId} on taskQueue ${taskQueue}`);
 
@@ -170,9 +172,10 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
       workflowId,
       taskQueue,
       args: [cmd],
+      searchAttributes,
       signal: 'externalCommand',
       signalArgs: [cmd],
-      workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
+      //workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE, //prevent sequential execution
     });
   }
 

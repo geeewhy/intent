@@ -189,10 +189,11 @@ export async function applyEvent(
             throw new Error(`Aggregate ${aggregateType}:${aggregateId} not found and could not be created`);
         }
 
+        let receivedEvents = [];
         // Apply the event to the aggregate
         if (typeof aggregate.apply === 'function') {
             // Use the aggregate's apply method
-            aggregate.apply(event);
+            receivedEvents = aggregate.apply(event);
             console.log(`[applyEvent] Event applied to aggregate: ${event.type}`);
         } else {
             throw new Error(`Aggregate ${aggregateType} does not have an apply method`);
@@ -202,7 +203,9 @@ export async function applyEvent(
         const currentVersion = aggregate.getVersion ? aggregate.getVersion() : 0;
 
         // Append the event to the event store
-        await eventStore.append(tenantId, aggregateType, aggregateId, [event], currentVersion - 1);
+        if (receivedEvents) {
+            await eventStore.append(tenantId, aggregateType, aggregateId, [receivedEvents], currentVersion);
+        }
 
         console.log(`[applyEvent] Event applied and stored: ${event.type}`);
         return [];
