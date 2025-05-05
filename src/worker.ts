@@ -20,7 +20,6 @@ dotenv.config();
  */
 async function run() {
     // Get the task queue from command line args (last argument)
-    // Default to 'saga-orderSaga' if not provided
     const cmdArgs = process.argv.slice(2);
     const customTaskQueue = cmdArgs.length > 0 ? cmdArgs[cmdArgs.length - 1] : null;
 
@@ -38,7 +37,7 @@ async function run() {
     const workers = await Promise.all(
         activeTenants.map(async (tenantId) => {
             // Use custom task queue if provided, otherwise use the default
-            const taskQueue = customTaskQueue || `saga-orderSaga`;
+            const taskQueue = customTaskQueue || `aggregates`;
             const workflowsPath = path.resolve(__dirname, 'infra/temporal/workflows');
             return Worker.create({
                 workflowsPath: workflowsPath, // register all workflows

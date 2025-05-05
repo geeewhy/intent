@@ -132,7 +132,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
         console.log(`[WorkflowRouter] Routing event ${event.type} to saga workflow ${sagaWorkflowId}`);
 
         const workflow = saga.workflow || 'processSaga';
-        const taskQueue = `saga-${Object.keys(SagaRegistry).find(k => SagaRegistry[k] === saga)}`;
+        const taskQueue = `sagas`; //-${Object.keys(SagaRegistry).find(k => SagaRegistry[k] === saga)}
 
         await this.client.signalWithStart(workflow, {
           workflowId: sagaWorkflowId,

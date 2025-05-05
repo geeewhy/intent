@@ -1,5 +1,5 @@
 // infra/temporal/temporal-scheduler.ts
-import {WorkflowClient, WorkflowHandle} from '@temporalio/client';
+import {WorkflowClient, WorkflowExecutionInfo, WorkflowHandle} from '@temporalio/client';
 import {Command, Event} from '../../core/contracts';
 import {WorkflowRouter} from './workflow-router';
 import {JobSchedulerPort, EventPublisherPort} from '../../core/ports';
@@ -9,11 +9,9 @@ import {markConsumed} from '../pump/helpers/command-helpers';
  * TemporalScheduler - schedules commands and events via Temporal workflows
  */
 export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
-    private workflowHandles = new Map<string, WorkflowHandle>();
-
     private constructor(
         private readonly router: WorkflowRouter,
-        private readonly client: WorkflowClient
+        private readonly client: WorkflowClient,
     ) {
     }
 
@@ -21,7 +19,6 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
     static async create(cfg?: any): Promise<TemporalScheduler> {
         const router = await WorkflowRouter.create(cfg);
         const client = (router as any)['client'] as WorkflowClient; // reuse internal client
-
         return new TemporalScheduler(router, client);
     }
 
@@ -67,34 +64,5 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
                 await this.router.on(event);
             }
         }
-    }
-
-    /* ---------- helpers ---------- */
-
-    private async track(handle: WorkflowHandle, id: string, cmd: Command): Promise<void> {
-        try {
-            await handle.result();
-            console.log(`[TemporalScheduler] Completed ${id}`);
-            await markConsumed(cmd.id);
-        } catch (e: any) {
-            if (e.name === 'WorkflowNotFoundError') {
-                console.warn(`[TemporalScheduler] Workflow ${id} not found — possibly completed early`);
-            } else {
-                console.error(`[TemporalScheduler] Failed ${id}`, e);
-            }
-        } finally {
-            this.workflowHandles.delete(id);
-        }
-    }
-
-    private getWorkflowId(cmd: Command): string {
-        if (cmd.payload?.aggregateId && cmd.payload?.aggregateType) {
-            return `${cmd.tenant_id}_${cmd.payload.aggregateType}-${cmd.payload.aggregateId}`;
-        }
-        return `${cmd.tenant_id}_${cmd.id}`; // fallback for saga commands
-    }
-
-    async getActiveWorkflows(): Promise<string[]> {
-        return [...this.workflowHandles.keys()];
     }
 }

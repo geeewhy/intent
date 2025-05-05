@@ -38,8 +38,7 @@ const WORKFLOW_TTL_INTERVAL_IN_MS = 300;
 export async function processCommand(
     tenantId: UUID,
     aggregateType: string,
-    aggregateId: UUID,
-    initialCommand: Command
+    aggregateId: UUID
 ): Promise<CommandResult> {
     console.log(`[processCommand] Starting workflow for ${aggregateType}:${aggregateId}`);
 
@@ -51,6 +50,7 @@ export async function processCommand(
     console.log(`[processCommand] Loaded aggregate state: ${aggregate ? 'exists' : 'new'}`, aggregate);
     let result: CommandResult = { status: 'success', events: [] };
     const commandQueue: Command[] = [];
+    let lastCommandId: string | null = null;
 
     setHandler(commandSignal, (cmd) => {
         console.log(`[processCommand] Received command signal: ${cmd.type}`);
@@ -63,6 +63,12 @@ export async function processCommand(
             const cmd = commandQueue.shift();
             if (!cmd) continue;
             console.log(`[processCommand] Processing queued command: ${cmd.type}`);
+
+            if (cmd.id === lastCommandId) {
+                console.log(`[processCommand] Duplicate command ID ${cmd.id}, ignoring.`);
+                continue;
+            }
+            lastCommandId = cmd.id;
 
             const response = await executeCommand(tenantId, aggregateType, aggregateId, cmd);
 

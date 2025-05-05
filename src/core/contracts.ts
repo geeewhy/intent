@@ -1,3 +1,5 @@
+//src/core/contracts.ts
+
 export type UUID = string;
 
 /**
@@ -60,6 +62,7 @@ export interface SagaDefinition {
  * Context passed to sagas for deterministic orchestration with optional utilities
  */
 export interface SagaContext {
+    readonly correlationId?: string;
     nextId(): Promise<UUID>;
     loadAggregate?<T>(aggregateType: string, aggregateId: UUID): Promise<T>;
     loadEvents?(aggregateType: string, aggregateId: UUID): Promise<Event[]>;
@@ -67,3 +70,20 @@ export interface SagaContext {
     evaluateCondition?(name: string, args?: any): Promise<boolean>;
     emitInternalSignal?(name: string, data: Record<string, any>): void;
 }
+
+/**
+ * observability related signals
+ */
+
+export enum InternalSignalType {
+    OBS_TRACE = 'obs.trace',
+    OBS_WARN = 'obs.warn',
+    OBS_ERROR = 'obs.error',
+    OBS_METRIC = 'obs.metric',
+}
+
+export type InternalSignalPayload =
+    | { type: 'obs.trace'; span: string; data?: any }
+    | { type: 'obs.warn'; message: string; tags?: Record<string, any> }
+    | { type: 'obs.error'; message: string; error?: any; tags?: Record<string, any> }
+    | { type: 'obs.metric'; name: string; value: number; tags?: Record<string, any> };

@@ -2,7 +2,6 @@
 /**
  * Registry of all aggregate types and their corresponding classes
  */
-
 import { OrderAggregate } from './order/aggregates/order.aggregate';
 
 // Interface for aggregate classes with static methods

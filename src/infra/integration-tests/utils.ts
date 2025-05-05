@@ -70,7 +70,7 @@ export const getSagaWorkflowId = (tenantId: string, orderId: string): string => 
  * @param aggregateId The aggregate ID
  * @returns The workflow ID for the processEvent workflow
  */
-export const getProcessEventWorkflowId = (tenantId: string, aggregateType: string, aggregateId: string): string => {
+export const getAggregateWorkflowId = (tenantId: string, aggregateType: string, aggregateId: string): string => {
   return `${tenantId}_${aggregateType}-${aggregateId}`;
 };
 
@@ -97,6 +97,36 @@ export const getWorkflowsById = async (
   }
 
   return workflows;
+};
+
+/**
+ * Find all running workflows with tenant prefix, optionally terminate them.
+ */
+export const verifyNoLeakedWorkflows = async (
+    scheduler: TemporalScheduler,
+    tenantId: string,
+    terminate = false
+): Promise<void> => {
+  const client = await scheduler.getClient();
+  const running = client.list({ query: 'ExecutionStatus="Running"' });
+
+  const leaks: WorkflowExecutionInfo[] = [];
+
+  for await (const wf of running) {
+    if (wf.workflowId?.startsWith(`${tenantId}_`)) {
+      leaks.push(wf);
+    }
+  }
+
+  if (leaks.length > 0) {
+    console.error(`[verifyNoLeakedWorkflows] Found ${leaks.length} running workflow(s) for tenant ${tenantId}`);
+    for (const wf of leaks) {
+      console.error(`→ ${wf.workflowId}`);
+    }
+    throw new Error(`[verifyNoLeakedWorkflows] ${leaks.length} workflows leaked after tests`);
+  } else {
+    console.log(`[verifyNoLeakedWorkflows] ✅ No workflow leaks for tenant ${tenantId}`);
+  }
 };
 
 export const getWorkflowDetails = async (

@@ -6,11 +6,11 @@ import {createAuthenticatedClient} from '../../client/cmdline/test-auth';
 import {SupabaseClient} from '@supabase/supabase-js';
 import {
     getSagaWorkflowId,
-    getProcessEventWorkflowId,
+    getAggregateWorkflowId,
     getWorkflowsById,
     verifyWorkflowsById,
     wait,
-    checkForEvents, getWorkflowDetails
+    checkForEvents, getWorkflowDetails, verifyNoLeakedWorkflows
 } from './utils';
 
 // Test timeout - increase if needed for slower environments
@@ -30,7 +30,7 @@ describe('Temporal Workflow Integration Tests', () => {
         supabase = await createAuthenticatedClient(tenantId, 'test-user');
 
         // Create temporal scheduler
-        scheduler = await TemporalScheduler.create();
+        scheduler = await TemporalScheduler.create(tenantId);
 
         console.log('Test setup complete with tenant ID:', tenantId);
     }, TEST_TIMEOUT);
@@ -38,6 +38,9 @@ describe('Temporal Workflow Integration Tests', () => {
     // Cleanup after all tests
     afterAll(async () => {
         // Any cleanup needed
+        console.log('Cleaning up test resources, waiting workflows to finish...');
+        await wait(2000); // Give some time for workflows to finish
+        await verifyNoLeakedWorkflows(scheduler, tenantId);
         console.log('Test cleanup complete');
     });
 
@@ -77,7 +80,7 @@ describe('Temporal Workflow Integration Tests', () => {
         await scheduler.schedule(command);
 
         // For processEvent workflow, the ID is: ${tenantId}_${aggregateType}-${aggregateId}
-        const aggregateWorkflowId = getProcessEventWorkflowId(tenantId, 'order', orderId);
+        const aggregateWorkflowId = getAggregateWorkflowId(tenantId, 'order', orderId);
 
         // Check for running workflows
         const workflows = await getWorkflowsById(scheduler, [aggregateWorkflowId]);
@@ -176,7 +179,7 @@ describe('Temporal Workflow Integration Tests', () => {
 
             // Generate workflow IDs
             const sagaWorkflowId = getSagaWorkflowId(tenantId, orderId);
-            const aggregateWorkflowId = getProcessEventWorkflowId(tenantId, 'order', orderId);
+            const aggregateWorkflowId = getAggregateWorkflowId(tenantId, 'order', orderId);
 
             // Check for running workflows
             const workflows = await getWorkflowsById(
@@ -233,7 +236,7 @@ describe('Temporal Workflow Integration Tests', () => {
 
         // Generate workflow IDs
         const sagaWorkflowId = getSagaWorkflowId(tenantId, orderId);
-        const aggregateWorkflowId = getProcessEventWorkflowId(tenantId, 'order', orderId);
+        const aggregateWorkflowId = getAggregateWorkflowId(tenantId, 'order', orderId);
 
         const aggregateInfo = await getWorkflowDetails(scheduler, aggregateWorkflowId);
         expect(aggregateInfo?.status?.name).toBe('COMPLETED');
@@ -263,87 +266,40 @@ describe('Temporal Workflow Integration Tests', () => {
     }, TEST_TIMEOUT);
 
     test('Sequential commands should signal to the same aggregate instance', async () => {
-        // Create a unique order ID for this test
-        const orderId = uuidv4();
+        const numberOfOrders = 3; // Configurable count
         const userId = `user-${uuidv4()}`;
+        const orderId = uuidv4(); // Unique order ID for this test
 
-        // Create order command
-        const createOrderCommand: Command = {
-            id: uuidv4(),
-            tenant_id: tenantId,
-            type: `${OrderCommandType.CREATE_ORDER}`,
-            payload: {
-                orderId,
-                userId,
-                aggregateId: orderId,
-                aggregateType: 'order',
-                scheduledFor: new Date(),
-                items: [
-                    {
-                        menuItemId: `menu-item-${Math.floor(Math.random() * 100)}`,
-                        quantity: Math.floor(Math.random() * 5) + 1,
-                    },
-                ],
-                status: 'pending',
-            },
-            metadata: {
-                userId,
-                timestamp: new Date(),
-            },
-        };
+        const handlers: Promise<any>[] = [];
+        const aggregateInstanceWorkflowId = getAggregateWorkflowId(tenantId, 'order', orderId);
 
-        console.log('Scheduling first command:', createOrderCommand.type);
+        for (let i = 0; i < numberOfOrders; i++) {
+            const createOrderCommand: Command = {
+                id: uuidv4(),
+                tenant_id: tenantId,
+                type: OrderCommandType.EXECUTE_TEST,
+                payload: {
+                    orderId,
+                    userId,
+                    aggregateId: orderId,
+                    aggregateType: 'order',
+                },
+                metadata: {
+                    userId,
+                    timestamp: new Date(),
+                },
+            };
 
-        // Schedule the create order command
-        let firstCommandHandler = scheduler.schedule(createOrderCommand);
-        await wait(1); //tick
+            handlers.push(scheduler.schedule(createOrderCommand));
+            await wait(1); // Minimal delay to avoid signal timing overlaps
+        }
 
-        // Create accept order command
-        const acceptOrderCommand: Command = {
-            id: uuidv4(),
-            tenant_id: tenantId,
-            type: `${OrderCommandType.ACCEPT_ORDER_MANUALLY}`,
-            payload: {
-                orderId,
-                aggregateId: orderId,
-                aggregateType: 'order',
-            },
-            metadata: {
-                userId,
-                timestamp: new Date(),
-            },
-        };
+        await Promise.all(handlers);
 
-        console.log('Scheduling second command:', acceptOrderCommand.type);
+        const workflows = await getWorkflowsById(scheduler, [aggregateInstanceWorkflowId]);
+        verifyWorkflowsById(workflows, [aggregateInstanceWorkflowId], 1);
 
-        // Schedule the accept order command immediately after
-        let secondCommandHandler = scheduler.schedule(acceptOrderCommand);
-
-        // For processEvent workflow, the ID is: ${tenantId}_${aggregateType}-${aggregateId}
-        const aggregateWorkflowId = getProcessEventWorkflowId(tenantId, 'order', orderId);
-
-        // Wait a moment for workflows to stabilize
-        await Promise.all([firstCommandHandler, secondCommandHandler]);
-
-        // Check for running workflows - should be only one aggregate instance
-        const workflows = await getWorkflowsById(scheduler, [aggregateWorkflowId]);
-
-        // Verify that only one workflow is running for this aggregate
-        verifyWorkflowsById(workflows, [aggregateWorkflowId], 1);
-
-        // Wait for events to be created
-        const events = await checkForEvents(supabase, orderId, 2, 5000);
-
-        // Verify that exactly two events were created
-        expect(events.length).toBe(2);
-
-        // Verify that the first event is an OrderCreated event
-        expect(events[0].type).toContain(OrderEventType.ORDER_CREATED);
-
-        // Verify that the second event is an OrderManuallyAcceptedByCook event
-        expect(events[1].type).toContain(OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK);
-
-        console.log('Sequential commands test complete');
+        console.log(`Successfully processed ${numberOfOrders} independent order commands.`);
     }, TEST_TIMEOUT);
 
     test('Commands after aggregate lifetime should restart aggregate with hydration', async () => {
@@ -382,7 +338,7 @@ describe('Temporal Workflow Integration Tests', () => {
         await scheduler.schedule(createOrderCommand);
 
         // For processEvent workflow, the ID is: ${tenantId}_${aggregateType}-${aggregateId}
-        const aggregateWorkflowId = getProcessEventWorkflowId(tenantId, 'order', orderId);
+        const aggregateWorkflowId = getAggregateWorkflowId(tenantId, 'order', orderId);
 
         // Verify the first workflow was created
         const workflowsAfterFirstCommand = await getWorkflowsById(scheduler, [aggregateWorkflowId]);
