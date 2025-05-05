@@ -172,7 +172,6 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
       workflowId,
       taskQueue,
       args: [cmd],
-      searchAttributes,
       signal: 'externalCommand',
       signalArgs: [cmd],
       //workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE, //prevent sequential execution

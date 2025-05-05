@@ -99,6 +99,21 @@ export const getWorkflowsById = async (
   return workflows;
 };
 
+export const getWorkflowDetails = async (
+    scheduler: TemporalScheduler,
+    workflowId: string
+): Promise<WorkflowExecutionInfo | undefined> => {
+  const workflowClient = await scheduler.getClient();
+
+  const executions = workflowClient.list({ query: `WorkflowId = "${workflowId}"` });
+
+  for await (const wf of executions) {
+    return wf; // There should only be one for a given ID
+  }
+
+  return undefined;
+};
+
 /**
  * Verifies that the expected workflows are running
  * @param runningWorkflows The array of running workflows

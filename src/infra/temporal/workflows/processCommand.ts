@@ -28,7 +28,7 @@ const { executeCommand, loadAggregate, applyEvent } = proxyActivities<DomainActi
 
 // TTL in milliseconds for the workflow to stay alive after last activity
 const WORKFLOW_TTL_IN_MS = 1000;
-const WORKFLOW_TTL_INTERVAL_IN_MS = 500;
+const WORKFLOW_TTL_INTERVAL_IN_MS = 300;
 
 /**
  * Process commands for a specific aggregate
