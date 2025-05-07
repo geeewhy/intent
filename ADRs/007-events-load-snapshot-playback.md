@@ -1,6 +1,4 @@
-Here is a **precise, complete system proposal** based on everything you provided, structured exactly for your project's current state and future plans.
-
----
+## 007- ADR: Temporal Saga Orchestration Using `signalWithStart` and Idempotent Execution Plans
 
 # System Proposal: Event Sourced Aggregate Management with Temporal
 
