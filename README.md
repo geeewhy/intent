@@ -1,7 +1,10 @@
-# KitchenEats Backend
+# Hexagonal Architecture Multi-Tenant Backend with simplistic, principal driven but pragmatic ES/DDD
 
 A multi-tenant backend system for KitchenEats using hexagonal architecture with Supabase, Temporal, and PostgreSQL.
 
+Current outlook is in [docs/current.md](docs/current.md).
+
+Directory structure is in [docs/structure.md](docs/structure.md).
 ## Architecture
 
 This project implements a hexagonal architecture (ports and adapters) pattern to separate the core domain logic from infrastructure concerns. The system is designed to be multi-tenant, with each household (tenant) having its own isolated data and real-time communication.

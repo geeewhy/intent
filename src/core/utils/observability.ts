@@ -1,5 +1,5 @@
 //core/order/index.ts
-import {SagaContext} from "./contracts";
+import {SagaContext} from "../contracts";
 
 export function trace(
     ctx: SagaContext,

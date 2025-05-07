@@ -39,7 +39,7 @@ describe('Temporal Workflow Integration Tests', () => {
     afterAll(async () => {
         // Any cleanup needed
         console.log('Cleaning up test resources, waiting workflows to finish...');
-        await wait(2000); // Give some time for workflows to finish
+        await wait(3000); // Give some time for workflows to finish
         await verifyNoLeakedWorkflows(scheduler, tenantId);
         console.log('Test cleanup complete');
     });

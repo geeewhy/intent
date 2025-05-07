@@ -1,13 +1,15 @@
-//core/order/sagas/order.saga.ts
-import {Command, Event, ProcessPlan, SagaContext} from '../../contracts';
-import {trace} from '../../observability';
+// core/order/sagas/order.saga.ts
+import { Command, Event, ProcessPlan, SagaContext } from '../../contracts';
+import { trace } from '../../utils/observability';
+import { buildCommand } from '../../utils/command-factory';
+import { inheritMetadata } from '../../utils/metadata';
 import {
     OrderCommandType,
-    OrderEventType
+    OrderEventType,
 } from '../contracts';
 
 export class OrderSaga {
-    static readonly sagaName = 'saga:'+OrderSaga.name;
+    static readonly sagaName = 'saga:' + OrderSaga.name;
 
     static reactsTo(): string[] {
         return [
@@ -21,31 +23,28 @@ export class OrderSaga {
     }
 
     static async react(input: Command | Event, ctx: SagaContext): Promise<ProcessPlan> {
-        const plan: ProcessPlan = {commands: []};
+        const plan: ProcessPlan = { commands: [] };
+        const tenantId = input.tenant_id;
+        const baseMeta = inheritMetadata(input, ctx, { source: this.sagaName });
 
         switch (input.type) {
-            // Saga now reacts to OrderCreated event instead of createOrder command
             case OrderEventType.ORDER_CREATED: {
-                console.log("[OrderSaga] TRIGGERED by OrderCreated event", input);
-                const {orderId, userId} = input.payload;
-                const tenantId = input.tenant_id;
+                const { orderId, userId } = input.payload;
                 const delayInMs = 2000;
-                const cancelCmd: Command = {
-                    id: await ctx.nextId(),
-                    tenant_id: tenantId,
-                    type: OrderCommandType.CANCEL_ORDER,
-                    payload: {orderId, reason: 'Cook did not respond'},
-                    metadata: {
-                        userId,
-                        timestamp: new Date(new Date().getTime() + delayInMs),
-                        causationId: input.id,
-                        correlationId: input.metadata?.correlationId,
-                        source: this.sagaName,
-                        requestId: ctx.getHint?.('requestId'),
-                    },
-                };
 
-                plan.delays = [{cmd: cancelCmd, ms: delayInMs}];
+                plan.delays = [
+                    {
+                        cmd: buildCommand(await ctx.nextId(), tenantId, OrderCommandType.CANCEL_ORDER, {
+                            orderId,
+                            reason: 'Cook did not respond',
+                        }, {
+                            ...baseMeta,
+                            userId,
+                            timestamp: new Date(Date.now() + delayInMs),
+                        }),
+                        ms: delayInMs,
+                    },
+                ];
 
                 trace(ctx, 'OrderSaga:ORDER_CREATED', {
                     delayInMs,
@@ -57,99 +56,74 @@ export class OrderSaga {
                 break;
             }
 
-            // Keep this case for backward compatibility, but it's no longer the primary path
-            case OrderCommandType.CREATE_ORDER: {
-                console.log("[OrderSaga] TRIGGERED by createOrder command (deprecated path)", input);
-                // No action needed - we now react to the OrderCreated event instead
-                break;
-            }
-
             case OrderCommandType.UPDATE_ORDER_STATUS: {
-                const {orderId, status} = input.payload;
-                const tenantId = input.tenant_id;
-                const delayInMs = 10 * 60 * 1000;
-
+                const { orderId, status } = input.payload;
                 if (status === 'confirmed') {
-                    // Order confirmed; potentially schedule next step like auto-cook in 10m
-                    const nextStatus: Command = {
-                        id: await ctx.nextId(),
-                        tenant_id: tenantId,
-                        type: OrderCommandType.UPDATE_ORDER_STATUS,
-                        payload: {orderId, status: 'cooking'},
-                        metadata: {
-                            userId: input.metadata?.userId,
-                            timestamp: new Date(new Date().getTime() + delayInMs),
-                            causationId: input.id,
-                            correlationId: input.metadata?.correlationId,
-                            source: this.sagaName,
-                            requestId: ctx.getHint?.('requestId'),
-                        },
-                    };
+                    const delayInMs = 10 * 60 * 1000;
 
-                    plan.delays = [{cmd: nextStatus, ms: delayInMs}]; // e.g. auto-start cooking
+                    plan.delays = [
+                        {
+                            cmd: buildCommand(await ctx.nextId(), tenantId, OrderCommandType.UPDATE_ORDER_STATUS, {
+                                orderId,
+                                status: 'cooking',
+                            }, {
+                                ...baseMeta,
+                                userId: input.metadata?.userId,
+                                timestamp: new Date(Date.now() + delayInMs),
+                            }),
+                            ms: delayInMs,
+                        },
+                    ];
                 }
 
                 break;
             }
 
-            case OrderCommandType.CANCEL_ORDER:
-                // Nothing to follow; cancel is terminal
+            case OrderCommandType.CANCEL_ORDER: {
                 trace(ctx, 'OrderSaga:CANCEL_ORDER', { note: 'No follow-up. Terminal.' });
                 break;
+            }
 
             case OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK: {
-                const {orderId, userId} = input.payload;
-                const tenantId = input.tenant_id;
+                const { orderId, userId } = input.payload;
+                const delayInMs = 15 * 60 * 1000;
 
-                // When an order is manually accepted by a cook, we might want to schedule
-                // a reminder to start cooking if they don't start within a certain time
-                const delayInMs = 15 * 60 * 1000; // 15 minutes
-                const reminderCmd: Command = {
-                    id: await ctx.nextId(),
-                    tenant_id: tenantId,
-                    type: OrderCommandType.UPDATE_ORDER_STATUS,
-                    payload: {orderId, status: 'cooking'},
-                    metadata: {
-                        userId,
-                        timestamp: new Date(new Date().getTime() + delayInMs),
-                        causationId: input.id,
-                        correlationId: input.metadata?.correlationId,
-                        source: this.sagaName,
-                        requestId: ctx.getHint?.('requestId'),
+                plan.delays = [
+                    {
+                        cmd: buildCommand(await ctx.nextId(), tenantId, OrderCommandType.UPDATE_ORDER_STATUS, {
+                            orderId,
+                            status: 'cooking',
+                        }, {
+                            ...baseMeta,
+                            userId,
+                            timestamp: new Date(Date.now() + delayInMs),
+                        }),
+                        ms: delayInMs,
                     },
-                };
+                ];
 
-                plan.delays = [{cmd: reminderCmd, ms: delayInMs}]; // 15 minutes
                 break;
             }
 
             case OrderEventType.ORDER_AUTO_ACCEPTED: {
-                const {orderId} = input.payload;
-                const tenantId = input.tenant_id;
-
-                // When an order is auto-accepted, we might want to schedule
-                // an automatic transition to cooking status
+                const { orderId } = input.payload;
                 const delayInMs = 5 * 60 * 1000;
-                const autoStartCmd: Command = {
-                    id: await ctx.nextId(),
-                    tenant_id: tenantId,
-                    type: OrderCommandType.UPDATE_ORDER_STATUS,
-                    payload: {orderId, status: 'cooking'},
-                    metadata: {
-                        timestamp: new Date(new Date().getTime() + delayInMs),
-                        causationId: input.id,
-                        correlationId: input.metadata?.correlationId,
-                        source: this.sagaName,
-                        requestId: ctx.getHint?.('requestId'),
-                    },
-                };
 
-                plan.delays = [{cmd: autoStartCmd, ms: delayInMs}]; // 5 minutes
+                plan.delays = [
+                    {
+                        cmd: buildCommand(await ctx.nextId(), tenantId, OrderCommandType.UPDATE_ORDER_STATUS, {
+                            orderId,
+                            status: 'cooking',
+                        }, {
+                            ...baseMeta,
+                            timestamp: new Date(Date.now() + delayInMs),
+                        }),
+                        ms: delayInMs,
+                    },
+                ];
+
                 break;
             }
-
-            default:
-                break;
         }
 
         return plan;
