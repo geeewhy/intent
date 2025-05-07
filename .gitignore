@@ -1,7 +1,7 @@
 dist
 node_modules
 .env
-coverage
+coverage/
 _obsolete
 .idea
 misc/conversations
