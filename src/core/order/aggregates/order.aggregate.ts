@@ -2,7 +2,6 @@
 /**
  * Order aggregate - core domain logic for orders
  */
-
 import {
   Event,
   Command,
@@ -10,8 +9,8 @@ import {
 
 import { BusinessRuleViolation } from '../../errors';
 
-import { 
-  UUID, 
+import {
+  UUID,
   OrderCommandType,
   OrderEventType,
   CreateOrderPayload,
@@ -31,16 +30,23 @@ import {
   OrderStatus,
   OrderItem
 } from '../contracts';
-import { isRetryableError } from "@temporalio/client";
+import { BaseAggregate, Snapshot } from '../../base/aggregate';
 import { orderExists, orderIsPending, orderIsNotCancelled } from '../conditions/order-conditions';
 import { buildEvent } from '../../utils/event-factory';
+
+type OrderSnapshotState = {
+  userId: UUID;
+  items: OrderItem[];
+  scheduledFor: string;
+  status: OrderStatus;
+  updatedAt: string;
+};
 
 /**
  * Order aggregate - represents the state and behavior of an order
  */
-export class OrderAggregate {
+export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
   public aggregateType = 'order'
-  id: UUID;
   userId: UUID;
   items: OrderItem[] = [];
   scheduledFor: Date;
@@ -66,8 +72,8 @@ export class OrderAggregate {
   /**
    * Private constructor - use static factory methods instead
    */
-  private constructor(id: UUID) {
-    this.id = id;
+  public constructor(id: UUID) {
+    super(id);
     this.createdAt = new Date();
     this.updatedAt = new Date();
     this.userId = '';
@@ -102,21 +108,6 @@ export class OrderAggregate {
     return base;
   }
 
-  /**
-   * Restore aggregate from a __SNAPSHOT__ event
-   */
-  public static fromSnapshot(event: Event<any>): OrderAggregate {
-    const snapshot = event.payload;
-    const order = new OrderAggregate(snapshot.id);
-    order.userId = snapshot.userId;
-    order.items = snapshot.items;
-    order.scheduledFor = new Date(snapshot.scheduledFor);
-    order.status = snapshot.status;
-    order.createdAt = new Date(snapshot.createdAt);
-    order.updatedAt = new Date(snapshot.updatedAt);
-    order.version = event.version;
-    return order;
-  }
 
   /**
    * Handle a command and produce events
@@ -516,6 +507,26 @@ export class OrderAggregate {
     if (!condition(this)) {
       throw new BusinessRuleViolation(message);
     }
+  }
+
+  applySnapshotState(state: OrderSnapshotState): void {
+    Object.assign(this, {
+      userId: state.userId,
+      items: state.items,
+      scheduledFor: new Date(state.scheduledFor),
+      status: state.status,
+      updatedAt: new Date(state.updatedAt),
+    });
+  }
+
+  extractSnapshotState(): OrderSnapshotState {
+    return {
+      userId: this.userId,
+      items: this.items,
+      scheduledFor: this.scheduledFor.toISOString(),
+      status: this.status,
+      updatedAt: this.updatedAt.toISOString(),
+    };
   }
 
   // Getters
