@@ -69,19 +69,39 @@ export class OrderAggregate {
   }
 
   /**
-   * Rehydrate an order aggregate from its event history
+   * Rehydrate an order aggregate from its event history, supporting snapshots.
+   * If a __SNAPSHOT__ event is found, uses it as the base and replays only subsequent events.
    */
   public static rehydrate(events: Event[]): OrderAggregate {
     if (!events.length) {
       throw new Error('Cannot rehydrate from empty event stream');
     }
+    // Find the last __SNAPSHOT__ event, if any
+    const snapshotIndex = events.map(e => e.type).lastIndexOf('__SNAPSHOT__');
+    let base: OrderAggregate;
+    if (snapshotIndex >= 0) {
+      base = OrderAggregate.fromSnapshot(events[snapshotIndex]);
+    } else {
+      base = new OrderAggregate(events[0].aggregateId);
+    }
+    // Replay only events after the snapshot (or all if none)
+    events.slice(snapshotIndex + 1).forEach(event => base.apply(event, false));
+    return base;
+  }
 
-    // Create a new aggregate with the ID from the first event
-    const order = new OrderAggregate(events[0].aggregateId);
-
-    // Apply all events to build the current state
-    events.forEach(event => order.apply(event, false));
-
+  /**
+   * Restore aggregate from a __SNAPSHOT__ event
+   */
+  public static fromSnapshot(event: Event<any>): OrderAggregate {
+    const snapshot = event.payload;
+    const order = new OrderAggregate(snapshot.id);
+    order.userId = snapshot.userId;
+    order.items = snapshot.items;
+    order.scheduledFor = new Date(snapshot.scheduledFor);
+    order.status = snapshot.status;
+    order.createdAt = new Date(snapshot.createdAt);
+    order.updatedAt = new Date(snapshot.updatedAt);
+    order.version = event.version;
     return order;
   }
 
