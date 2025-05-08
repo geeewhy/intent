@@ -33,7 +33,7 @@ import {
 } from '../contracts';
 import { isRetryableError } from "@temporalio/client";
 import { orderExists, orderIsPending, orderIsNotCancelled } from '../conditions/order-conditions';
-import { createEvent } from '../../utils/event-factory';
+import { buildEvent } from '../../utils/event-factory';
 
 /**
  * Order aggregate - represents the state and behavior of an order
@@ -173,7 +173,7 @@ export class OrderAggregate {
       status: 'pending',
       createdAt: new Date(),
     } as OrderCreatedPayload;
-    const event = createEvent<OrderCreatedPayload>(
+    const event = buildEvent<OrderCreatedPayload>(
       cmd.tenant_id,
       cmd.payload.orderId,
       OrderEventType.ORDER_CREATED,
@@ -213,7 +213,7 @@ export class OrderAggregate {
       status: cmd.payload.status,
       updatedAt: new Date(),
     } as OrderStatusUpdatedPayload;
-    const event = createEvent<OrderStatusUpdatedPayload>(
+    const event = buildEvent<OrderStatusUpdatedPayload>(
       cmd.tenant_id,
       cmd.payload.orderId,
       OrderEventType.ORDER_STATUS_UPDATED,
@@ -255,7 +255,7 @@ export class OrderAggregate {
       reason: cmd.payload.reason,
       cancelledAt: new Date(),
     } as OrderCancelledPayload;
-    const event = createEvent<OrderCancelledPayload>(
+    const event = buildEvent<OrderCancelledPayload>(
       cmd.tenant_id,
       cmd.payload.orderId,
       OrderEventType.ORDER_CANCELLED,
@@ -351,7 +351,7 @@ export class OrderAggregate {
       executedAt: new Date(),
       parameters: cmd.payload.parameters,
     } as TestExecutedPayload;
-    const event = createEvent<TestExecutedPayload>(
+    const event = buildEvent<TestExecutedPayload>(
       cmd.tenant_id,
       aggregateId,
       OrderEventType.TEST_EXECUTED,
@@ -387,7 +387,7 @@ export class OrderAggregate {
       executedAt: now,
       parameters: cmd.payload.parameters,
     } as RetryableTestExecutedPayload;
-    const event = createEvent<RetryableTestExecutedPayload>(
+    const event = buildEvent<RetryableTestExecutedPayload>(
       cmd.tenant_id,
       aggregateId,
       OrderEventType.TEST_RETRYABLE_EXECUTED,
@@ -417,7 +417,7 @@ export class OrderAggregate {
       userId: cmd.payload.userId,
       acceptedAt: new Date(),
     } as OrderManuallyAcceptedByCookPayload;
-    const event = createEvent<OrderManuallyAcceptedByCookPayload>(
+    const event = buildEvent<OrderManuallyAcceptedByCookPayload>(
       cmd.tenant_id,
       cmd.payload.orderId,
       OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK,
@@ -449,7 +449,7 @@ export class OrderAggregate {
       orderId: cmd.payload.orderId,
       acceptedAt: new Date(),
     } as OrderAutoAcceptedPayload;
-    const event = createEvent<OrderAutoAcceptedPayload>(
+    const event = buildEvent<OrderAutoAcceptedPayload>(
       cmd.tenant_id,
       cmd.payload.orderId,
       OrderEventType.ORDER_AUTO_ACCEPTED,

@@ -2,7 +2,7 @@
 
 import { Event, UUID } from '../contracts';
 
-export function createEvent<T>(
+export function buildEvent<T>(
     tenantId: UUID,
     aggregateId: UUID,
     type: string,
