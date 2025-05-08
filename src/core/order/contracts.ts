@@ -39,6 +39,7 @@ export enum OrderCommandType {
   EXECUTE_TEST = 'executeTest',
   ACCEPT_ORDER_MANUALLY = 'acceptOrderManually',
   ACCEPT_ORDER_AUTO = 'acceptOrderAuto',
+  TEST_RETRYABLE = 'testRetryable',
 }
 
 /**
@@ -51,6 +52,7 @@ export enum OrderEventType {
   TEST_EXECUTED = 'testExecuted',
   ORDER_MANUALLY_ACCEPTED_BY_COOK = 'orderManuallyAcceptedByCook',
   ORDER_AUTO_ACCEPTED = 'orderAutoAccepted',
+  TEST_RETRYABLE_EXECUTED = 'testRetryableExecuted',
 }
 
 /**
@@ -124,6 +126,15 @@ export interface ExecuteTestPayload {
 }
 
 /**
+ * Retryable test command payload
+ */
+export interface ExecuteRetryableTestPayload {
+  testId: UUID;
+  testName: string;
+  parameters?: Record<string, any>;
+}
+
+/**
  * Order manually accepted by cook event payload
  */
 export interface OrderManuallyAcceptedByCookPayload {
@@ -148,6 +159,17 @@ export interface TestExecutedPayload {
   testName: string;
   result: 'success' | 'failure';
   message?: string;
+  executedAt: Date;
+  parameters?: Record<string, any>;
+}
+
+/**
+ * Retryable test executed event payload
+ */
+export interface RetryableTestExecutedPayload {
+  testId: UUID;
+  testName: string;
+  result: 'success';
   executedAt: Date;
   parameters?: Record<string, any>;
 }

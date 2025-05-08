@@ -6,6 +6,7 @@ import { OrderAggregate } from '../aggregates/order.aggregate';
 import { OrderService } from '../services/order.service';
 import { Command, Event } from '../../contracts';
 import { OrderCommandType, OrderEventType } from '../contracts';
+import { BusinessRuleViolation } from '../../errors';
 
 // Mock event store
 const mockEventStore = {
@@ -68,6 +69,54 @@ describe('Order Domain', () => {
         expect(aggregate.getId()).toBe(orderId);
         expect(aggregate.getStatus()).toBe('pending');
         expect(aggregate.getVersion()).toBe(1);
+      });
+    });
+    describe('GIVEN a retryable test command', () => {
+      it('WHEN version is even THEN should throw a retryable BusinessRuleViolation', () => {
+        // GIVEN
+        const testId = 'retry-test-123';
+        const tenantId = 'tenant-789';
+        const aggregate = OrderAggregate.create({ payload: { orderId: testId } } as any);
+        const retryableCmd: Command = {
+          id: 'cmd-retry-fail',
+          tenant_id: tenantId,
+          type: OrderCommandType.TEST_RETRYABLE,
+          payload: { testId, testName: 'Retry Test', parameters: {} },
+        };
+        expect(() => aggregate.handle(retryableCmd)).toThrow(BusinessRuleViolation);
+      });
+
+      it('WHEN version is odd THEN should produce testRetryableExecuted event and update aggregate state', () => {
+        // GIVEN
+        const testId = 'retry-test-456';
+        const tenantId = 'tenant-789';
+        const aggregate = OrderAggregate.create({ payload: { orderId: testId } } as any);
+        // bump version to 1
+        const baselineCmd: Command = {
+          id: 'cmd-baseline',
+          tenant_id: tenantId,
+          type: OrderCommandType.EXECUTE_TEST,
+          payload: { testId, testName: 'Baseline Test', parameters: {} },
+        };
+        aggregate.handle(baselineCmd);
+        expect(aggregate.getVersion()).toBe(1);
+
+        const retryableCmd: Command = {
+          id: 'cmd-retry-success',
+          tenant_id: tenantId,
+          type: OrderCommandType.TEST_RETRYABLE,
+          payload: { testId, testName: 'Retry Test', parameters: { foo: 'bar' } },
+        };
+        // WHEN
+        const events = aggregate.handle(retryableCmd);
+        // THEN
+        expect(events).toHaveLength(1);
+        expect(events[0].type).toBe(OrderEventType.TEST_RETRYABLE_EXECUTED);
+        expect(events[0].aggregateId).toBe(testId);
+        expect(events[0].tenant_id).toBe(tenantId);
+        expect(events[0].payload.testId).toBe(testId);
+        expect(events[0].payload.testName).toBe('Retry Test');
+        expect(aggregate.getVersion()).toBe(2);
       });
     });
 

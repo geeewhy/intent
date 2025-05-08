@@ -22,6 +22,8 @@ import {
   OrderCancelledPayload,
   ExecuteTestPayload,
   TestExecutedPayload,
+  ExecuteRetryableTestPayload,
+  RetryableTestExecutedPayload,
   AcceptOrderManuallyPayload,
   AcceptOrderAutoPayload,
   OrderManuallyAcceptedByCookPayload,
@@ -29,22 +31,24 @@ import {
   OrderStatus,
   OrderItem
 } from '../contracts';
-import {isRetryableError} from "@temporalio/client";
+import { isRetryableError } from "@temporalio/client";
+import { orderExists, orderIsPending, orderIsNotCancelled } from '../conditions/order-conditions';
+import { createEvent } from '../../utils/event-factory';
 
 /**
  * Order aggregate - represents the state and behavior of an order
  */
 export class OrderAggregate {
   public aggregateType = 'order'
-  private id: UUID;
-  private userId: UUID;
-  private items: OrderItem[] = [];
-  private scheduledFor: Date;
-  private status: OrderStatus = 'pending';
-  private createdAt: Date;
-  private updatedAt: Date;
-  private cancelReason?: string;
-  private version: number = 0;
+  id: UUID;
+  userId: UUID;
+  items: OrderItem[] = [];
+  scheduledFor: Date;
+  status: OrderStatus = 'pending';
+  createdAt: Date;
+  updatedAt: Date;
+  cancelReason?: string;
+  version: number = 0;
 
   /**
    * Private constructor - use static factory methods instead
@@ -98,6 +102,8 @@ export class OrderAggregate {
         return this.handleAcceptOrderManually(cmd as Command<AcceptOrderManuallyPayload>);
       case OrderCommandType.ACCEPT_ORDER_AUTO:
         return this.handleAcceptOrderAuto(cmd as Command<AcceptOrderAutoPayload>);
+      case OrderCommandType.TEST_RETRYABLE:
+        return this.handleExecuteRetryableTest(cmd as Command<ExecuteRetryableTestPayload>);
       default:
         throw new Error(`Unknown command type: ${cmd.type}`);
     }
@@ -125,6 +131,9 @@ export class OrderAggregate {
         break;
       case OrderEventType.ORDER_AUTO_ACCEPTED:
         this.applyOrderAutoAccepted(event as Event<OrderAutoAcceptedPayload>);
+        break;
+      case OrderEventType.TEST_RETRYABLE_EXECUTED:
+        this.applyRetryableTestExecuted(event as Event<RetryableTestExecutedPayload>);
         break;
       default:
         throw new Error(`Unknown event type: ${event.type}`);
@@ -156,27 +165,26 @@ export class OrderAggregate {
     }
 
     // Create event
-    const event: Event<OrderCreatedPayload> = {
-      id: crypto.randomUUID(),
-      tenant_id: cmd.tenant_id,
-      type: OrderEventType.ORDER_CREATED,
-      aggregateId: cmd.payload.orderId,
-      version: this.version + 1,
-      payload: {
-        orderId: cmd.payload.orderId,
-        userId: cmd.payload.userId,
-        items: cmd.payload.items,
-        scheduledFor: cmd.payload.scheduledFor,
-        status: 'pending',
-        createdAt: new Date()
-      },
-      metadata: {
+    const payload = {
+      orderId: cmd.payload.orderId,
+      userId: cmd.payload.userId,
+      items: cmd.payload.items,
+      scheduledFor: cmd.payload.scheduledFor,
+      status: 'pending',
+      createdAt: new Date(),
+    } as OrderCreatedPayload;
+    const event = createEvent<OrderCreatedPayload>(
+      cmd.tenant_id,
+      cmd.payload.orderId,
+      OrderEventType.ORDER_CREATED,
+      this.version + 1,
+      payload,
+      {
         userId: cmd.metadata?.userId,
-        timestamp: new Date(),
         correlationId: cmd.metadata?.correlationId,
-        causationId: cmd.id
+        causationId: cmd.id,
       }
-    };
+    );
 
     // Apply the event to update the aggregate state
     this.apply(event);
@@ -188,14 +196,9 @@ export class OrderAggregate {
    * Handle update order status command
    */
   private handleUpdateOrderStatus(cmd: Command<UpdateOrderStatusPayload>): Event[] {
-    // Validate command
-    if (this.version === 0) {
-      throw new BusinessRuleViolation('Order does not exist');
-    }
-
-    if (this.status === 'cancelled') {
-      throw new BusinessRuleViolation('Cannot update status of a cancelled order');
-    }
+    // Validate command using registered conditions
+    this.assertCondition(orderExists, 'Order does not exist');
+    this.assertCondition(orderIsNotCancelled, 'Cannot update status of a cancelled order');
 
     if (this.status === cmd.payload.status) {
       return []; // No change, no event
@@ -205,24 +208,23 @@ export class OrderAggregate {
     this.validateStatusTransition(cmd.payload.status);
 
     // Create event
-    const event: Event<OrderStatusUpdatedPayload> = {
-      id: crypto.randomUUID(),
-      tenant_id: cmd.tenant_id,
-      type: OrderEventType.ORDER_STATUS_UPDATED,
-      aggregateId: cmd.payload.orderId,
-      version: this.version + 1,
-      payload: {
-        orderId: cmd.payload.orderId,
-        status: cmd.payload.status,
-        updatedAt: new Date()
-      },
-      metadata: {
+    const payload = {
+      orderId: cmd.payload.orderId,
+      status: cmd.payload.status,
+      updatedAt: new Date(),
+    } as OrderStatusUpdatedPayload;
+    const event = createEvent<OrderStatusUpdatedPayload>(
+      cmd.tenant_id,
+      cmd.payload.orderId,
+      OrderEventType.ORDER_STATUS_UPDATED,
+      this.version + 1,
+      payload,
+      {
         userId: cmd.metadata?.userId,
-        timestamp: new Date(),
         correlationId: cmd.metadata?.correlationId,
-        causationId: cmd.id
+        causationId: cmd.id,
       }
-    };
+    );
 
     // Apply the event to update the aggregate state
     this.apply(event);
@@ -234,38 +236,37 @@ export class OrderAggregate {
    * Handle cancel order command
    */
   private handleCancelOrder(cmd: Command<CancelOrderPayload>): Event[] {
-    // Validate command
-    if (this.version === 0) {
-      throw new BusinessRuleViolation('Order does not exist');
+    // Validate command using registered conditions
+    this.assertCondition(orderExists, 'Order does not exist');
+
+    // Already cancelled?
+    if (!orderIsNotCancelled(this)) {
+      return []; // No-op if already cancelled
     }
 
-    if (this.status === 'cancelled') {
-      return []; // Already cancelled, no event
-    }
-
+    // Cannot cancel after completion
     if (this.status === 'completed') {
       throw new BusinessRuleViolation('Cannot cancel a completed order');
     }
 
     // Create event
-    const event: Event<OrderCancelledPayload> = {
-      id: crypto.randomUUID(),
-      tenant_id: cmd.tenant_id,
-      type: OrderEventType.ORDER_CANCELLED,
-      aggregateId: cmd.payload.orderId,
-      version: this.version + 1,
-      payload: {
-        orderId: cmd.payload.orderId,
-        reason: cmd.payload.reason,
-        cancelledAt: new Date()
-      },
-      metadata: {
+    const payload = {
+      orderId: cmd.payload.orderId,
+      reason: cmd.payload.reason,
+      cancelledAt: new Date(),
+    } as OrderCancelledPayload;
+    const event = createEvent<OrderCancelledPayload>(
+      cmd.tenant_id,
+      cmd.payload.orderId,
+      OrderEventType.ORDER_CANCELLED,
+      this.version + 1,
+      payload,
+      {
         userId: cmd.metadata?.userId,
-        timestamp: new Date(),
         correlationId: cmd.metadata?.correlationId,
-        causationId: cmd.id
+        causationId: cmd.id,
       }
-    };
+    );
 
     // Apply the event to update the aggregate state
     this.apply(event);
@@ -329,33 +330,39 @@ export class OrderAggregate {
     this.status = 'confirmed';
     this.updatedAt = new Date(event.payload.acceptedAt);
   }
+  /**
+   * Apply retryable test executed event
+   */
+  private applyRetryableTestExecuted(event: Event<RetryableTestExecutedPayload>): void {
+    this.updatedAt = new Date(event.payload.executedAt);
+  }
 
   /**
    * Handle execute test command
    */
   private handleExecuteTest(cmd: Command<ExecuteTestPayload>): Event[] {
     // Create event
-    const event: Event<TestExecutedPayload> = {
-      id: crypto.randomUUID(),
-      tenant_id: cmd.tenant_id,
-      type: OrderEventType.TEST_EXECUTED,
-      aggregateId: this.id || cmd.payload.testId,
-      version: this.version + 1,
-      payload: {
-        testId: cmd.payload.testId,
-        testName: cmd.payload.testName,
-        result: 'success',
-        message: 'Test executed successfully',
-        executedAt: new Date(),
-        parameters: cmd.payload.parameters
-      },
-      metadata: {
+    const aggregateId = this.id || cmd.payload.testId;
+    const payload = {
+      testId: cmd.payload.testId,
+      testName: cmd.payload.testName,
+      result: 'success',
+      message: 'Test executed successfully',
+      executedAt: new Date(),
+      parameters: cmd.payload.parameters,
+    } as TestExecutedPayload;
+    const event = createEvent<TestExecutedPayload>(
+      cmd.tenant_id,
+      aggregateId,
+      OrderEventType.TEST_EXECUTED,
+      this.version + 1,
+      payload,
+      {
         userId: cmd.metadata?.userId,
-        timestamp: new Date(),
         correlationId: cmd.metadata?.correlationId,
-        causationId: cmd.id
+        causationId: cmd.id,
       }
-    };
+    );
 
     // Apply the event to update the aggregate state
     this.apply(event);
@@ -364,37 +371,64 @@ export class OrderAggregate {
   }
 
   /**
+   * Handle retryable test command
+   */
+  private handleExecuteRetryableTest(cmd: Command<ExecuteRetryableTestPayload>): Event[] {
+    // Fail on even versions (including initial version 0) to simulate retryable error
+    if (this.version % 2 === 0) {
+      throw new BusinessRuleViolation('Transient retryable error', undefined, true);
+    }
+    const aggregateId = this.id || cmd.payload.testId;
+    const now = new Date();
+    const payload = {
+      testId: cmd.payload.testId,
+      testName: cmd.payload.testName,
+      result: 'success',
+      executedAt: now,
+      parameters: cmd.payload.parameters,
+    } as RetryableTestExecutedPayload;
+    const event = createEvent<RetryableTestExecutedPayload>(
+      cmd.tenant_id,
+      aggregateId,
+      OrderEventType.TEST_RETRYABLE_EXECUTED,
+      this.version + 1,
+      payload,
+      {
+        userId: cmd.metadata?.userId,
+        correlationId: cmd.metadata?.correlationId,
+        causationId: cmd.id,
+      }
+    );
+    this.apply(event);
+    return [event];
+  }
+
+  /**
    * Handle accept order manually command
    */
   private handleAcceptOrderManually(cmd: Command<AcceptOrderManuallyPayload>): Event[] {
-    // Validate command
-    if (this.version === 0) {
-      throw new BusinessRuleViolation('Order does not exist');
-    }
-
-    if (this.status !== 'pending') {
-      throw new BusinessRuleViolation('Only pending orders can be accepted');
-    }
+    // Validate command using registered conditions
+    this.assertCondition(orderExists, 'Order does not exist');
+    this.assertCondition(orderIsPending, 'Only pending orders can be accepted');
 
     // Create event
-    const event: Event<OrderManuallyAcceptedByCookPayload> = {
-      id: crypto.randomUUID(),
-      tenant_id: cmd.tenant_id,
-      type: OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK,
-      aggregateId: cmd.payload.orderId,
-      version: this.version + 1,
-      payload: {
-        orderId: cmd.payload.orderId,
-        userId: cmd.payload.userId,
-        acceptedAt: new Date()
-      },
-      metadata: {
+    const payload = {
+      orderId: cmd.payload.orderId,
+      userId: cmd.payload.userId,
+      acceptedAt: new Date(),
+    } as OrderManuallyAcceptedByCookPayload;
+    const event = createEvent<OrderManuallyAcceptedByCookPayload>(
+      cmd.tenant_id,
+      cmd.payload.orderId,
+      OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK,
+      this.version + 1,
+      payload,
+      {
         userId: cmd.metadata?.userId,
-        timestamp: new Date(),
         correlationId: cmd.metadata?.correlationId,
-        causationId: cmd.id
+        causationId: cmd.id,
       }
-    };
+    );
 
     // Apply the event to update the aggregate state
     this.apply(event);
@@ -406,33 +440,27 @@ export class OrderAggregate {
    * Handle accept order auto command
    */
   private handleAcceptOrderAuto(cmd: Command<AcceptOrderAutoPayload>): Event[] {
-    // Validate command
-    if (this.version === 0) {
-      throw new Error('Order does not exist');
-    }
-
-    if (this.status !== 'pending') {
-      throw new Error('Only pending orders can be accepted');
-    }
+    // Validate command using registered conditions
+    this.assertCondition(orderExists, 'Order does not exist');
+    this.assertCondition(orderIsPending, 'Only pending orders can be accepted');
 
     // Create event
-    const event: Event<OrderAutoAcceptedPayload> = {
-      id: crypto.randomUUID(),
-      tenant_id: cmd.tenant_id,
-      type: OrderEventType.ORDER_AUTO_ACCEPTED,
-      aggregateId: cmd.payload.orderId,
-      version: this.version + 1,
-      payload: {
-        orderId: cmd.payload.orderId,
-        acceptedAt: new Date()
-      },
-      metadata: {
+    const payload = {
+      orderId: cmd.payload.orderId,
+      acceptedAt: new Date(),
+    } as OrderAutoAcceptedPayload;
+    const event = createEvent<OrderAutoAcceptedPayload>(
+      cmd.tenant_id,
+      cmd.payload.orderId,
+      OrderEventType.ORDER_AUTO_ACCEPTED,
+      this.version + 1,
+      payload,
+      {
         userId: cmd.metadata?.userId,
-        timestamp: new Date(),
         correlationId: cmd.metadata?.correlationId,
-        causationId: cmd.id
+        causationId: cmd.id,
       }
-    };
+    );
 
     // Apply the event to update the aggregate state
     this.apply(event);
@@ -452,9 +480,23 @@ export class OrderAggregate {
       'completed': [],
       'cancelled': []
     };
+    const allowed = validTransitions[this.status];
+    if (!allowed) {
+      throw new Error(`Unhandled order status: ${this.status}`);
+    }
+    if (!allowed.includes(newStatus)) {
+      throw new BusinessRuleViolation(
+        `Invalid status transition from ${this.status} to ${newStatus}`
+      );
+    }
+  }
 
-    if (!validTransitions[this.status].includes(newStatus)) {
-      throw new Error(`Invalid status transition from ${this.status} to ${newStatus}`);
+  /**
+   * Assert a registered condition on this order or throw a BusinessRuleViolation
+   */
+  private assertCondition(condition: (order: OrderAggregate) => boolean, message: string): void {
+    if (!condition(this)) {
+      throw new BusinessRuleViolation(message);
     }
   }
 
