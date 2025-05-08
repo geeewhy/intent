@@ -51,6 +51,19 @@ export class OrderAggregate {
   version: number = 0;
 
   /**
+   * Map of command types to their handler functions
+   */
+  private readonly handlers: Record<OrderCommandType, (cmd: Command<any>) => Event[]> = {
+    [OrderCommandType.CREATE_ORDER]: this.handleCreateOrder.bind(this),
+    [OrderCommandType.UPDATE_ORDER_STATUS]: this.handleUpdateOrderStatus.bind(this),
+    [OrderCommandType.CANCEL_ORDER]: this.handleCancelOrder.bind(this),
+    [OrderCommandType.EXECUTE_TEST]: this.handleExecuteTest.bind(this),
+    [OrderCommandType.ACCEPT_ORDER_MANUALLY]: this.handleAcceptOrderManually.bind(this),
+    [OrderCommandType.ACCEPT_ORDER_AUTO]: this.handleAcceptOrderAuto.bind(this),
+    [OrderCommandType.TEST_RETRYABLE]: this.handleExecuteRetryableTest.bind(this),
+  };
+
+  /**
    * Private constructor - use static factory methods instead
    */
   private constructor(id: UUID) {
@@ -109,24 +122,9 @@ export class OrderAggregate {
    * Handle a command and produce events
    */
   public handle(cmd: Command): Event[] {
-    switch (cmd.type) {
-      case OrderCommandType.CREATE_ORDER:
-        return this.handleCreateOrder(cmd as Command<CreateOrderPayload>);
-      case OrderCommandType.UPDATE_ORDER_STATUS:
-        return this.handleUpdateOrderStatus(cmd as Command<UpdateOrderStatusPayload>);
-      case OrderCommandType.CANCEL_ORDER:
-        return this.handleCancelOrder(cmd as Command<CancelOrderPayload>);
-      case OrderCommandType.EXECUTE_TEST:
-        return this.handleExecuteTest(cmd as Command<ExecuteTestPayload>);
-      case OrderCommandType.ACCEPT_ORDER_MANUALLY:
-        return this.handleAcceptOrderManually(cmd as Command<AcceptOrderManuallyPayload>);
-      case OrderCommandType.ACCEPT_ORDER_AUTO:
-        return this.handleAcceptOrderAuto(cmd as Command<AcceptOrderAutoPayload>);
-      case OrderCommandType.TEST_RETRYABLE:
-        return this.handleExecuteRetryableTest(cmd as Command<ExecuteRetryableTestPayload>);
-      default:
-        throw new Error(`Unknown command type: ${cmd.type}`);
-    }
+    const handler = this.handlers[cmd.type as OrderCommandType];
+    if (!handler) throw new Error(`Unknown command type: ${cmd.type}`);
+    return handler(cmd);
   }
 
   /**
