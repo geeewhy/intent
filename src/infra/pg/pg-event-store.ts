@@ -7,7 +7,6 @@ import { Pool, PoolClient } from 'pg';
 import { Event, UUID } from '../../core/contracts';
 import { EventStorePort } from '../../core/ports';
 import { BaseAggregate } from '../../core/base/aggregate';
-import { getAggregateClass } from '../../core/aggregates';
 
 /**
  * PostgreSQL implementation of the EventStorePort

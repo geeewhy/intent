@@ -2,7 +2,7 @@
  * Tests for the BaseAggregate class
  */
 
-import { BaseAggregate, Snapshot } from '../aggregate';
+import { BaseAggregate } from '../aggregate';
 import { Event, UUID } from '../../contracts';
 
 // Define a simple state interface for our dummy aggregate
