@@ -10,8 +10,28 @@ export abstract class BaseAggregate<TState> {
 
     constructor(public id: UUID) {}
 
+    // Schema versioning
+    static CURRENT_SCHEMA_VERSION = 1;
+
+    // Default is identity (can override in subclass)
+    protected upcastSnapshotState?(raw: any, version: number): TState {
+        return raw;
+    }
+
+    applySnapshotState(raw: any, incomingVersion?: number): void {
+        const targetVersion = (this.constructor as any).CURRENT_SCHEMA_VERSION;
+        const inputVersion = incomingVersion ?? targetVersion;
+
+        const upcasted = this.upcastSnapshotState
+            ? this.upcastSnapshotState(raw, inputVersion)
+            : raw;
+
+        this.applyUpcastedSnapshot(upcasted);
+    }
+
+    protected abstract applyUpcastedSnapshot(state: TState): void;
+
     abstract extractSnapshotState(): TState;
-    abstract applySnapshotState(state: TState): void;
 
     toSnapshot(): Snapshot<TState> {
         return {
@@ -19,13 +39,14 @@ export abstract class BaseAggregate<TState> {
             type: this.aggregateType,
             state: this.extractSnapshotState(),
             createdAt: new Date().toISOString(),
+            schemaVersion: (this.constructor as any).CURRENT_SCHEMA_VERSION,
         };
     }
 
     static fromSnapshot<T extends BaseAggregate<any>>(this: new (id: UUID) => T, event: any): T {
         const instance = new this(event.payload.id);
         instance.version = event.version;
-        instance.applySnapshotState(event.payload.state);
+        instance.applySnapshotState(event.payload.state, event.payload.schemaVersion);
         return instance;
     }
 
@@ -40,4 +61,5 @@ export interface Snapshot<T> {
     type: string;
     state: T;
     createdAt: string;
+    schemaVersion: number;
 }

@@ -86,9 +86,9 @@ export async function loadAggregate(
 
         // If a snapshot exists, create an aggregate instance and apply the snapshot state
         if (snapshot) {
-            console.log(`[loadAggregate] Loaded snapshot at version ${snapshot.version}`);
+            console.log(`[loadAggregate] Loaded snapshot at version ${snapshot.version} (schema version ${snapshot.schemaVersion})`);
             aggregate = new AggregateClass(aggregateId);
-            aggregate.applySnapshotState(snapshot.state);
+            aggregate.applySnapshotState(snapshot.state, snapshot.schemaVersion);
             aggregate.version = snapshot.version;
             fromVersion = snapshot.version;
         }

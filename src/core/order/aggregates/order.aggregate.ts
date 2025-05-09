@@ -47,6 +47,8 @@ type OrderSnapshotState = {
  */
 export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
   public aggregateType = 'order'
+  static CURRENT_SCHEMA_VERSION = 1;
+
   userId: UUID;
   items: OrderItem[] = [];
   scheduledFor: Date;
@@ -509,7 +511,13 @@ export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
     }
   }
 
-  applySnapshotState(state: OrderSnapshotState): void {
+  protected upcastSnapshotState(raw: any, version: number): OrderSnapshotState {
+    // In this simple example, we don't need to upcast anything
+    // If we had a schema version 2 with new fields, we would handle it here
+    return raw;
+  }
+
+  protected applyUpcastedSnapshot(state: OrderSnapshotState): void {
     Object.assign(this, {
       userId: state.userId,
       items: state.items,

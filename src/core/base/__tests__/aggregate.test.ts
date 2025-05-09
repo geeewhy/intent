@@ -69,7 +69,12 @@ class ExampleAggregate extends BaseAggregate<ExampleState> {
     };
   }
 
-  applySnapshotState(state: ExampleState): void {
+  protected upcastSnapshotState(raw: any, version: number): ExampleState {
+    // In this simple example, we don't need to upcast anything
+    return raw;
+  }
+
+  protected applyUpcastedSnapshot(state: ExampleState): void {
     this.name = state.name;
     this.counter = state.counter;
     this.items = [...state.items];
@@ -161,6 +166,7 @@ describe('BaseAggregate', () => {
       expect(snapshot.state.items).toEqual(['item1']);
       expect(snapshot.createdAt).toBeDefined();
       expect(typeof snapshot.createdAt).toBe('string');
+      expect(snapshot.schemaVersion).toBe(1); // Default schema version
     });
   });
 

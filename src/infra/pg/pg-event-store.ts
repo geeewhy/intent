@@ -36,12 +36,13 @@ export class PgEventStore implements EventStorePort {
   async snapshotAggregate(tenantId: UUID, aggregate: BaseAggregate<any>): Promise<void> {
     const snapshot = aggregate.toSnapshot();
     await this.pool.query(`
-      INSERT INTO aggregates (id, tenant_id, type, version, snapshot, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO aggregates (id, tenant_id, type, version, snapshot, created_at, schema_version)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (id, tenant_id) DO UPDATE
       SET version = EXCLUDED.version,
           snapshot = EXCLUDED.snapshot,
-          created_at = EXCLUDED.created_at
+          created_at = EXCLUDED.created_at,
+          schema_version = EXCLUDED.schema_version
     `, [
       snapshot.id,
       tenantId,
@@ -49,6 +50,7 @@ export class PgEventStore implements EventStorePort {
       aggregate.version,
       JSON.stringify(snapshot.state),
       snapshot.createdAt,
+      snapshot.schemaVersion,
     ]);
   }
 
@@ -114,7 +116,7 @@ export class PgEventStore implements EventStorePort {
    * @param aggregateId ID of the aggregate
    * @returns Snapshot version and state, or null if no snapshot exists
    */
-  async loadSnapshot(tenantId: UUID, aggregateType: string, aggregateId: UUID): Promise<{ version: number; state: any } | null> {
+  async loadSnapshot(tenantId: UUID, aggregateType: string, aggregateId: UUID): Promise<{ version: number; state: any; schemaVersion: number } | null> {
     const client = await this.pool.connect();
     try {
       // Set tenant context for RLS
@@ -122,7 +124,7 @@ export class PgEventStore implements EventStorePort {
 
       // Check if a snapshot exists
       const snapshotResult = await client.query(`
-        SELECT version, snapshot FROM aggregates
+        SELECT version, snapshot, schema_version FROM aggregates
         WHERE tenant_id = $1 AND id = $2 AND type = $3
       `, [tenantId, aggregateId, aggregateType]);
 
@@ -130,7 +132,8 @@ export class PgEventStore implements EventStorePort {
         const snapshotRow = snapshotResult.rows[0];
         return {
           version: snapshotRow.version,
-          state: snapshotRow.snapshot
+          state: snapshotRow.snapshot,
+          schemaVersion: snapshotRow.schema_version ?? 1
         };
       }
 

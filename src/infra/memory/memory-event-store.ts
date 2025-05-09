@@ -14,7 +14,7 @@ export class InMemoryEventStore implements EventStorePort {
   private events = new Map<string, Event[]>();
 
   // Store snapshots with key format: tenantId-aggregateType-aggregateId
-  private snapshots = new Map<string, { version: number, snapshot: any }>();
+  private snapshots = new Map<string, { version: number, snapshot: any, schemaVersion: number }>();
 
   /**
    * Generate a key for the store
@@ -62,7 +62,8 @@ export class InMemoryEventStore implements EventStorePort {
           id: aggregateId,
           version: newVersion
           // Add other aggregate state here if needed
-        }
+        },
+        schemaVersion: 1 // Default schema version
       });
     }
   }
@@ -74,14 +75,15 @@ export class InMemoryEventStore implements EventStorePort {
    * @param aggregateId ID of the aggregate
    * @returns Snapshot version and state, or null if no snapshot exists
    */
-  async loadSnapshot(tenantId: UUID, aggregateType: string, aggregateId: UUID): Promise<{ version: number; state: any } | null> {
+  async loadSnapshot(tenantId: UUID, aggregateType: string, aggregateId: UUID): Promise<{ version: number; state: any; schemaVersion: number } | null> {
     const key = this.key(tenantId, aggregateType, aggregateId);
     const snapshot = this.snapshots.get(key);
 
     if (snapshot) {
       return {
         version: snapshot.version,
-        state: snapshot.snapshot
+        state: snapshot.snapshot,
+        schemaVersion: snapshot.schemaVersion
       };
     }
 
