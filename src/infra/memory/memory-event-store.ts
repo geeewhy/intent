@@ -12,7 +12,7 @@ import { EventStorePort } from '../../core/ports';
 export class InMemoryEventStore implements EventStorePort {
   // Store events with key format: tenantId-aggregateType-aggregateId
   private events = new Map<string, Event[]>();
-  
+
   // Store snapshots with key format: tenantId-aggregateType-aggregateId
   private snapshots = new Map<string, { version: number, snapshot: any }>();
 
@@ -36,23 +36,23 @@ export class InMemoryEventStore implements EventStorePort {
 
     const key = this.key(tenantId, aggregateType, aggregateId);
     const existingEvents = this.events.get(key) || [];
-    
+
     // Check current version for optimistic concurrency control
     const currentVersion = existingEvents.length;
-    
+
     if (currentVersion !== expectedVersion) {
       throw new Error(`VersionConflictError: expected ${expectedVersion}, found ${currentVersion}`);
     }
-    
+
     // Add version to each event
     const eventsWithVersion = events.map((event, index) => ({
       ...event,
       version: expectedVersion + index + 1
     }));
-    
+
     // Append events
     this.events.set(key, [...existingEvents, ...eventsWithVersion]);
-    
+
     // Create snapshot every 10 events
     const newVersion = expectedVersion + events.length;
     if (newVersion >= 10 && (newVersion % 10 === 0)) {
@@ -68,38 +68,53 @@ export class InMemoryEventStore implements EventStorePort {
   }
 
   /**
-   * Load events for an aggregate
-   * First checks if a snapshot exists. If so, loads snapshot + replays only newer events.
-   * Otherwise, replays from event 0.
+   * Load a snapshot for an aggregate
    * @param tenantId Tenant ID
    * @param aggregateType Type of the aggregate
    * @param aggregateId ID of the aggregate
+   * @returns Snapshot version and state, or null if no snapshot exists
+   */
+  async loadSnapshot(tenantId: UUID, aggregateType: string, aggregateId: UUID): Promise<{ version: number; state: any } | null> {
+    const key = this.key(tenantId, aggregateType, aggregateId);
+    const snapshot = this.snapshots.get(key);
+
+    if (snapshot) {
+      return {
+        version: snapshot.version,
+        state: snapshot.snapshot
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Load events for an aggregate
+   * Pure event loader that loads events from a specific version.
+   * @param tenantId Tenant ID
+   * @param aggregateType Type of the aggregate
+   * @param aggregateId ID of the aggregate
+   * @param fromVersion Version to start loading events from (default: 0)
    * @returns Events and version, or null if aggregate doesn't exist
    */
-  async load(tenantId: UUID, aggregateType: string, aggregateId: UUID): Promise<{ events: Event[]; version: number } | null> {
+  async load(tenantId: UUID, aggregateType: string, aggregateId: UUID, fromVersion = 0): Promise<{ events: Event[]; version: number } | null> {
     const key = this.key(tenantId, aggregateType, aggregateId);
     const allEvents = this.events.get(key) || [];
-    
+
     // If no events, return null
     if (allEvents.length === 0) {
       return null;
     }
-    
-    // Check if a snapshot exists
-    const snapshot = this.snapshots.get(key);
-    let events: Event[] = [];
-    let version: number;
-    
-    if (snapshot) {
-      // If snapshot exists, only return events after the snapshot version
-      events = allEvents.filter(event => event.version > snapshot.version);
-      version = snapshot.version + events.length;
-    } else {
-      // If no snapshot, return all events
-      events = [...allEvents];
-      version = events.length;
-    }
-    
+
+    // Filter events based on fromVersion
+    const events = allEvents.filter(event => event.version > fromVersion);
+
+    // Calculate the current version (max of fromVersion and highest event version)
+    const maxEventVersion = events.length > 0
+      ? Math.max(...events.map(e => e.version))
+      : 0;
+    const version = Math.max(fromVersion, maxEventVersion);
+
     return { events, version };
   }
 

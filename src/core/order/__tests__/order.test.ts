@@ -11,7 +11,8 @@ import { BusinessRuleViolation } from '../../errors';
 // Mock event store
 const mockEventStore = {
   append: jest.fn().mockResolvedValue(undefined),
-  load: jest.fn().mockResolvedValue({ events: [], version: 0 })
+  load: jest.fn().mockResolvedValue({ events: [], version: 0 }),
+  loadSnapshot: jest.fn().mockResolvedValue(null)
 };
 
 // Mock event publisher

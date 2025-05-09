@@ -108,15 +108,13 @@ export class PgEventStore implements EventStorePort {
   }
 
   /**
-   * Load events for an aggregate
-   * First checks if a snapshot exists. If so, loads snapshot + replays only newer events.
-   * Otherwise, replays from event 0.
+   * Load a snapshot for an aggregate
    * @param tenantId Tenant ID
    * @param aggregateType Type of the aggregate
    * @param aggregateId ID of the aggregate
-   * @returns Events and version, or null if aggregate doesn't exist
+   * @returns Snapshot version and state, or null if no snapshot exists
    */
-  async load(tenantId: UUID, aggregateType: string, aggregateId: UUID): Promise<{ events: Event[]; version: number; aggregate?: any } | null> {
+  async loadSnapshot(tenantId: UUID, aggregateType: string, aggregateId: UUID): Promise<{ version: number; state: any } | null> {
     const client = await this.pool.connect();
     try {
       // Set tenant context for RLS
@@ -128,43 +126,49 @@ export class PgEventStore implements EventStorePort {
         WHERE tenant_id = $1 AND id = $2 AND type = $3
       `, [tenantId, aggregateId, aggregateType]);
 
-      let fromVersion = 0;
-      let aggregate = null;
-
       if (snapshotResult && snapshotResult.rowCount && snapshotResult.rowCount > 0) {
         const snapshotRow = snapshotResult.rows[0];
-        fromVersion = snapshotRow.version;
-
-        // Deserialize the snapshot
-        const AggregateClass = getAggregateClass(aggregateType);
-        if (AggregateClass) {
-          const instance = new AggregateClass(aggregateId);
-          instance.applySnapshotState(snapshotRow.snapshot);
-          instance.version = snapshotRow.version;
-          aggregate = instance;
-        }
+        return {
+          version: snapshotRow.version,
+          state: snapshotRow.snapshot
+        };
       }
 
-      // Query events (all or just those after the snapshot)
-      const eventsQuery = fromVersion > 0
-        ? `
-          SELECT * FROM events
-          WHERE tenant_id = $1 AND aggregate_id = $2 AND aggregate_type = $3 AND version > $4
-          ORDER BY version ASC
-        `
-        : `
-          SELECT * FROM events
-          WHERE tenant_id = $1 AND aggregate_id = $2 AND aggregate_type = $3
-          ORDER BY version ASC
-        `;
+      return null;
+    } catch (error) {
+      console.error('Error loading snapshot:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 
-      const eventsParams = fromVersion > 0
-        ? [tenantId, aggregateId, aggregateType, fromVersion]
-        : [tenantId, aggregateId, aggregateType];
+  /**
+   * Load events for an aggregate
+   * Pure event loader that loads events from a specific version.
+   * @param tenantId Tenant ID
+   * @param aggregateType Type of the aggregate
+   * @param aggregateId ID of the aggregate
+   * @param fromVersion Version to start loading events from (default: 0)
+   * @returns Events and version, or null if aggregate doesn't exist
+   */
+  async load(tenantId: UUID, aggregateType: string, aggregateId: UUID, fromVersion = 0): Promise<{ events: Event[]; version: number } | null> {
+    const client = await this.pool.connect();
+    try {
+      // Set tenant context for RLS
+      await this.setTenantContext(client, tenantId);
 
+      // Query events from the specified version
+      const eventsQuery = `
+        SELECT * FROM events
+        WHERE tenant_id = $1 AND aggregate_id = $2 AND aggregate_type = $3 AND version > $4
+        ORDER BY version ASC
+      `;
+
+      const eventsParams = [tenantId, aggregateId, aggregateType, fromVersion];
       const eventsResult = await client.query(eventsQuery, eventsParams);
 
-      // If no events and no snapshot, return null
+      // If no events and fromVersion is 0, return null (aggregate doesn't exist)
       if (eventsResult.rowCount === 0 && fromVersion === 0) {
         return null;
       }
@@ -180,13 +184,13 @@ export class PgEventStore implements EventStorePort {
         metadata: row.metadata,
       }));
 
-      // Calculate the current version (max of snapshot version and highest event version)
+      // Calculate the current version (max of fromVersion and highest event version)
       const maxEventVersion = events.length > 0
         ? Math.max(...events.map(e => e.version))
         : 0;
       const version = Math.max(fromVersion, maxEventVersion);
 
-      return { events, version, aggregate };
+      return { events, version };
     } catch (error) {
       console.error('Error loading events:', error);
       throw error;

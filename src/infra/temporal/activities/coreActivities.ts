@@ -79,36 +79,53 @@ export async function loadAggregate(
             return null;
         }
 
-        // Load events from the event store
-        const result = await eventStore.load(tenantId, aggregateType, aggregateId);
+        // First, try to load a snapshot
+        const snapshot = await eventStore.loadSnapshot(tenantId, aggregateType, aggregateId);
+        let aggregate = null;
+        let fromVersion = 0;
 
-        if (!result) {
-            console.log(`[loadAggregate] No events found for ${aggregateType}:${aggregateId}`);
+        // If a snapshot exists, create an aggregate instance and apply the snapshot state
+        if (snapshot) {
+            console.log(`[loadAggregate] Loaded snapshot at version ${snapshot.version}`);
+            aggregate = new AggregateClass(aggregateId);
+            aggregate.applySnapshotState(snapshot.state);
+            aggregate.version = snapshot.version;
+            fromVersion = snapshot.version;
+        }
+
+        // Load events after the snapshot version (or from 0 if no snapshot)
+        const result = await eventStore.load(tenantId, aggregateType, aggregateId, fromVersion);
+
+        if (!result && !snapshot) {
+            console.log(`[loadAggregate] No events or snapshot found for ${aggregateType}:${aggregateId}`);
             // Create a new instance of the aggregate using a dynamic payload
             return AggregateClass.create(createAggregatePayload(aggregateType, aggregateId));
         }
 
-        // If we have a pre-loaded aggregate from a snapshot, use it
-        if (result.aggregate) {
-            console.log(`[loadAggregate] Loaded aggregate from snapshot at version ${result.aggregate.version}`);
-
-            // Apply any events that came after the snapshot
-            if (result.events.length > 0) {
-                console.log(`[loadAggregate] Applying ${result.events.length} events on top of snapshot`);
-                for (const event of result.events) {
-                    result.aggregate.apply(event);
-                }
-            }
-
-            return result.aggregate;
+        // If we have a snapshot but no events, return the aggregate from the snapshot
+        if (!result && snapshot) {
+            console.log(`[loadAggregate] Using snapshot with no additional events`);
+            return aggregate;
         }
 
-        console.log(`[loadAggregate] Loaded ${result.events.length} events for ${aggregateType}:${aggregateId}`);
+        // If we have events but no snapshot, rebuild the aggregate from events
+        if (result && !snapshot) {
+            console.log(`[loadAggregate] Loaded ${result.events.length} events for ${aggregateType}:${aggregateId}`);
+            return AggregateClass.rehydrate(result.events);
+        }
 
-        // Rebuild the aggregate from events
-        const aggregateInstance = AggregateClass.rehydrate(result.events);
+        // If we have both a snapshot and events, apply the events to the aggregate
+        if (result && snapshot && aggregate) {
+            console.log(`[loadAggregate] Applying ${result.events.length} events on top of snapshot`);
+            for (const event of result.events) {
+                aggregate.apply(event);
+            }
+            return aggregate;
+        }
 
-        return aggregateInstance;
+        // This should never happen, but just in case
+        console.warn(`[loadAggregate] Unexpected state in loadAggregate`);
+        return null;
     } catch (error) {
         console.error(`[loadAggregate] Error loading aggregate ${aggregateType}:${aggregateId}:`, error);
         throw error;
@@ -268,7 +285,8 @@ export async function publishEvents(events: Event[]): Promise<void> {
       const aggregateType = event.payload.aggregateType;
 
       // Load the aggregate to get the current version
-      const result = await eventStore.load(tenant_id, aggregateType, aggregateId);
+      // We pass 0 as fromVersion to load all events
+      const result = await eventStore.load(tenant_id, aggregateType, aggregateId, 0);
       const currentVersion = result ? result.version : 0;
 
       // Append the event to the event store

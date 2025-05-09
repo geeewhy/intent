@@ -34,14 +34,23 @@ export interface EventStorePort {
 
   /**
    * Load events for an aggregate
-   * First checks if a snapshot exists. If so, loads snapshot + replays only newer events.
-   * Otherwise, replays from event 0.
+   * Pure event loader that loads events from a specific version.
    * @param tenantId Tenant ID
    * @param aggregateType Type of the aggregate
    * @param aggregateId ID of the aggregate
+   * @param fromVersion Version to start loading events from (default: 0)
    * @returns Events and version, or null if aggregate doesn't exist
    */
-  load(tenantId: UUID, aggregateType: string, aggregateId: UUID): Promise<{ events: Event[]; version: number } | null>;
+  load(tenantId: UUID, aggregateType: string, aggregateId: UUID, fromVersion?: number): Promise<{ events: Event[]; version: number } | null>;
+
+  /**
+   * Load a snapshot for an aggregate
+   * @param tenantId Tenant ID
+   * @param aggregateType Type of the aggregate
+   * @param aggregateId ID of the aggregate
+   * @returns Snapshot version and state, or null if no snapshot exists
+   */
+  loadSnapshot(tenantId: UUID, aggregateType: string, aggregateId: UUID): Promise<{ version: number; state: any } | null>;
 }
 
 /**
