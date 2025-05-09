@@ -1,6 +1,4 @@
-## 007- ADR: Temporal Saga Orchestration Using `signalWithStart` and Idempotent Execution Plans
-
-# System Proposal: Event Sourced Aggregate Management with Temporal
+# 007- ADR: System Proposal: Event Sourced Aggregate Management with Temporal
 
 ## Goals
 

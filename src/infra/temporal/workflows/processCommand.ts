@@ -1,4 +1,4 @@
-// processCommand.ts
+//src/infra/temporal/workflows/processCommand.ts
 import {
     defineSignal,
     proxyActivities,
@@ -22,13 +22,16 @@ type CommandResult = {
 const commandSignal = defineSignal<[Command]>('command');
 
 // Activities for interacting with the core domain
-const { executeCommand, loadAggregate, applyEvent } = proxyActivities<DomainActivities & typeof coreActivities>({
+const { executeCommand, loadAggregate, applyEvent, snapshotAggregate } = proxyActivities<DomainActivities & typeof coreActivities>({
     startToCloseTimeout: '1 minute',
 });
 
 // TTL in milliseconds for the workflow to stay alive after last activity
 const WORKFLOW_TTL_IN_MS = 1000;
 const WORKFLOW_TTL_INTERVAL_IN_MS = 300;
+
+// Track the number of applies since the last snapshot
+let appliesSinceLastSnapshot = 0;
 
 /**
  * Process commands for a specific aggregate
@@ -78,6 +81,16 @@ export async function processCommand(
                 const events = response.events || [];
                 if (events.length > 0) {
                     console.log(`[processCommand] Events from command:`, events.map(e => e.type));
+
+                    // Increment the counter after successful command execution
+                    appliesSinceLastSnapshot++;
+
+                    // Take a snapshot every 2 successful applies
+                    if (appliesSinceLastSnapshot >= 2) {
+                        await snapshotAggregate(tenantId, aggregateType, aggregateId);
+                        appliesSinceLastSnapshot = 0;
+                        console.log(`[processCommand] Snapshot taken after ${events.length} events`);
+                    }
                 }
             }
 

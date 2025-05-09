@@ -6,6 +6,7 @@ import { OrderAggregate } from './order/aggregates/order.aggregate';
 
 // Interface for aggregate classes with static methods
 export interface AggregateClass {
+  new (id: string): any;
   create: (cmd: any) => any;
   rehydrate: (events: any[]) => any;
 }

@@ -1,3 +1,4 @@
+//src/core/base/aggregate.ts
 import {UUID} from "../contracts";
 
 /**

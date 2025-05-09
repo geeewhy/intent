@@ -1,3 +1,4 @@
+//src/infra/temporal/activities/coreActivities.ts
 import type { Command, Event, UUID } from '../../../core/contracts';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
@@ -81,11 +82,25 @@ export async function loadAggregate(
         // Load events from the event store
         const result = await eventStore.load(tenantId, aggregateType, aggregateId);
 
-        if (!result || result.events.length === 0) {
+        if (!result) {
             console.log(`[loadAggregate] No events found for ${aggregateType}:${aggregateId}`);
-
             // Create a new instance of the aggregate using a dynamic payload
             return AggregateClass.create(createAggregatePayload(aggregateType, aggregateId));
+        }
+
+        // If we have a pre-loaded aggregate from a snapshot, use it
+        if (result.aggregate) {
+            console.log(`[loadAggregate] Loaded aggregate from snapshot at version ${result.aggregate.version}`);
+
+            // Apply any events that came after the snapshot
+            if (result.events.length > 0) {
+                console.log(`[loadAggregate] Applying ${result.events.length} events on top of snapshot`);
+                for (const event of result.events) {
+                    result.aggregate.apply(event);
+                }
+            }
+
+            return result.aggregate;
         }
 
         console.log(`[loadAggregate] Loaded ${result.events.length} events for ${aggregateType}:${aggregateId}`);
@@ -216,28 +231,53 @@ export async function applyEvent(
 }
 
 /**
+ * Create a snapshot of the current aggregate state
+ * @param tenantId Tenant ID
+ * @param aggregateType Type of the aggregate
+ * @param aggregateId ID of the aggregate
+ */
+export async function snapshotAggregate(
+  tenantId: UUID,
+  aggregateType: string,
+  aggregateId: UUID
+): Promise<void> {
+  console.log(`[snapshotAggregate] Creating snapshot for ${aggregateType}:${aggregateId}`);
+
+  try {
+    const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId);
+    if (aggregate) {
+      await eventStore.snapshotAggregate(tenantId, aggregate);
+      console.log(`[snapshotAggregate] Snapshot taken for ${aggregateType}:${aggregateId}`);
+    }
+  } catch (error) {
+    console.error(`[snapshotAggregate] Error creating snapshot for ${aggregateType}:${aggregateId}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Publish events to the EventStore
  * @param events Events to publish
  */
 export async function publishEvents(events: Event[]): Promise<void> {
-    console.log(`[publishEvents] Publishing ${events.length} events`);
+  console.log(`[publishEvents] Publishing ${events.length} events`);
 
-    try {
-        for (const event of events) {
-            const { tenant_id, aggregateId } = event;
-            const aggregateType = event.payload.aggregateType;
+  try {
+    for (const event of events) {
+      const { tenant_id, aggregateId } = event;
+      const aggregateType = event.payload.aggregateType;
 
-            // Load the aggregate to get the current version
-            const result = await eventStore.load(tenant_id, aggregateType, aggregateId);
-            const currentVersion = result ? result.version : 0;
+      // Load the aggregate to get the current version
+      const result = await eventStore.load(tenant_id, aggregateType, aggregateId);
+      const currentVersion = result ? result.version : 0;
 
-            // Append the event to the event store
-            await eventStore.append(tenant_id, aggregateType, aggregateId, [event], currentVersion);
+      // Append the event to the event store
+      await eventStore.append(tenant_id, aggregateType, aggregateId, [event], currentVersion);
 
-            console.log(`[publishEvents] Published event: ${event.type}`);
-        }
-    } catch (error) {
-        console.error(`[publishEvents] Error publishing events:`, error);
-        throw error;
+      console.log(`[publishEvents] Published event: ${event.type}`);
     }
+  } catch (error) {
+    console.error(`[publishEvents] Error publishing events:`, error);
+    throw error;
+  }
 }
