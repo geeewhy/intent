@@ -30,7 +30,7 @@ import {
   OrderStatus,
   OrderItem
 } from '../contracts';
-import { BaseAggregate, Snapshot } from '../../base/aggregate';
+import { BaseAggregate } from '../../base/aggregate';
 import { orderExists, orderIsPending, orderIsNotCancelled } from '../conditions/order-conditions';
 import { buildEvent } from '../../utils/event-factory';
 
@@ -59,7 +59,7 @@ export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
   /**
    * Map of command types to their handler functions
    */
-  private readonly handlers: Record<OrderCommandType, (cmd: Command<any>) => Event[]> = {
+  private readonly handlers: Record<OrderCommandType, (cmd: Command) => Event[]> = {
     [OrderCommandType.CREATE_ORDER]: this.handleCreateOrder.bind(this),
     [OrderCommandType.UPDATE_ORDER_STATUS]: this.handleUpdateOrderStatus.bind(this),
     [OrderCommandType.CANCEL_ORDER]: this.handleCancelOrder.bind(this),
@@ -326,7 +326,7 @@ export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
    * Apply order manually accepted by cook event
    */
   private applyOrderManuallyAcceptedByCook(event: Event<OrderManuallyAcceptedByCookPayload>): void {
-    // Update the order status to confirmed when a cook accepts it
+    // Update the order status to be confirmed when a cook accepts it
     this.status = 'confirmed';
     this.updatedAt = new Date(event.payload.acceptedAt);
   }
@@ -335,7 +335,7 @@ export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
    * Apply order auto accepted event
    */
   private applyOrderAutoAccepted(event: Event<OrderAutoAcceptedPayload>): void {
-    // Update the order status to confirmed when it's auto-accepted
+    // Update the order status to be confirmed when it's auto-accepted
     this.status = 'confirmed';
     this.updatedAt = new Date(event.payload.acceptedAt);
   }
