@@ -160,6 +160,7 @@ export interface TestExecutedPayload {
   result: 'success' | 'failure';
   message?: string;
   executedAt: Date;
+  numberExecutedTests: number;
   parameters?: Record<string, any>;
 }
 

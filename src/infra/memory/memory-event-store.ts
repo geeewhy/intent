@@ -47,7 +47,7 @@ export class InMemoryEventStore implements EventStorePort {
     // Add version to each event
     const eventsWithVersion = events.map((event, index) => ({
       ...event,
-      version: expectedVersion + index + 1
+      version: expectedVersion + index
     }));
 
     // Append events

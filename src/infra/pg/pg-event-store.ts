@@ -19,11 +19,11 @@ export class PgEventStore implements EventStorePort {
    */
   constructor(connectionConfig?: any) {
     this.pool = new Pool(connectionConfig || {
-      host: process.env.SUPABASE_DB_HOST || 'localhost',
-      port: parseInt(process.env.SUPABASE_DB_PORT || '5432'),
-      user: process.env.SUPABASE_DB_USER || 'postgres',
-      password: process.env.SUPABASE_DB_PASSWORD || 'postgres',
-      database: process.env.SUPABASE_DB_NAME || 'postgres',
+      host: process.env.LOCAL_DB_HOST || 'localhost',
+      port: parseInt(process.env.LOCAL_DB_PORT || '5432'),
+      user: process.env.LOCAL_DB_USER || 'postgres',
+      password: process.env.LOCAL_DB_PASSWORD || 'postgres',
+      database: process.env.LOCAL_DB_NAME || 'postgres',
     });
   }
 
@@ -80,7 +80,7 @@ export class PgEventStore implements EventStorePort {
       // Insert events
       for (let i = 0; i < events.length; i++) {
         const event = events[i];
-        const version = expectedVersion + i + 1;
+        const version = expectedVersion + i;
 
         await client.query(`
         INSERT INTO events (
@@ -168,6 +168,7 @@ export class PgEventStore implements EventStorePort {
       `;
 
       const eventsParams = [tenantId, aggregateId, aggregateType, fromVersion];
+
       const eventsResult = await client.query(eventsQuery, eventsParams);
 
       // If no events and fromVersion is 0, return null (aggregate doesn't exist)

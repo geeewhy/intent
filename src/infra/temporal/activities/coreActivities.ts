@@ -1,11 +1,11 @@
 //src/infra/temporal/activities/coreActivities.ts
-import type { Command, Event, UUID } from '../../../core/contracts';
-import { createClient } from '@supabase/supabase-js';
+import type {Command, Event, UUID} from '../../../core/contracts';
+import {createClient} from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { v4 as uuidv4 } from 'uuid';
-import { PgEventStore } from '../../pg/pg-event-store';
-import { getAggregateClass, supportsAggregateType, createAggregatePayload } from '../../../core/aggregates';
-import { BusinessRuleViolation } from '../../../core/errors';
+import {v4 as uuidv4} from 'uuid';
+import {PgEventStore} from '../../pg/pg-event-store';
+import {getAggregateClass, supportsAggregateType, createAggregatePayload} from '../../../core/aggregates';
+import {BusinessRuleViolation} from '../../../core/errors';
 
 dotenv.config();
 
@@ -21,7 +21,7 @@ const supabase = createClient(
             autoRefreshToken: false,
         },
         global: {
-            headers: { 'x-supabase-auth-role': 'service_role' }
+            headers: {'x-supabase-auth-role': 'service_role'}
         }
     }
 );
@@ -31,9 +31,9 @@ const supabase = createClient(
  * This will be picked up by the CommandPump to run via Temporal
  */
 export async function dispatchCommand(cmd: Command): Promise<void> {
-    const { error } = await supabase
+    const {error} = await supabase
         .from('commands')
-        .insert([{ ...cmd, status: 'pending', created_at: new Date() }]);
+        .insert([{...cmd, status: 'pending', created_at: new Date()}]);
 
     if (error) {
         console.error(`[dispatchCommand] Failed to insert command ${cmd.type}:`, error);
@@ -91,6 +91,8 @@ export async function loadAggregate(
             aggregate.applySnapshotState(snapshot.state, snapshot.schemaVersion);
             aggregate.version = snapshot.version;
             fromVersion = snapshot.version;
+
+            console.log(`[loadAggregate] Loaded snapshot, aggregate`, aggregate);
         }
 
         // Load events after the snapshot version (or from 0 if no snapshot)
@@ -172,7 +174,7 @@ export async function executeCommand(
 
         if (events.length === 0) {
             console.log(`[executeCommand] Command produced no events`);
-            return { events: [] };
+            return {events: []};
         }
 
         // Get the current version from the aggregate
@@ -182,14 +184,14 @@ export async function executeCommand(
         await eventStore.append(tenantId, aggregateType, aggregateId, events, currentVersion);
 
         console.log(`[executeCommand] Command executed, produced ${events.length} events`);
-        return { events };
+        return {events};
     } catch (error) {
         console.error(`[executeCommand] Error executing command ${command.type}:`, error);
 
         // Check if this is a business rule violation
         if (error instanceof BusinessRuleViolation) {
             console.log(`[executeCommand] Business rule violation: ${error.reason}`);
-            return { status: 'fail', error: error.reason };
+            return {status: 'fail', error: error.reason};
         }
 
         // For unexpected errors, rethrow to fail the workflow
@@ -221,11 +223,10 @@ export async function applyEvent(
             throw new Error(`Aggregate ${aggregateType}:${aggregateId} not found and could not be created`);
         }
 
-        let receivedEvents = [];
         // Apply the event to the aggregate
         if (typeof aggregate.apply === 'function') {
             // Use the aggregate's apply method
-            receivedEvents = aggregate.apply(event);
+            aggregate.apply(event);
             console.log(`[applyEvent] Event applied to aggregate: ${event.type}`);
         } else {
             throw new Error(`Aggregate ${aggregateType} does not have an apply method`);
@@ -234,10 +235,8 @@ export async function applyEvent(
         // Get the current version from the aggregate
         const currentVersion = aggregate.getVersion ? aggregate.getVersion() : 0;
 
-        // Append the event to the event store
-        if (receivedEvents) {
-            await eventStore.append(tenantId, aggregateType, aggregateId, [receivedEvents], currentVersion);
-        }
+        // Store the event in the event store
+        await eventStore.append(tenantId, aggregateType, aggregateId, [event], currentVersion - 1);
 
         console.log(`[applyEvent] Event applied and stored: ${event.type}`);
         return [];
@@ -254,22 +253,33 @@ export async function applyEvent(
  * @param aggregateId ID of the aggregate
  */
 export async function snapshotAggregate(
-  tenantId: UUID,
-  aggregateType: string,
-  aggregateId: UUID
+    tenantId: UUID,
+    aggregateType: string,
+    aggregateId: UUID
 ): Promise<void> {
-  console.log(`[snapshotAggregate] Creating snapshot for ${aggregateType}:${aggregateId}`);
+    console.log(`[snapshotAggregate] Creating snapshot for ${aggregateType}:${aggregateId}`);
 
-  try {
-    const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId);
-    if (aggregate) {
-      await eventStore.snapshotAggregate(tenantId, aggregate);
-      console.log(`[snapshotAggregate] Snapshot taken for ${aggregateType}:${aggregateId}`);
+    try {
+        const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId);
+        if (aggregate) {
+            console.log(`[snapshotAggregate] Aggregate loaded, version: ${aggregate.version}, creating snapshot...`);
+            await eventStore.snapshotAggregate(tenantId, aggregate);
+            console.log(`[snapshotAggregate] Snapshot taken for ${aggregateType}:${aggregateId}`);
+
+            // Verify the snapshot was created
+            const snapshot = await eventStore.loadSnapshot(tenantId, aggregateType, aggregateId);
+            if (snapshot) {
+                console.log(`[snapshotAggregate] Verified snapshot exists with version: ${snapshot.version}`);
+            } else {
+                console.error(`[snapshotAggregate] Failed to verify snapshot for ${aggregateType}:${aggregateId}`);
+            }
+        } else {
+            console.error(`[snapshotAggregate] No aggregate found for ${aggregateType}:${aggregateId}`);
+        }
+    } catch (error) {
+        console.error(`[snapshotAggregate] Error creating snapshot for ${aggregateType}:${aggregateId}:`, error);
+        throw error;
     }
-  } catch (error) {
-    console.error(`[snapshotAggregate] Error creating snapshot for ${aggregateType}:${aggregateId}:`, error);
-    throw error;
-  }
 }
 
 /**
@@ -277,25 +287,25 @@ export async function snapshotAggregate(
  * @param events Events to publish
  */
 export async function publishEvents(events: Event[]): Promise<void> {
-  console.log(`[publishEvents] Publishing ${events.length} events`);
+    console.log(`[publishEvents] Publishing ${events.length} events`);
 
-  try {
-    for (const event of events) {
-      const { tenant_id, aggregateId } = event;
-      const aggregateType = event.payload.aggregateType;
+    try {
+        for (const event of events) {
+            const {tenant_id, aggregateId} = event;
+            const aggregateType = event.payload.aggregateType;
 
-      // Load the aggregate to get the current version
-      // We pass 0 as fromVersion to load all events
-      const result = await eventStore.load(tenant_id, aggregateType, aggregateId, 0);
-      const currentVersion = result ? result.version : 0;
+            // Load the aggregate to get the current version
+            // We pass 0 as fromVersion to load all events
+            const result = await eventStore.load(tenant_id, aggregateType, aggregateId, 0);
+            const currentVersion = result ? result.version : 0;
 
-      // Append the event to the event store
-      await eventStore.append(tenant_id, aggregateType, aggregateId, [event], currentVersion);
+            // Append the event to the event store
+            await eventStore.append(tenant_id, aggregateType, aggregateId, [event], currentVersion);
 
-      console.log(`[publishEvents] Published event: ${event.type}`);
+            console.log(`[publishEvents] Published event: ${event.type}`);
+        }
+    } catch (error) {
+        console.error(`[publishEvents] Error publishing events:`, error);
+        throw error;
     }
-  } catch (error) {
-    console.error(`[publishEvents] Error publishing events:`, error);
-    throw error;
-  }
 }
