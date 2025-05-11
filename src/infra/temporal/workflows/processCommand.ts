@@ -20,7 +20,7 @@ const { executeCommand, loadAggregate, snapshotAggregate } = proxyActivities<Dom
     startToCloseTimeout: '1 minute',
 });
 
-const WORKFLOW_TTL_IN_MS = 30;
+const WORKFLOW_TTL_IN_MS = 1000;
 
 let appliesSinceLastSnapshot = 0;
 

@@ -6,7 +6,6 @@ import {OrderCommandType, OrderEventType} from '../../core/order';
 import {waitForNewEvents, waitForSnapshot} from "./utils";
 
 import {
-    wait,
     verifyNoLeakedWorkflows
 } from './utils';
 import { PgEventStore } from '../pg/pg-event-store';
@@ -14,7 +13,7 @@ import { PgEventStore } from '../pg/pg-event-store';
 // Test timeout - increase if needed for slower environments
 const TEST_TIMEOUT = 30000; // 30 seconds
 
-describe.only('Snapshot Integration Tests', () => {
+describe('Snapshot Integration Tests', () => {
     let scheduler: TemporalScheduler;
     let tenantId: string;
     let eventStore: PgEventStore;
