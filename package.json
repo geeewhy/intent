@@ -17,9 +17,9 @@
     "dev:command-pump": "ts-node-dev --respawn --transpile-only src/infra/pump/command-pump.ts",
     "dev:event-pump": "ts-node-dev --respawn --transpile-only src/infra/pump/event-pump.ts",
     "dev:cmdline": "ts-node src/client/cmdline/index.ts",
-    "test": "jest --testMatch='**/core/**/__tests__/**/*.ts'",
-    "test:core": "jest --testMatch='**/core/**/__tests__/**/*.ts'",
-    "test:integration": "jest --testMatch='**/integration-tests/**/*.test.ts'"
+    "test": "jest",
+    "test:core": "jest --selectProjects core",
+    "test:integration": "jest --selectProjects integration-tests"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

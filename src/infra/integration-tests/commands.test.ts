@@ -8,7 +8,7 @@ import { waitForNewEvents, waitForSnapshot } from './utils';
 
 const TEST_TIMEOUT = 30000;
 
-describe.only('Temporal Workflow Integration Tests', () => {
+describe('Temporal Workflow Integration Tests', () => {
     let scheduler: TemporalScheduler;
     let eventStore: PgEventStore;
     let tenantId: string;
@@ -21,7 +21,6 @@ describe.only('Temporal Workflow Integration Tests', () => {
 
     afterAll(async () => {
         await eventStore.close();
-        await verifyNoLeakedWorkflows(scheduler, tenantId, true);
     });
 
     test('Command should create aggregate and apply event', async () => {

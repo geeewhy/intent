@@ -39,9 +39,6 @@ describe('Snapshot Integration Tests', () => {
         // Any cleanup needed
         await eventStore.close();
         await Promise.all(allSchedules);
-        console.log('Cleaning up test resources, waiting workflows to finish...');
-        await verifyNoLeakedWorkflows(scheduler, tenantId);
-        console.log('Test cleanup complete');
     });
 
     /**

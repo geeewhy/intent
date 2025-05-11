@@ -1,7 +1,6 @@
 //src/infra/integration-tests/utils.ts
 import {TemporalScheduler} from '../temporal/temporal-scheduler';
 import {WorkflowExecutionInfo} from '@temporalio/client';
-import {expect} from '@jest/globals';
 import {Event} from '../../core/contracts';
 import {SupabaseClient} from '@supabase/supabase-js';
 import {PgEventStore} from '../pg/pg-event-store';
