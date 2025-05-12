@@ -19,7 +19,7 @@
     "dev:cmdline": "ts-node src/client/cmdline/index.ts",
     "test": "jest",
     "test:core": "jest --selectProjects core",
-    "test:integration": "jest --selectProjects integration-tests"
+    "test:integration": "jest --selectProjects integration"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
