@@ -46,15 +46,9 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
             throw new Error('Cannot rehydrate from empty events');
         }
 
-        const snapshotIndex = events.map(e => e.type).lastIndexOf('__SNAPSHOT__');
-        let base: SystemAggregate;
-        if (snapshotIndex >= 0) {
-            base = SystemAggregate.fromSnapshot(events[snapshotIndex]);
-        } else {
-            base = new SystemAggregate(events[0].aggregateId);
-        }
+        const base = new SystemAggregate(events[0].aggregateId);
 
-        events.slice(snapshotIndex + 1).forEach(event => base.apply(event, false));
+        events.forEach(event => base.apply(event, false));
         return base;
     }
 
