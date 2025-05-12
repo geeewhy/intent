@@ -5,6 +5,7 @@ import { Event, UUID } from '../contracts';
 export function buildEvent<T>(
     tenantId: UUID,
     aggregateId: UUID,
+    aggregateType: string,
     type: string,
     version: number,
     payload: T,
@@ -15,6 +16,7 @@ export function buildEvent<T>(
         tenant_id: tenantId,
         type,
         aggregateId,
+        aggregateType,
         version,
         payload,
         metadata: {

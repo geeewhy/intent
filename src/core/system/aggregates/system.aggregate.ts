@@ -99,6 +99,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
         const event = buildEvent<LogMessagePayload>(
             cmd.tenant_id,
             this.id,
+            this.aggregateType,
             SystemEventType.MESSAGE_LOGGED,
             this.version,
             payload,
@@ -128,6 +129,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
             const event = buildEvent<MultiEventEmittedPayload>(
                 cmd.tenant_id,
                 this.id,
+                this.aggregateType,
                 SystemEventType.MULTI_EVENT_EMITTED,
                 this.version + i,
                 payload,
@@ -157,6 +159,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
         const event = buildEvent<TestExecutedPayload>(
             cmd.tenant_id,
             this.id,
+            this.aggregateType,
             SystemEventType.TEST_EXECUTED,
             this.version,
             payload,
@@ -186,6 +189,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
         const event = buildEvent<RetryableTestExecutedPayload>(
             cmd.tenant_id,
             this.id,
+            this.aggregateType,
             SystemEventType.RETRYABLE_TEST_EXECUTED,
             this.version,
             payload,

@@ -181,6 +181,7 @@ export class PgEventStore implements EventStorePort {
         id: row.id,
         tenant_id: row.tenant_id,
         type: row.type,
+        aggregateType: row.aggregate_type,
         aggregateId: row.aggregate_id,
         version: row.version,
         payload: row.payload,

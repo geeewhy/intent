@@ -35,9 +35,9 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
     );
   }
 
-  /** Supports event routing (only aggregates) */
+  /** Supports event routing */
   supportsEvent(event: Event): event is Event {
-    return !!event.aggregateId && !!event.payload?.aggregateType;
+    return !!event.aggregateId && !!event.aggregateType;
   }
 
   /** Handle a command (always route to aggregate's processCommand workflow) */
@@ -105,7 +105,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
   /** Handle an event for aggregates and sagas */
   async on(event: Event): Promise<void> {
     if (!this.supportsEvent(event)) {
-      console.warn(`[WorkflowRouter] Ignored unsupported event`);
+      console.warn(`[WorkflowRouter] Ignored unsupported event`, event);
       return;
     }
 
@@ -113,7 +113,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
 
     // Route to Aggregate (processEvent)
     const { tenant_id, aggregateId } = event;
-    const aggregateType = event.payload.aggregateType;
+    const aggregateType = event.aggregateType;
     const workflowId = this.getAggregateWorkflowId(tenant_id, aggregateType, aggregateId);
 
     await this.client.signalWithStart('processEvent', {
@@ -121,8 +121,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
       taskQueue: 'aggregates',
       args: [tenant_id, aggregateType, aggregateId, event],
       signal: 'event',
-      signalArgs: [event],
-      workflowIdReusePolicy: WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
+      signalArgs: [event]
     });
 
     // Route to Saga(s) (processSaga) that match the event

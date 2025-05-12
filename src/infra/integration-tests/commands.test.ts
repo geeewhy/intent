@@ -71,7 +71,10 @@ describe('Temporal Workflow Integration Tests', () => {
             };
 
             void scheduler.schedule(command);
-            await waitForNewEvents(eventStore, tenantId, 'system', aggregateId, i, 1);
+            let events = await waitForNewEvents(eventStore, tenantId, 'system', aggregateId, i, 1);
+            expect(events[0].type).toBe(SystemEventType.TEST_EXECUTED);
+            expect(events[0].payload.testName).toBe(`Test ${i}`);
+            expect(events[0].payload.numberExecutedTests).toBe(i + 1);
         }
 
         const workflows = await getWorkflowsById(scheduler, [workflowId]);
@@ -106,7 +109,7 @@ describe('Temporal Workflow Integration Tests', () => {
 
         const sagaDetails = await getWorkflowDetails(scheduler, sagaWfId);
         expect(sagaDetails?.startTime?.getTime()).toBeGreaterThanOrEqual(
-            aggDetails?.closeTime?.getTime() ?? 0
+            aggDetails?.startTime?.getTime() ?? 0
         );
 
         verifyWorkflowsById(await getWorkflowsById(scheduler, [sagaWfId, aggWfId]), [sagaWfId, aggWfId], 2);

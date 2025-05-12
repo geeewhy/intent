@@ -54,6 +54,7 @@ describe('SystemAggregate', () => {
         type: SystemEventType.MESSAGE_LOGGED,
         payload: { message: 'Test message' } as MessageLoggedPayload,
         aggregateId: 'test-system',
+        aggregateType: 'system',
         version: 1
       },
       {
@@ -68,6 +69,7 @@ describe('SystemAggregate', () => {
           executedAt: new Date()
         } as TestExecutedPayload,
         aggregateId: 'test-system',
+        aggregateType: 'system',
         version: 2
       }
     ];
@@ -227,6 +229,7 @@ describe('SystemAggregate', () => {
       tenant_id: 'test-tenant',
       type: SystemEventType.MESSAGE_LOGGED,
       payload: { message: 'Test message' } as MessageLoggedPayload,
+      aggregateType: 'system',
       aggregateId: 'test-system',
       version: 1
     };
@@ -241,6 +244,7 @@ describe('SystemAggregate', () => {
       type: SystemEventType.MULTI_EVENT_EMITTED,
       payload: { index: 0 } as MultiEventEmittedPayload,
       aggregateId: 'test-system',
+      aggregateType: 'system',
       version: 2
     };
 
@@ -259,6 +263,7 @@ describe('SystemAggregate', () => {
         executedAt: new Date()
       } as RetryableTestExecutedPayload,
       aggregateId: 'test-system',
+      aggregateType: 'system',
       version: 3
     };
 

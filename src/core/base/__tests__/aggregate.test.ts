@@ -117,6 +117,7 @@ class ExampleAggregate extends BaseAggregate<ExampleState> {
       tenant_id: 'test-tenant',
       type: ExampleEventType.ITEM_ADDED,
       aggregateId,
+      aggregateType: 'example',
       version: 1,
       payload: { item }
     };
@@ -128,6 +129,7 @@ class ExampleAggregate extends BaseAggregate<ExampleState> {
       tenant_id: 'test-tenant',
       type: ExampleEventType.COUNTER_INCREMENTED,
       aggregateId,
+      aggregateType: 'example',
       version: 1,
       payload: { amount }
     };
@@ -139,6 +141,7 @@ class ExampleAggregate extends BaseAggregate<ExampleState> {
       tenant_id: 'test-tenant',
       type: ExampleEventType.NAME_CHANGED,
       aggregateId,
+      aggregateType: 'example',
       version: 1,
       payload: { name }
     };

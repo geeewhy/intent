@@ -36,6 +36,7 @@ export interface Event<T = any> {
     type: string;
     payload: T;
     aggregateId: UUID;
+    aggregateType: string;
     version: number;
     metadata?: Metadata;
 }

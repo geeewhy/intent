@@ -27,7 +27,11 @@ const {
 
 const WORKFLOW_TTL_IN_MS = 1000;
 
-export async function processCommand(): Promise<CommandResult> {
+export async function processCommand(
+    tenantId: UUID,
+    aggregateType: string,
+    aggregateId: UUID
+): Promise<CommandResult> {
     const commandQueue: Command[] = [];
     let lastCommandId: string | null = null;
     let appliesSinceLastSnapshot = 0;

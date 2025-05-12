@@ -29,6 +29,7 @@ describe('OrderSaga', () => {
         tenant_id: tenantId,
         type: OrderEventType.ORDER_CREATED,
         aggregateId: orderId,
+        aggregateType: 'order',
         version: 1,
         payload: {
           scheduledFor: new Date(),
@@ -196,6 +197,7 @@ describe('OrderSaga', () => {
         tenant_id: tenantId,
         type: OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK,
         aggregateId: orderId,
+        aggregateType: 'order',
         version: 1,
         payload: {
           orderId,
@@ -231,6 +233,7 @@ describe('OrderSaga', () => {
       const autoAcceptedEvent: Event = {
         id: 'event-123',
         tenant_id: tenantId,
+        aggregateType: 'order',
         type: OrderEventType.ORDER_AUTO_ACCEPTED,
         aggregateId: orderId,
         version: 1,

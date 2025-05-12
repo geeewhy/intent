@@ -4,7 +4,7 @@ import {
     proxyActivities,
     setHandler,
     sleep,
-    condition
+    condition, allHandlersFinished
 } from '@temporalio/workflow';
 import type { Command, Event } from '../../../core/contracts';
 import { SagaRegistry } from '../../../core/domains';
@@ -67,6 +67,8 @@ export async function processSaga(initialInput: Command | Event): Promise<void> 
             break;
         }
     }
+
+    await condition(allHandlersFinished);
 }
 
 /**

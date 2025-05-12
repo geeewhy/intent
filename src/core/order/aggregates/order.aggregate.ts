@@ -183,6 +183,7 @@ export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
         const event = buildEvent<OrderCreatedPayload>(
             cmd.tenant_id,
             cmd.payload.orderId,
+            this.aggregateType,
             OrderEventType.ORDER_CREATED,
             this.version,
             payload,
@@ -223,6 +224,7 @@ export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
         const event = buildEvent<OrderStatusUpdatedPayload>(
             cmd.tenant_id,
             cmd.payload.orderId,
+            this.aggregateType,
             OrderEventType.ORDER_STATUS_UPDATED,
             this.version,
             payload,
@@ -265,6 +267,7 @@ export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
         const event = buildEvent<OrderCancelledPayload>(
             cmd.tenant_id,
             cmd.payload.orderId,
+            this.aggregateType,
             OrderEventType.ORDER_CANCELLED,
             this.version,
             payload,
@@ -362,6 +365,7 @@ export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
         const event = buildEvent<TestExecutedPayload>(
             cmd.tenant_id,
             aggregateId,
+            this.aggregateType,
             OrderEventType.TEST_EXECUTED,
             this.version,
             payload,
@@ -398,6 +402,7 @@ export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
         const event = buildEvent<RetryableTestExecutedPayload>(
             cmd.tenant_id,
             aggregateId,
+            this.aggregateType,
             OrderEventType.TEST_RETRYABLE_EXECUTED,
             this.version,
             payload,
@@ -428,6 +433,7 @@ export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
         const event = buildEvent<OrderManuallyAcceptedByCookPayload>(
             cmd.tenant_id,
             cmd.payload.orderId,
+            this.aggregateType,
             OrderEventType.ORDER_MANUALLY_ACCEPTED_BY_COOK,
             this.version,
             payload,
@@ -460,6 +466,7 @@ export class OrderAggregate extends BaseAggregate<OrderSnapshotState> {
         const event = buildEvent<OrderAutoAcceptedPayload>(
             cmd.tenant_id,
             cmd.payload.orderId,
+            this.aggregateType,
             OrderEventType.ORDER_AUTO_ACCEPTED,
             this.version,
             payload,
