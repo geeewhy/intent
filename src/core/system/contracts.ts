@@ -1,5 +1,13 @@
-import { Command, Event, UUID } from '../contracts';
+// src/core/system/contracts.ts
+/**
+ * Core system contracts for commands and events
+ */
 
+export type UUID = string;
+
+/**
+ * System-specific command types
+ */
 export enum SystemCommandType {
   LOG_MESSAGE = 'logMessage',
   SIMULATE_FAILURE = 'simulateFailure',
@@ -8,6 +16,9 @@ export enum SystemCommandType {
   EXECUTE_RETRYABLE_TEST = 'executeRetryableTest',
 }
 
+/**
+ * System-specific event types
+ */
 export enum SystemEventType {
   MESSAGE_LOGGED = 'messageLogged',
   FAILURE_SIMULATED = 'failureSimulated',
@@ -16,8 +27,15 @@ export enum SystemEventType {
   RETRYABLE_TEST_EXECUTED = 'retryableTestExecuted',
 }
 
+/**
+ * System command payloads
+ */
 export interface LogMessagePayload {
   message: string;
+  systemId?: UUID;
+}
+
+export interface SimulateFailurePayload {
   systemId?: UUID;
 }
 
@@ -40,18 +58,13 @@ export interface ExecuteRetryableTestPayload {
   parameters?: Record<string, any>;
 }
 
-export interface SimulateFailurePayload {
+/**
+ * System event payloads
+ */
+export interface MessageLoggedPayload {
+  message: string;
   systemId?: UUID;
 }
-
-export type SystemCommand =
-  | Command<LogMessagePayload> & { type: SystemCommandType.LOG_MESSAGE }
-  | Command<SimulateFailurePayload> & { type: SystemCommandType.SIMULATE_FAILURE }
-  | Command<EmitMultipleEventsPayload> & { type: SystemCommandType.EMIT_MULTIPLE_EVENTS }
-  | Command<ExecuteTestPayload> & { type: SystemCommandType.EXECUTE_TEST }
-  | Command<ExecuteRetryableTestPayload> & { type: SystemCommandType.EXECUTE_RETRYABLE_TEST };
-
-export interface MessageLoggedPayload extends LogMessagePayload {}
 
 export interface FailureSimulatedPayload {
   systemId?: UUID;
@@ -65,9 +78,9 @@ export interface MultiEventEmittedPayload {
 export interface TestExecutedPayload {
   testId: UUID;
   testName: string;
-  result: 'success';
-  numberExecutedTests: number;
+  result: 'success' | 'failure';
   executedAt: Date;
+  numberExecutedTests: number;
   systemId?: UUID;
   parameters?: Record<string, any>;
 }
@@ -81,7 +94,19 @@ export interface RetryableTestExecutedPayload {
   parameters?: Record<string, any>;
 }
 
-export type SystemEvent = Event<any> & {
-  type: SystemEventType;
-  payload: MessageLoggedPayload | FailureSimulatedPayload | MultiEventEmittedPayload | TestExecutedPayload | RetryableTestExecutedPayload;
-};
+/**
+ * Union types (optional if not needed elsewhere)
+ */
+export type SystemCommandPayload =
+    | LogMessagePayload
+    | SimulateFailurePayload
+    | EmitMultipleEventsPayload
+    | ExecuteTestPayload
+    | ExecuteRetryableTestPayload;
+
+export type SystemEventPayload =
+    | MessageLoggedPayload
+    | FailureSimulatedPayload
+    | MultiEventEmittedPayload
+    | TestExecutedPayload
+    | RetryableTestExecutedPayload;

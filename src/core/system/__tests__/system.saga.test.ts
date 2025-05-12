@@ -1,8 +1,12 @@
-import { systemSaga } from '../sagas/system.saga';
+import { SystemSaga } from '../sagas/system.saga';
 import { SystemCommandType, SystemEventType } from '../contracts';
 
 describe('SystemSaga', () => {
-  test('should trigger log message command when multi event index is 2', () => {
+  test('reactsTo should include MULTI_EVENT_EMITTED', () => {
+    expect(SystemSaga.reactsTo()).toContain(SystemEventType.MULTI_EVENT_EMITTED);
+  });
+
+  test('react should return a plan with commands for MULTI_EVENT_EMITTED with index 2', async () => {
     const event = {
       id: 'event-id',
       tenant_id: 'tenant-id',
@@ -12,14 +16,21 @@ describe('SystemSaga', () => {
       version: 1
     };
 
-    const commands = systemSaga(event);
+    const ctx = {
+      nextId: jest.fn().mockResolvedValue('new-id'),
+      correlationId: 'correlation-id',
+      emitInternalSignal: jest.fn()
+    };
 
-    expect(commands).toHaveLength(1);
-    expect(commands[0].type).toBe(SystemCommandType.LOG_MESSAGE);
-    expect(commands[0].payload.message).toBe('auto-triggered from saga');
+    const plan = await SystemSaga.react(event, ctx);
+
+    expect(plan.commands).toHaveLength(1);
+    expect(plan.commands[0].type).toBe(SystemCommandType.LOG_MESSAGE);
+    expect(plan.commands[0].payload.message).toBe('auto-triggered from saga');
+    expect(ctx.emitInternalSignal).toHaveBeenCalledWith('obs.trace', expect.any(Object));
   });
 
-  test('should not trigger commands for other events', () => {
+  test('react should not return commands for other events', async () => {
     const event = {
       id: 'event-id',
       tenant_id: 'tenant-id',
@@ -29,12 +40,18 @@ describe('SystemSaga', () => {
       version: 1
     };
 
-    const commands = systemSaga(event);
+    const ctx = {
+      nextId: jest.fn().mockResolvedValue('new-id'),
+      correlationId: 'correlation-id',
+      emitInternalSignal: jest.fn()
+    };
 
-    expect(commands).toHaveLength(0);
+    const plan = await SystemSaga.react(event, ctx);
+
+    expect(plan.commands).toHaveLength(0);
   });
 
-  test('should not trigger commands for multi event with index other than 2', () => {
+  test('react should not return commands for MULTI_EVENT_EMITTED with index other than 2', async () => {
     const event = {
       id: 'event-id',
       tenant_id: 'tenant-id',
@@ -44,8 +61,14 @@ describe('SystemSaga', () => {
       version: 1
     };
 
-    const commands = systemSaga(event);
+    const ctx = {
+      nextId: jest.fn().mockResolvedValue('new-id'),
+      correlationId: 'correlation-id',
+      emitInternalSignal: jest.fn()
+    };
 
-    expect(commands).toHaveLength(0);
+    const plan = await SystemSaga.react(event, ctx);
+
+    expect(plan.commands).toHaveLength(0);
   });
 });

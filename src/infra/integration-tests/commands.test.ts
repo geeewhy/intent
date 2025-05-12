@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { TemporalScheduler } from '../temporal/temporal-scheduler';
 import { Command, Event } from '../../core/contracts';
-import { OrderCommandType, OrderEventType } from '../../core/order';
+import { SystemCommandType, SystemEventType } from '../../core/system';
 import { getAggregateWorkflowId, getSagaWorkflowId, getWorkflowsById, verifyWorkflowsById, getWorkflowDetails, wait, verifyNoLeakedWorkflows } from './utils';
 import { PgEventStore } from '../pg/pg-event-store';
 import { waitForNewEvents, waitForSnapshot } from './utils';
@@ -24,55 +24,54 @@ describe('Temporal Workflow Integration Tests', () => {
     });
 
     test('Command should create aggregate and apply event', async () => {
-        const orderId = uuidv4();
+        const aggregateId = uuidv4();
+        const aggregateType = 'system';
         const userId = `user-${uuidv4()}`;
 
         const command: Command = {
             id: uuidv4(),
             tenant_id: tenantId,
-            type: OrderCommandType.CREATE_ORDER,
+            type: SystemCommandType.LOG_MESSAGE,
             payload: {
-                orderId,
-                userId,
-                aggregateId: orderId,
-                aggregateType: 'order',
-                scheduledFor: new Date(),
-                items: [{ menuItemId: 'menu-1', quantity: 1 }],
-                status: 'pending',
+                message: 'Test message',
+                aggregateId,
+                aggregateType,
             },
             metadata: { userId, timestamp: new Date() }
         };
 
         await scheduler.schedule(command);
 
-        const events = await waitForNewEvents(eventStore, tenantId, 'order', orderId, 0, 1);
-        expect(events[0].type).toBe(OrderEventType.ORDER_CREATED);
+        const events = await waitForNewEvents(eventStore, tenantId, 'system', aggregateId, 0, 1);
+        expect(events[0].type).toBe(SystemEventType.MESSAGE_LOGGED);
 
-        const workflowId = getAggregateWorkflowId(tenantId, 'order', orderId);
+        const workflowId = getAggregateWorkflowId(tenantId, 'system', aggregateId);
         const workflows = await getWorkflowsById(scheduler, [workflowId]);
         verifyWorkflowsById(workflows, [workflowId], 1);
     }, TEST_TIMEOUT);
 
     test('Sequential commands should reuse same workflow and maintain version', async () => {
-        const orderId = uuidv4();
+        const aggregateId = uuidv4();
+        const aggregateType = 'system';
         const userId = `user-${uuidv4()}`;
-        const workflowId = getAggregateWorkflowId(tenantId, 'order', orderId);
+        const workflowId = getAggregateWorkflowId(tenantId, 'system', aggregateId);
 
         for (let i = 0; i < 3; i++) {
             const command: Command = {
                 id: uuidv4(),
                 tenant_id: tenantId,
-                type: OrderCommandType.EXECUTE_TEST,
+                type: SystemCommandType.EXECUTE_TEST,
                 payload: {
-                    orderId,
-                    aggregateId: orderId,
-                    aggregateType: 'order',
+                    testId: uuidv4(),
+                    testName: `Test ${i}`,
+                    aggregateId,
+                    aggregateType,
                 },
                 metadata: { userId, timestamp: new Date() }
             };
 
             void scheduler.schedule(command);
-            await waitForNewEvents(eventStore, tenantId, 'order', orderId, i, 1);
+            await waitForNewEvents(eventStore, tenantId, 'system', aggregateId, i, 1);
         }
 
         const workflows = await getWorkflowsById(scheduler, [workflowId]);
@@ -81,29 +80,26 @@ describe('Temporal Workflow Integration Tests', () => {
     }, TEST_TIMEOUT);
 
     test('Command should signal Saga after Aggregate is completed', async () => {
-        const orderId = uuidv4();
+        const aggregateId = uuidv4();
         const userId = `user-${uuidv4()}`;
+        const aggregateType = 'system';
 
         const command: Command = {
             id: uuidv4(),
             tenant_id: tenantId,
-            type: OrderCommandType.CREATE_ORDER,
+            type: SystemCommandType.EMIT_MULTIPLE_EVENTS,
             payload: {
-                orderId,
-                userId,
-                aggregateId: orderId,
-                aggregateType: 'order',
-                scheduledFor: new Date(),
-                items: [{ menuItemId: 'menu-1', quantity: 1 }],
-                status: 'pending',
+                count: 3, // This will emit 3 events with indices 0, 1, 2
+                aggregateId,
+                aggregateType,
             },
             metadata: { userId, timestamp: new Date() }
         };
 
         await scheduler.schedule(command);
 
-        const aggWfId = getAggregateWorkflowId(tenantId, 'order', orderId);
-        const sagaWfId = getSagaWorkflowId(tenantId, orderId);
+        const aggWfId = getAggregateWorkflowId(tenantId, 'system', aggregateId);
+        const sagaWfId = getSagaWorkflowId(tenantId, aggregateId);
 
         const aggDetails = await getWorkflowDetails(scheduler, aggWfId);
         expect(aggDetails?.status?.name).toBe('COMPLETED');

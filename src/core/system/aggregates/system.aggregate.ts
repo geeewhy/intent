@@ -1,157 +1,251 @@
-import { BaseAggregate } from '../../base/aggregate';
-import { BusinessRuleViolation } from '../../errors';
-import { SystemCommand, SystemCommandType, SystemEvent, SystemEventType } from '../contracts';
-import { buildEvent } from '../../utils/event-factory';
+// src/core/system/aggregates/system.aggregate.ts
 
-export interface SystemAggregateSnapshotState {
-  id: string;
-  version: number;
-  numberExecutedTests: number;
-}
+import {Command, Event} from '../../contracts';
+import {BaseAggregate} from '../../base/aggregate';
+import {BusinessRuleViolation} from '../../errors';
+import {
+    UUID,
+    SystemCommandType,
+    SystemEventType,
+    LogMessagePayload,
+    SimulateFailurePayload,
+    EmitMultipleEventsPayload,
+    ExecuteTestPayload,
+    ExecuteRetryableTestPayload,
+    MessageLoggedPayload,
+    FailureSimulatedPayload,
+    MultiEventEmittedPayload,
+    TestExecutedPayload,
+    RetryableTestExecutedPayload
+} from '../contracts';
+import {buildEvent} from '../../utils/event-factory';
 
-export class SystemAggregate extends BaseAggregate<SystemAggregateSnapshotState> {
-  aggregateType = 'system';
-  id: string;
-  version = 0;
-  numberExecutedTests = 0;
-  static CURRENT_SCHEMA_VERSION = 1;
+type SystemSnapshotState = {
+    numberExecutedTests: number;
+};
 
-  constructor(id: string) {
-    super(id);
-    this.id = id;
-  }
+export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
+    public aggregateType = 'system';
+    static CURRENT_SCHEMA_VERSION = 1;
 
-  static create(command: SystemCommand): SystemAggregate {
-    const systemId = command.payload?.systemId || 'system';
-    const aggregate = new SystemAggregate(systemId);
-    return aggregate;
-  }
+    id: UUID;
+    version = 0;
+    numberExecutedTests = 0;
 
-  static rehydrate(events: SystemEvent[]): SystemAggregate {
-    if (!events.length) {
-      throw new Error('Cannot rehydrate from empty events');
+    constructor(id: UUID) {
+        super(id);
+        this.id = id;
     }
 
-    const aggregate = new SystemAggregate(events[0].aggregateId);
-
-    for (const event of events) {
-      aggregate.apply(event);
+    static create(cmd: Command<LogMessagePayload | EmitMultipleEventsPayload | ExecuteTestPayload>): SystemAggregate {
+        return new SystemAggregate(cmd.payload.systemId || 'system');
     }
 
-    return aggregate;
-  }
-
-  handle(command: SystemCommand): SystemEvent[] {
-    const tenantId = command.tenant_id;
-
-    switch (command.type) {
-      case SystemCommandType.LOG_MESSAGE:
-        return [buildEvent(
-          tenantId,
-          this.id,
-          SystemEventType.MESSAGE_LOGGED,
-          this.version + 1,
-          {
-            ...command.payload,
-            systemId: this.id
-          },
-          command.metadata
-        ) as SystemEvent];
-
-      case SystemCommandType.SIMULATE_FAILURE:
-        throw new Error('Simulated failure');
-
-      case SystemCommandType.EMIT_MULTIPLE_EVENTS:
-        return Array.from({ length: command.payload.count }, (_, i) => 
-          buildEvent(
-            tenantId,
-            this.id,
-            SystemEventType.MULTI_EVENT_EMITTED,
-            this.version + i + 1,
-            { 
-              index: i,
-              systemId: this.id
-            },
-            command.metadata
-          ) as SystemEvent
-        );
-
-      case SystemCommandType.EXECUTE_TEST:
-        return [buildEvent(
-          tenantId,
-          this.id,
-          SystemEventType.TEST_EXECUTED,
-          this.version + 1,
-          {
-            testId: command.payload.testId,
-            testName: command.payload.testName,
-            result: 'success' as const,
-            executedAt: new Date(),
-            numberExecutedTests: this.numberExecutedTests + 1,
-            parameters: command.payload.parameters,
-            systemId: this.id
-          },
-          command.metadata
-        ) as SystemEvent];
-
-      case SystemCommandType.EXECUTE_RETRYABLE_TEST:
-        if (this.version % 2 === 0) {
-          throw new BusinessRuleViolation('Retryable error', undefined, true);
+    static rehydrate(events: Event[]): SystemAggregate {
+        if (!events.length) {
+            throw new Error('Cannot rehydrate from empty events');
         }
-        return [buildEvent(
-          tenantId,
-          this.id,
-          SystemEventType.RETRYABLE_TEST_EXECUTED,
-          this.version + 1,
-          {
-            testId: command.payload.testId,
-            testName: command.payload.testName,
-            result: 'success' as const,
-            executedAt: new Date(),
-            parameters: command.payload.parameters,
-            systemId: this.id
-          },
-          command.metadata
-        ) as SystemEvent];
 
-      default:
-        return [];
-    }
-  }
+        const snapshotIndex = events.map(e => e.type).lastIndexOf('__SNAPSHOT__');
+        let base: SystemAggregate;
+        if (snapshotIndex >= 0) {
+            base = SystemAggregate.fromSnapshot(events[snapshotIndex]);
+        } else {
+            base = new SystemAggregate(events[0].aggregateId);
+        }
 
-  apply(event: SystemEvent, isNew = false): void {
-    switch (event.type) {
-      case SystemEventType.TEST_EXECUTED:
-        this.numberExecutedTests++;
-        break;
+        events.slice(snapshotIndex + 1).forEach(event => base.apply(event, false));
+        return base;
     }
 
-    this.version++;
-  }
-
-  protected upcastSnapshotState(raw: any, version: number): SystemAggregateSnapshotState {
-    return raw;
-  }
-
-  protected applyUpcastedSnapshot(state: SystemAggregateSnapshotState): void {
-    this.id = state.id;
-    this.version = state.version;
-    this.numberExecutedTests = state.numberExecutedTests;
-  }
-
-  extractSnapshotState(): SystemAggregateSnapshotState {
-    return {
-      id: this.id,
-      version: this.version,
-      numberExecutedTests: this.numberExecutedTests,
+    private readonly handlers: Record<SystemCommandType, (cmd: Command) => Event[]> = {
+        [SystemCommandType.LOG_MESSAGE]: this.handleLogMessage.bind(this),
+        [SystemCommandType.SIMULATE_FAILURE]: this.handleSimulateFailure.bind(this),
+        [SystemCommandType.EMIT_MULTIPLE_EVENTS]: this.handleEmitMultipleEvents.bind(this),
+        [SystemCommandType.EXECUTE_TEST]: this.handleExecuteTest.bind(this),
+        [SystemCommandType.EXECUTE_RETRYABLE_TEST]: this.handleExecuteRetryableTest.bind(this),
     };
-  }
 
-  getId(): string {
-    return this.id;
-  }
+    public handle(cmd: Command): Event[] {
+        const handler = this.handlers[cmd.type as SystemCommandType];
+        if (!handler) throw new Error(`Unknown command type: ${cmd.type}`);
+        return handler(cmd);
+    }
 
-  getVersion(): number {
-    return this.version;
-  }
+    public apply(event: Event, isNew = true): void {
+        switch (event.type) {
+            case SystemEventType.MESSAGE_LOGGED:
+                this.applyMessageLogged(event as Event<MessageLoggedPayload>);
+                break;
+            case SystemEventType.FAILURE_SIMULATED:
+                this.applyFailureSimulated(event as Event<FailureSimulatedPayload>);
+                break;
+            case SystemEventType.MULTI_EVENT_EMITTED:
+                this.applyMultiEventEmitted(event as Event<MultiEventEmittedPayload>);
+                break;
+            case SystemEventType.TEST_EXECUTED:
+                this.applyTestExecuted(event as Event<TestExecutedPayload>);
+                break;
+            case SystemEventType.RETRYABLE_TEST_EXECUTED:
+                this.applyRetryableTestExecuted(event as Event<RetryableTestExecutedPayload>);
+                break;
+            default:
+                throw new Error(`Unknown event type: ${event.type}`);
+        }
+
+        if (isNew) {
+            this.version++;
+        } else {
+            this.version = event.version;
+        }
+    }
+
+    private handleLogMessage(cmd: Command<LogMessagePayload>): Event[] {
+        const payload = {...cmd.payload, systemId: this.id};
+        const event = buildEvent<LogMessagePayload>(
+            cmd.tenant_id,
+            this.id,
+            SystemEventType.MESSAGE_LOGGED,
+            this.version,
+            payload,
+            {
+                userId: cmd.metadata?.userId,
+                correlationId: cmd.metadata?.correlationId,
+                causationId: cmd.id,
+            }
+        );
+        this.apply(event);
+        return [event];
+    }
+
+    private handleSimulateFailure(_: Command<SimulateFailurePayload>): Event[] {
+        throw new BusinessRuleViolation('Simulated failure', undefined, true);
+    }
+
+    private handleEmitMultipleEvents(cmd: Command<EmitMultipleEventsPayload>): Event[] {
+        const now = new Date();
+        const events: Event[] = [];
+
+        for (let i = 0; i < cmd.payload.count; i++) {
+            const payload: MultiEventEmittedPayload = {
+                index: i,
+                systemId: this.id,
+            };
+            const event = buildEvent<MultiEventEmittedPayload>(
+                cmd.tenant_id,
+                this.id,
+                SystemEventType.MULTI_EVENT_EMITTED,
+                this.version + i,
+                payload,
+                {
+                    userId: cmd.metadata?.userId,
+                    correlationId: cmd.metadata?.correlationId,
+                    causationId: cmd.id,
+                }
+            );
+            this.apply(event);
+            events.push(event);
+        }
+
+        return events;
+    }
+
+    private handleExecuteTest(cmd: Command<ExecuteTestPayload>): Event[] {
+        const now = new Date();
+        const payload: TestExecutedPayload = {
+            testId: cmd.payload.testId,
+            testName: cmd.payload.testName,
+            result: 'success',
+            executedAt: now,
+            numberExecutedTests: this.numberExecutedTests + 1,
+            parameters: cmd.payload.parameters,
+            systemId: this.id,
+        };
+        const event = buildEvent<TestExecutedPayload>(
+            cmd.tenant_id,
+            this.id,
+            SystemEventType.TEST_EXECUTED,
+            this.version,
+            payload,
+            {
+                userId: cmd.metadata?.userId,
+                correlationId: cmd.metadata?.correlationId,
+                causationId: cmd.id,
+            }
+        );
+        this.apply(event);
+        return [event];
+    }
+
+    private handleExecuteRetryableTest(cmd: Command<ExecuteRetryableTestPayload>): Event[] {
+        if (this.version % 2 === 0) {
+            throw new BusinessRuleViolation('Retryable error', undefined, true);
+        }
+
+        const now = new Date();
+        const payload: RetryableTestExecutedPayload = {
+            testId: cmd.payload.testId,
+            testName: cmd.payload.testName,
+            result: 'success',
+            executedAt: now,
+            parameters: cmd.payload.parameters,
+            systemId: this.id,
+        };
+        const event = buildEvent<RetryableTestExecutedPayload>(
+            cmd.tenant_id,
+            this.id,
+            SystemEventType.RETRYABLE_TEST_EXECUTED,
+            this.version,
+            payload,
+            {
+                userId: cmd.metadata?.userId,
+                correlationId: cmd.metadata?.correlationId,
+                causationId: cmd.id,
+            }
+        );
+        this.apply(event);
+        return [event];
+    }
+
+    private applyMessageLogged(_: Event<MessageLoggedPayload>): void {
+        // no-op
+    }
+
+    private applyFailureSimulated(_: Event<FailureSimulatedPayload>): void {
+        // no-op
+    }
+
+    private applyMultiEventEmitted(_: Event<MultiEventEmittedPayload>): void {
+        // no-op
+    }
+
+    private applyTestExecuted(_: Event<TestExecutedPayload>): void {
+        this.numberExecutedTests++;
+    }
+
+    private applyRetryableTestExecuted(_: Event<RetryableTestExecutedPayload>): void {
+        // no-op
+    }
+
+    protected upcastSnapshotState(raw: any, version: number): SystemSnapshotState {
+        return raw;
+    }
+
+    protected applyUpcastedSnapshot(state: SystemSnapshotState): void {
+        this.numberExecutedTests = state.numberExecutedTests;
+    }
+
+    extractSnapshotState(): SystemSnapshotState {
+        return {
+            numberExecutedTests: this.numberExecutedTests,
+        };
+    }
+
+    public getId(): UUID {
+        return this.id;
+    }
+
+    public getVersion(): number {
+        return this.version;
+    }
 }
