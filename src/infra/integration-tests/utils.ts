@@ -2,7 +2,6 @@
 import {TemporalScheduler} from '../temporal/temporal-scheduler';
 import {WorkflowExecutionInfo} from '@temporalio/client';
 import {Event} from '../../core/contracts';
-import {SupabaseClient} from '@supabase/supabase-js';
 import {PgEventStore} from '../pg/pg-event-store';
 
 /**
@@ -76,52 +75,6 @@ export const waitForSnapshot = async (
     throw new Error(
         `Timed out waiting for snapshot of aggregate ${aggregateType}-${aggregateId} to reach version ${minVersion}`
     );
-};
-
-/**
- * @OBSOLETE: Helper function to check if events were created
- * Helper function to check if events were created
- * @param supabase The Supabase client
- * @param aggregateId The aggregate ID to check for events
- * @param expectedCount The expected number of events
- * @param TTL The maximum number of attempts to check for events
- * @returns An array of events
- */
-export const checkForEvents = async (
-    supabase: SupabaseClient,
-    aggregateId: string,
-    expectedCount: number,
-    TTL = 500
-): Promise<Event[]> => {
-    let currentProgress = 0;
-    let events: Event[] = [];
-    let hitExpected = false;
-    while (currentProgress < TTL && !hitExpected) {
-        const {data, error} = await supabase
-            .from('events')
-            .select('*')
-            .eq('aggregate_id', aggregateId)
-            .order('created_at', {ascending: false});
-
-        console.log('Got events:', data);
-
-        if (error) {
-            console.error('Error fetching events:', error);
-        } else if (data && data.length >= expectedCount) {
-            console.log("Hit expected count of events");
-            hitExpected = true;
-            events = data;
-            console.log("Got events:", events);
-            break;
-        }
-
-        let ttlIncrement = TTL / 10;
-        await wait(ttlIncrement);
-        console.log('Waiting for events...');
-        currentProgress += ttlIncrement;
-    }
-
-    return events;
 };
 
 /**

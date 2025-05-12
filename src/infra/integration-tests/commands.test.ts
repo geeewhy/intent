@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { TemporalScheduler } from '../temporal/temporal-scheduler';
 import { Command, Event } from '../../core/contracts';
-import { OrderCommandType, OrderEventType } from '../../core/order/contracts';
+import { OrderCommandType, OrderEventType } from '../../core/order';
 import { getAggregateWorkflowId, getSagaWorkflowId, getWorkflowsById, verifyWorkflowsById, getWorkflowDetails, wait, verifyNoLeakedWorkflows } from './utils';
 import { PgEventStore } from '../pg/pg-event-store';
 import { waitForNewEvents, waitForSnapshot } from './utils';
