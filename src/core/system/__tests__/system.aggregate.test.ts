@@ -1,11 +1,88 @@
 import { SystemAggregate } from '../aggregates/system.aggregate';
-import { SystemCommandType, SystemEventType, LogMessagePayload, EmitMultipleEventsPayload, ExecuteTestPayload, ExecuteRetryableTestPayload, SimulateFailurePayload } from '../contracts';
+import { SystemCommandType, SystemEventType, LogMessagePayload, EmitMultipleEventsPayload, ExecuteTestPayload, ExecuteRetryableTestPayload, SimulateFailurePayload, MessageLoggedPayload, MultiEventEmittedPayload, TestExecutedPayload, RetryableTestExecutedPayload } from '../contracts';
 
 describe('SystemAggregate', () => {
   let systemAggregate: SystemAggregate;
 
   beforeEach(() => {
     systemAggregate = new SystemAggregate('test-system');
+  });
+
+  // Test for static create method
+  test('should create a new system aggregate with static create method', () => {
+    const command = {
+      id: 'test-id',
+      tenant_id: 'test-tenant',
+      type: SystemCommandType.LOG_MESSAGE as const,
+      payload: { 
+        message: 'Test message',
+        systemId: 'custom-system-id'
+      } as LogMessagePayload
+    };
+
+    const aggregate = SystemAggregate.create(command);
+
+    expect(aggregate).toBeInstanceOf(SystemAggregate);
+    expect(aggregate.id).toBe('custom-system-id');
+    expect(aggregate.version).toBe(0);
+    expect(aggregate.numberExecutedTests).toBe(0);
+  });
+
+  // Test for static create method with default system ID
+  test('should create a new system aggregate with default system ID', () => {
+    const command = {
+      id: 'test-id',
+      tenant_id: 'test-tenant',
+      type: SystemCommandType.LOG_MESSAGE as const,
+      payload: { 
+        message: 'Test message'
+      } as LogMessagePayload
+    };
+
+    const aggregate = SystemAggregate.create(command);
+
+    expect(aggregate).toBeInstanceOf(SystemAggregate);
+    expect(aggregate.id).toBe('system');
+  });
+
+  // Test for static rehydrate method
+  test('should rehydrate a system aggregate from events', () => {
+    const events = [
+      {
+        id: 'event-1',
+        tenant_id: 'test-tenant',
+        type: SystemEventType.MESSAGE_LOGGED,
+        payload: { message: 'Test message' } as MessageLoggedPayload,
+        aggregateId: 'test-system',
+        version: 1
+      },
+      {
+        id: 'event-2',
+        tenant_id: 'test-tenant',
+        type: SystemEventType.TEST_EXECUTED,
+        payload: { 
+          testId: 'test-id',
+          testName: 'Test Name',
+          result: 'success' as const,
+          numberExecutedTests: 1,
+          executedAt: new Date()
+        } as TestExecutedPayload,
+        aggregateId: 'test-system',
+        version: 2
+      }
+    ];
+
+    const aggregate = SystemAggregate.rehydrate(events);
+
+    expect(aggregate).toBeInstanceOf(SystemAggregate);
+    expect(aggregate.id).toBe('test-system');
+    expect(aggregate.version).toBe(2);
+    expect(aggregate.numberExecutedTests).toBe(1);
+  });
+
+  // Test for rehydrate with empty events array
+  test('should throw error when rehydrating with empty events array', () => {
+    expect(() => SystemAggregate.rehydrate([])).toThrow('Cannot rehydrate from empty events');
   });
 
   test('should log a message', () => {
@@ -96,5 +173,97 @@ describe('SystemAggregate', () => {
     };
 
     expect(() => systemAggregate.handle(command)).toThrow('Simulated failure');
+  });
+
+  // Test for default case in handle method
+  test('should return empty array for unknown command type', () => {
+    const command = {
+      id: 'test-id',
+      tenant_id: 'test-tenant',
+      type: 'unknownCommand' as any,
+      payload: {}
+    };
+
+    const events = systemAggregate.handle(command);
+
+    expect(events).toHaveLength(0);
+  });
+
+  // Test for snapshot-related methods
+  test('should extract and apply snapshot state', () => {
+    systemAggregate.id = 'test-system';
+    systemAggregate.version = 5;
+    systemAggregate.numberExecutedTests = 3;
+
+    const snapshotState = systemAggregate.extractSnapshotState();
+
+    expect(snapshotState).toEqual({
+      id: 'test-system',
+      version: 5,
+      numberExecutedTests: 3
+    });
+
+    const newAggregate = new SystemAggregate('new-system');
+    newAggregate.applySnapshotState(snapshotState);
+
+    expect(newAggregate.id).toBe('test-system');
+    expect(newAggregate.version).toBe(5);
+    expect(newAggregate.numberExecutedTests).toBe(3);
+  });
+
+  // Test for getId and getVersion methods
+  test('should return correct id and version', () => {
+    systemAggregate.id = 'test-system';
+    systemAggregate.version = 10;
+
+    expect(systemAggregate.getId()).toBe('test-system');
+    expect(systemAggregate.getVersion()).toBe(10);
+  });
+
+  // Test for apply method with different event types
+  test('should apply different event types correctly', () => {
+    // Apply MESSAGE_LOGGED event
+    const messageEvent = {
+      id: 'event-1',
+      tenant_id: 'test-tenant',
+      type: SystemEventType.MESSAGE_LOGGED,
+      payload: { message: 'Test message' } as MessageLoggedPayload,
+      aggregateId: 'test-system',
+      version: 1
+    };
+
+    systemAggregate.apply(messageEvent);
+    expect(systemAggregate.version).toBe(1);
+
+    // Apply MULTI_EVENT_EMITTED event
+    const multiEvent = {
+      id: 'event-2',
+      tenant_id: 'test-tenant',
+      type: SystemEventType.MULTI_EVENT_EMITTED,
+      payload: { index: 0 } as MultiEventEmittedPayload,
+      aggregateId: 'test-system',
+      version: 2
+    };
+
+    systemAggregate.apply(multiEvent);
+    expect(systemAggregate.version).toBe(2);
+
+    // Apply RETRYABLE_TEST_EXECUTED event
+    const retryableEvent = {
+      id: 'event-3',
+      tenant_id: 'test-tenant',
+      type: SystemEventType.RETRYABLE_TEST_EXECUTED,
+      payload: { 
+        testId: 'test-id',
+        testName: 'Retryable Test',
+        result: 'success' as const,
+        executedAt: new Date()
+      } as RetryableTestExecutedPayload,
+      aggregateId: 'test-system',
+      version: 3
+    };
+
+    systemAggregate.apply(retryableEvent);
+    expect(systemAggregate.version).toBe(3);
   });
 });
