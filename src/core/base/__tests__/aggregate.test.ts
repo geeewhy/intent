@@ -106,6 +106,10 @@ class ExampleAggregate extends BaseAggregate<ExampleState> {
     }
   }
 
+  handle(command: any): Event[] {
+    return []; // No commands to handle in this example
+  }
+
   // Helper method to create events for testing
   static createItemAddedEvent(aggregateId: UUID, item: string): Event<ItemAddedPayload> {
     return {

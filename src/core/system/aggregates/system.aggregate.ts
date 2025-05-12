@@ -137,7 +137,6 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
                     causationId: cmd.id,
                 }
             );
-            this.apply(event);
             events.push(event);
         }
 
@@ -167,7 +166,6 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
                 causationId: cmd.id,
             }
         );
-        this.apply(event);
         return [event];
     }
 
@@ -197,7 +195,6 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
                 causationId: cmd.id,
             }
         );
-        this.apply(event);
         return [event];
     }
 

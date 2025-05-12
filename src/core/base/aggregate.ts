@@ -1,5 +1,5 @@
 //src/core/base/aggregate.ts
-import {UUID} from "../contracts";
+import {UUID, Event, Command} from "../contracts";
 
 /**
  * Generic base class for aggregates
@@ -51,6 +51,8 @@ export abstract class BaseAggregate<TState> {
     }
 
     abstract apply(event: any, isSnapshot?: boolean): void;
+
+    abstract handle(command: any): Event[];
 }
 
 /**

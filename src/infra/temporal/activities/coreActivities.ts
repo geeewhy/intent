@@ -6,8 +6,20 @@ import {v4 as uuidv4} from 'uuid';
 import {PgEventStore} from '../../pg/pg-event-store';
 import {getAggregateClass, supportsAggregateType, createAggregatePayload} from '../../../core/aggregates';
 import {BusinessRuleViolation} from '../../../core/errors';
+import {WorkflowRouter} from '../workflow-router';
+import {BaseAggregate} from "../../../core/base/aggregate";
 
 dotenv.config();
+
+let router: WorkflowRouter | undefined;
+
+//route the event
+export async function routeEvent(event: Event): Promise<void> {
+    if (!router) {
+        router = await WorkflowRouter.create();
+    }
+    return router.on(event);
+}
 
 // Initialize the event store
 const eventStore = new PgEventStore();
@@ -101,7 +113,9 @@ export async function loadAggregate(
         if (!result && !snapshot) {
             console.log(`[loadAggregate] No events or snapshot found for ${aggregateType}:${aggregateId}`);
             // Create a new instance of the aggregate using a dynamic payload
-            return AggregateClass.create(createAggregatePayload(aggregateType, aggregateId));
+            let aggregate = AggregateClass.create(createAggregatePayload(aggregateType, aggregateId));
+            console.log(`[loadAggregate] Created new aggregate instance:`, aggregate);
+            return aggregate;
         }
 
         // If we have a snapshot but no events, return the aggregate from the snapshot
@@ -133,6 +147,55 @@ export async function loadAggregate(
         throw error;
     }
 }
+
+/**
+ * Get events for a command without applying them
+ * @param tenantId
+ * @param cmd
+ */
+export async function getEventsForCommand(
+    cmd: Command
+): Promise<{ events?: Event[]; status: 'success' | 'fail'; error?: string }> {
+    try {
+        const tenantId = cmd.tenant_id;
+        const { aggregateType, aggregateId } = cmd.payload;
+        // Load the aggregate
+        const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId);
+
+        if (!aggregate) {
+            throw new Error(`Aggregate ${aggregateType}:${aggregateId} not found and could not be created`);
+        }
+
+        const events = aggregate.handle(cmd); // In activity context — class instance is intact
+        return { events, status: 'success' };
+    } catch (err) {
+        if (err instanceof BusinessRuleViolation) {
+            return { status: 'fail', error: err.reason };
+        }
+        throw err;
+    }
+}
+
+/**
+ * Apply a list of events to an aggregate
+ * @param tenantId
+ * @param aggregateType
+ * @param aggregateId
+ * @param events
+ */
+export async function applyEvents(
+    tenantId: UUID,
+    aggregateType: string,
+    aggregateId: UUID,
+    events: Event[]
+): Promise<void> {
+    const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId);
+    for (const evt of events) aggregate.apply(evt);
+
+    const version = aggregate.getVersion();
+    await eventStore.append(tenantId, aggregateType, aggregateId, events, version);
+}
+
 
 /**
  * Execute a command on an aggregate
@@ -255,7 +318,7 @@ export async function applyEvent(
 export async function snapshotAggregate(
     tenantId: UUID,
     aggregateType: string,
-    aggregateId: UUID
+    aggregateId: UUID,
 ): Promise<void> {
     console.log(`[snapshotAggregate] Creating snapshot for ${aggregateType}:${aggregateId}`);
 
@@ -280,6 +343,32 @@ export async function snapshotAggregate(
         console.error(`[snapshotAggregate] Error creating snapshot for ${aggregateType}:${aggregateId}:`, error);
         throw error;
     }
+}
+
+/**
+ * Append events to the event store
+ * @param events
+ * @param aggregate
+ * @param tenantId
+ */
+export async function appendEvents(
+    events: Event[],
+    aggregate: BaseAggregate<any>,
+    tenantId: UUID
+): Promise<void> {
+    if (events.length === 0) return;
+
+    const version = aggregate.version;
+
+    await eventStore.append(
+        tenantId,
+        aggregate.aggregateType,
+        aggregate.id,
+        events,
+        version
+    );
+
+    console.log(`[appendEvents] Appended ${events.length} event(s) to store at version ${version}`);
 }
 
 /**
