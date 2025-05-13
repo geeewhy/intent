@@ -20,7 +20,8 @@ const {
     getEventsForCommand,
     snapshotAggregate,
     routeEvent,
-    applyEvents
+    applyEvents,
+    projectEventsActivity
 } = proxyActivities<DomainActivities & typeof coreActivities>({
     startToCloseTimeout: '1 minute',
 });
@@ -50,6 +51,7 @@ export async function processCommand(
             if (status === 'fail') return { status, error };
 
             await applyEvents(cmd.tenant_id, cmd.payload.aggregateType, cmd.payload.aggregateId, events);
+            await projectEventsActivity(events);
             appliesSinceLastSnapshot += events.length;
 
             for (const evt of events) {

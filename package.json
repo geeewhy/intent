@@ -19,7 +19,8 @@
     "dev:cmdline": "ts-node src/client/cmdline/index.ts",
     "test": "jest",
     "test:core": "jest --selectProjects core",
-    "test:integration": "jest --selectProjects integration"
+    "test:integration": "jest --selectProjects integration",
+    "migration:projections": "ts-node src/infra/migrations/runMigrations.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
@@ -32,7 +33,10 @@
     "drizzle-kit": "^0.31.0",
     "drizzle-orm": "^0.43.1",
     "express": "^4.18.2",
-    "pg": "^8.15.6",
+    "glob": "^11.0.2",
+    "pg": "^8.7.3",
+    "slonik": "^29.2.0",
+    "umzug": "^3.8.2",
     "uuid": "^9.0.1",
     "zod": "^3.22.4"
   },

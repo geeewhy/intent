@@ -88,3 +88,23 @@ export type InternalSignalPayload =
     | { type: 'obs.warn'; message: string; tags?: Record<string, any> }
     | { type: 'obs.error'; message: string; error?: any; tags?: Record<string, any> }
     | { type: 'obs.metric'; name: string; value: number; tags?: Record<string, any> };
+
+/**
+ * Projection interfaces
+ */
+
+/**
+ * Event handler for projections
+ */
+export interface EventHandler<E extends Event = Event> {
+  supportsEvent(event: Event): event is E;
+  handle(event: E): Promise<void>;
+}
+
+/**
+ * Port for updating read models
+ */
+export interface ReadModelUpdaterPort<T> {
+  upsert(tenantId: string, id: string, data: T): Promise<void>;
+  remove(tenantId: string, id: string): Promise<void>;
+}

@@ -230,3 +230,9 @@ export async function snapshotAggregate(
         throw error;
     }
 }
+
+/**
+ * Project events to read models
+ * @param events The events to project
+ */
+export { projectEvents as projectEventsActivity } from '../../../infra/projections/projectEvents';

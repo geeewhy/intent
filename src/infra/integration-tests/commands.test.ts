@@ -66,6 +66,7 @@ describe('Temporal Workflow Integration Tests', () => {
                     testName: `Test ${i}`,
                     aggregateId,
                     aggregateType,
+                    parameters: { param1: `value${i}` },
                 },
                 metadata: { userId, timestamp: new Date() }
             };
