@@ -138,8 +138,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
           taskQueue,
           args: [event], // Pass the event as the initial input
           signal: 'externalEvent', // New signal type for events
-          signalArgs: [event],
-          workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
+          signalArgs: [event]
         });
       }
     }
