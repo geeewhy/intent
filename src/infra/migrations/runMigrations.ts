@@ -1,3 +1,4 @@
+//src/infra/migrations/runMigrations.ts
 import { Umzug } from 'umzug';
 import { globSync } from 'glob';
 import { Pool } from 'pg';

@@ -16,6 +16,7 @@ export function createPgUpdaterFor<T>(tableName: string, pool: DatabasePool): Re
 
       const values = rawValues.map(v => {
         if (v === undefined) return null;
+        // @ts-ignore
         if (v instanceof Date) return sql`${v.toISOString()}`;
         if (typeof v === 'object' && v !== null) return sql`${JSON.stringify(v)}`;
         return sql`${v}`;

@@ -1,4 +1,4 @@
-// policy-registry.ts
+//src/core/policy-registry.ts
 const conditionMap: Record<string, (args: any) => boolean | Promise<boolean>> = {};
 
 export function registerCondition(name: string, fn: (args: any) => boolean | Promise<boolean>) {

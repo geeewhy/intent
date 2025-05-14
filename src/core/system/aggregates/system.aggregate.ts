@@ -19,6 +19,8 @@ import {
     RetryableTestExecutedPayload
 } from '../contracts';
 import {buildEvent} from '../../utils/event-factory';
+import {evaluateCondition} from '../../policy-registry';
+import {SystemAccessCondition, systemAccessModel} from "../access";
 
 type SystemSnapshotState = {
     numberExecutedTests: number;
@@ -146,6 +148,12 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
     }
 
     private handleExecuteTest(cmd: Command<ExecuteTestPayload>): Event[] {
+        // if (!cmd.metadata?.userId) {
+        //     throw new BusinessRuleViolation(`User ID is required for test execution`);
+        // }
+        // if (!evaluateCondition(SystemAccessCondition.CAN_EXECUTE_TEST, cmd.metadata)) {
+        //     throw new BusinessRuleViolation(`You don't have permission to execute this test`);
+        // }
         const now = new Date();
         const payload: TestExecutedPayload = {
             testId: cmd.payload.testId,

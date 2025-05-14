@@ -1,5 +1,5 @@
 import { DatabasePool } from 'slonik';
-import { EventHandler } from '../../../contracts';
+import { EventHandler } from '../../contracts';
 import { createPgUpdaterFor } from '../../../infra/projections/pg-updater';
 import { createSystemStatusProjection } from './system-status.projection';
 
