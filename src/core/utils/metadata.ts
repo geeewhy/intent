@@ -9,7 +9,7 @@ export function inheritMetadata(
     return {
         userId: input.metadata?.userId,
         timestamp: new Date(),
-        correlationId: input.metadata?.correlationId,
+        correlationId: input.metadata?.correlationId || input.id,
         causationId: input.id,
         requestId: ctx.getHint?.('requestId'),
         source: extendMetadata?.source ?? 'unknown',

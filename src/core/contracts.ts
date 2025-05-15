@@ -6,10 +6,11 @@ export type UUID = string;
  * Common Metadata across Commands and Events
  */
 export interface Metadata {
-    userId?: UUID;
+    userId?: UUID; //AUTH/RBAC/RLS
+    role?: string; //RBAC/RLS
     timestamp: Date;
-    correlationId?: UUID;
-    causationId?: UUID;
+    correlationId?: UUID; // ID for tracking the flow of actions
+    causationId?: UUID; // ID of the action that caused this command
     requestId?: string; // Useful for cross-service tracing
     source?: string;    // Service or workflow origin
     tags?: Record<string, string | number>; // For flexible enrichment
@@ -107,4 +108,28 @@ export interface EventHandler<E extends Event = Event> {
 export interface ReadModelUpdaterPort<T> {
   upsert(tenantId: string, id: string, data: T): Promise<void>;
   remove(tenantId: string, id: string): Promise<void>;
+}
+
+/**
+ * Tenant context for multi-tenancy
+ */
+export interface TenantContext {
+    tenantIds: string[];
+}
+
+/**
+ * Access control context for evaluating policies
+ */
+export interface AccessContext {
+    role: string;
+    userId?: string;
+    scopes?: string[]; //For openID/oAuth scopes
+}
+
+/**
+ * Access request context for evaluating policies
+ */
+export interface AccessRequestContext {
+    tenantId: string;
+    access: AccessContext;
 }

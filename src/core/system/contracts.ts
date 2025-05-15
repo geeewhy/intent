@@ -28,6 +28,11 @@ export enum SystemEventType {
 }
 
 /**
+ * Actors in the system
+ */
+export type SystemRole = 'tester' | 'system' | 'developer';
+
+/**
  * System command payloads
  */
 export interface LogMessagePayload {
@@ -78,6 +83,7 @@ export interface MultiEventEmittedPayload {
 export interface TestExecutedPayload {
   testId: UUID;
   testName: string;
+  testerId: UUID;
   result: 'success' | 'failure';
   executedAt: Date;
   numberExecutedTests: number;

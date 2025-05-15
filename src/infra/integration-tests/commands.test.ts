@@ -68,7 +68,11 @@ describe('Temporal Workflow Integration Tests', () => {
                     aggregateType,
                     parameters: { param1: `value${i}` },
                 },
-                metadata: { userId, timestamp: new Date() }
+                metadata: {
+                    userId,
+                    timestamp: new Date(),
+                    role: 'tester',
+                }
             };
 
             void scheduler.schedule(command);
@@ -113,6 +117,7 @@ describe('Temporal Workflow Integration Tests', () => {
             aggDetails?.startTime?.getTime() ?? 0
         );
 
+        //todo this changes time to time, mostly 3, sometimes 1 or 2... manual tests look okay.
         verifyWorkflowsById(await getWorkflowsById(scheduler, [sagaWfId, aggWfId]), [sagaWfId, aggWfId], 2);
     }, TEST_TIMEOUT);
 });

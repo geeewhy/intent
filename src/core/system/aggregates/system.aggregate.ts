@@ -1,6 +1,6 @@
 // src/core/system/aggregates/system.aggregate.ts
 
-import {Command, Event} from '../../contracts';
+import {AccessContext, Command, Event} from '../../contracts';
 import {BaseAggregate} from '../../base/aggregate';
 import {BusinessRuleViolation} from '../../errors';
 import {
@@ -20,7 +20,10 @@ import {
 } from '../contracts';
 import {buildEvent} from '../../utils/event-factory';
 import {evaluateCondition} from '../../policy-registry';
-import {SystemAccessCondition, systemAccessModel} from "../access";
+import {
+    autoRegisteredCommandAccessConditions,
+    SystemCommandAccessCondition, GeneratedSystemCommandConditions
+} from "../command-access";
 
 type SystemSnapshotState = {
     numberExecutedTests: number;
@@ -148,16 +151,29 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
     }
 
     private handleExecuteTest(cmd: Command<ExecuteTestPayload>): Event[] {
-        // if (!cmd.metadata?.userId) {
-        //     throw new BusinessRuleViolation(`User ID is required for test execution`);
-        // }
-        // if (!evaluateCondition(SystemAccessCondition.CAN_EXECUTE_TEST, cmd.metadata)) {
-        //     throw new BusinessRuleViolation(`You don't have permission to execute this test`);
-        // }
+
+        function isCommandAllowed(
+            condition: SystemCommandAccessCondition,
+            context: AccessContext
+        ) {
+            return evaluateCondition(condition, context);
+        }
+
+        if (!cmd.metadata?.userId) {
+            throw new BusinessRuleViolation(`User ID is required for test execution`);
+        }
+        const accessContext: AccessContext = {
+            role: cmd.metadata?.role ?? 'unknown', // or throw if not present
+            userId: cmd.metadata?.userId
+        };
+        if (!evaluateCondition(GeneratedSystemCommandConditions.EXECUTETEST, accessContext)) {
+            throw new BusinessRuleViolation(`User ${cmd.metadata.userId} does not have access to execute test`);
+        }
         const now = new Date();
         const payload: TestExecutedPayload = {
             testId: cmd.payload.testId,
             testName: cmd.payload.testName,
+            testerId: cmd.metadata.userId,
             result: 'success',
             executedAt: now,
             numberExecutedTests: this.numberExecutedTests + 1,

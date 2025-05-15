@@ -21,6 +21,7 @@ export function createSystemStatusProjection(
       await updater.upsert(tenant_id, aggregateId, {
         id: aggregateId,
         tenant_id,
+        testerId: payload.testerId,
         testName: payload.testName,
         result: payload.result,
         executedAt: payload.executedAt,

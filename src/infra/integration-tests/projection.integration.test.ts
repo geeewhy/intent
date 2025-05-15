@@ -77,7 +77,11 @@ describe('Projection Integration Tests', () => {
                 aggregateType,
                 parameters: {integration: true}
             },
-            metadata: {timestamp: new Date()}
+            metadata: {
+                timestamp: new Date(),
+                userId: uuidv4(),
+                role: 'tester',
+            }
         };
 
         // Act: Send the command
@@ -117,7 +121,11 @@ describe('Projection Integration Tests', () => {
                     aggregateType,
                     parameters: {sequence: i}
                 },
-                metadata: {timestamp: new Date()}
+                metadata: {
+                    timestamp: new Date(),
+                    userId: uuidv4(),
+                    role: 'tester',
+                }
             };
 
             await scheduler.schedule(command);
