@@ -50,7 +50,15 @@ export class CommandBus {
    */
   async dispatchWithAggregate(cmd: Command, aggregate: BaseAggregate<any>): Promise<Event[]> {
     const handler = this.handlers.find(h => h.supportsCommand(cmd));
-    if (!handler) throw new Error(`No handler for command: ${cmd.type}`);
+    if (!handler) throw new Error(`[Command-bus] No handler for command: ${cmd.type}`);
+
+    const cmdTenant = cmd.tenant_id;
+    const payloadTenant = (cmd.payload as any)?.tenantId;
+
+    if (payloadTenant && payloadTenant !== cmdTenant) {
+      throw new Error(`[Command-bus] Mismatch between command.tenant_id and payload.tenantId`);
+    }
+
     return await handler.handleWithAggregate(cmd, aggregate);
   }
 }
