@@ -320,4 +320,4 @@ The `temporal-config` directory contains configuration files for the Temporal se
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+TBD. Means you can not do anything with it yet.

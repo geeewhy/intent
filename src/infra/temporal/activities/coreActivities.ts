@@ -7,6 +7,7 @@ import {PgEventStore} from '../../pg/pg-event-store';
 import {getAggregateClass, supportsAggregateType, createAggregatePayload} from '../../../core/aggregates';
 import {BusinessRuleViolation} from '../../../core/errors';
 import {WorkflowRouter} from '../workflow-router';
+import {getCommandBus} from "../../../core/domains";
 
 dotenv.config();
 
@@ -149,7 +150,6 @@ export async function loadAggregate(
 
 /**
  * Get events for a command without applying them
- * @param tenantId
  * @param cmd
  */
 export async function getEventsForCommand(
@@ -158,14 +158,11 @@ export async function getEventsForCommand(
     try {
         const tenantId = cmd.tenant_id;
         const { aggregateType, aggregateId } = cmd.payload;
-        // Load the aggregate
-        const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId);
 
-        if (!aggregate) {
-            throw new Error(`Aggregate ${aggregateType}:${aggregateId} not found and could not be created`);
-        }
+        const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId); // Activity
+        const commandBus = getCommandBus();
+        const events = await commandBus.dispatchWithAggregate(cmd, aggregate); // Pure
 
-        const events = aggregate.handle(cmd); // In activity context — class instance is intact
         return { events, status: 'success' };
     } catch (err) {
         if (err instanceof BusinessRuleViolation) {

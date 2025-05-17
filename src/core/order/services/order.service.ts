@@ -9,6 +9,7 @@ import { OrderAggregate } from '../aggregates/order.aggregate';
 import { CommandHandler } from '../../command-bus';
 import { EventHandler } from '../../event-bus';
 import { createAggregatePayload } from '../../aggregates';
+import {BaseAggregate} from "../../base/aggregate";
 
 /**
  * Order service - implements the inbound ports (CommandPort, EventPort)
@@ -24,6 +25,12 @@ export class OrderService implements CommandPort, EventPort, CommandHandler, Eve
   ) {}
 
   /* ---------- Port Implementations ---------- */
+  async handleWithAggregate(cmd: Command, aggregate: BaseAggregate<any>): Promise<Event[]> {
+    if (!(aggregate instanceof OrderAggregate)) {
+      throw new Error('Expected OrderAggregate but got something else');
+    }
+    return aggregate.handle(cmd);
+  }
 
   /** Check if this service supports a command */
   supportsCommand(cmd: Command): boolean {

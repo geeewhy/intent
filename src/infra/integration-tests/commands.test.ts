@@ -26,7 +26,7 @@ describe('Temporal Workflow Integration Tests', () => {
     test('Command should create aggregate and apply event', async () => {
         const aggregateId = uuidv4();
         const aggregateType = 'system';
-        const userId = `user-${uuidv4()}`;
+        const userId = uuidv4();
 
         const command: Command = {
             id: uuidv4(),
@@ -53,7 +53,7 @@ describe('Temporal Workflow Integration Tests', () => {
     test('Sequential commands should reuse same workflow and maintain version', async () => {
         const aggregateId = uuidv4();
         const aggregateType = 'system';
-        const userId = `user-${uuidv4()}`;
+        const userId = uuidv4();
         const workflowId = getAggregateWorkflowId(tenantId, 'system', aggregateId);
 
         for (let i = 0; i < 3; i++) {
@@ -89,7 +89,7 @@ describe('Temporal Workflow Integration Tests', () => {
 
     test('Command should signal Saga after Aggregate is completed', async () => {
         const aggregateId = uuidv4();
-        const userId = `user-${uuidv4()}`;
+        const userId = uuidv4();
         const aggregateType = 'system';
 
         const command: Command = {

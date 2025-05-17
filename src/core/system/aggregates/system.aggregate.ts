@@ -32,6 +32,13 @@ type SystemSnapshotState = {
 export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
     public aggregateType = 'system';
     static CURRENT_SCHEMA_VERSION = 1;
+    static readonly COMMAND_LIST = [
+        SystemCommandType.LOG_MESSAGE,
+        SystemCommandType.SIMULATE_FAILURE,
+        SystemCommandType.EMIT_MULTIPLE_EVENTS,
+        SystemCommandType.EXECUTE_TEST,
+        SystemCommandType.EXECUTE_RETRYABLE_TEST,
+    ];
 
     id: UUID;
     version = 0;

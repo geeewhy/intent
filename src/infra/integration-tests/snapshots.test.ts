@@ -2,7 +2,7 @@
 import {v4 as uuidv4} from 'uuid';
 import {TemporalScheduler} from '../temporal/temporal-scheduler';
 import {Command, Event} from '../../core/contracts';
-import {OrderCommandType, OrderEventType} from '../../core/order';
+import {SystemCommandType, SystemEventType} from '../../core/system';
 import {waitForNewEvents, waitForSnapshot} from "./utils";
 
 import {
@@ -18,7 +18,7 @@ describe('Snapshot Integration Tests', () => {
     let tenantId: string;
     let eventStore: PgEventStore;
     let allSchedules: Promise<any>[] = [];
-    let aggregateType = 'order'; //todo change it to test, isolate test aggregate in core
+    let aggregateType = 'system';
 
     // Setup before all tests
     beforeAll(async () => {
@@ -47,22 +47,22 @@ describe('Snapshot Integration Tests', () => {
     test('Snapshots taken every 2 aggregate loads, odd events be applied', async () => {
         // Create a unique order ID for this test
         const orderId = uuidv4();
-        const userId = `user-${uuidv4()}`;
+        const userId = uuidv4();
 
         // Create first command
         const firstCommand: Command = {
             id: uuidv4(),
             tenant_id: tenantId,
-            type: OrderCommandType.EXECUTE_TEST,
+            type: SystemCommandType.EXECUTE_TEST,
             payload: {
                 orderId,
-                userId,
                 aggregateId: orderId,
                 aggregateType: aggregateType,
             },
             metadata: {
                 userId,
                 timestamp: new Date(),
+                role: 'tester',
             },
         };
 
@@ -73,7 +73,7 @@ describe('Snapshot Integration Tests', () => {
         // Wait for events to be created
         events = await waitForNewEvents(eventStore, tenantId, aggregateType, orderId, 0, 1);
         expect(events.length).toBeGreaterThanOrEqual(1);
-        expect(events[0].type).toBe(OrderEventType.TEST_EXECUTED);
+        expect(events[0].type).toBe(SystemEventType.TEST_EXECUTED);
 
         // Check that no snapshot exists yet (only 1 event)
         let maybeSnapshot = await eventStore.loadSnapshot(tenantId, aggregateType, orderId);
@@ -83,7 +83,7 @@ describe('Snapshot Integration Tests', () => {
         const secondCommand: Command = {
             id: uuidv4(),
             tenant_id: tenantId,
-            type: OrderCommandType.EXECUTE_TEST,
+            type: SystemCommandType.EXECUTE_TEST,
             payload: {
                 orderId,
                 aggregateId: orderId,
@@ -92,6 +92,7 @@ describe('Snapshot Integration Tests', () => {
             metadata: {
                 userId,
                 timestamp: new Date(),
+                role: 'tester',
             },
         };
 
@@ -112,15 +113,15 @@ describe('Snapshot Integration Tests', () => {
         const thirdCommand: Command = {
             id: uuidv4(),
             tenant_id: tenantId,
-            type: OrderCommandType.EXECUTE_TEST,
+            type: SystemCommandType.EXECUTE_TEST,
             payload: {
-                orderId,
                 aggregateId: orderId,
                 aggregateType: aggregateType,
             },
             metadata: {
                 userId,
                 timestamp: new Date(),
+                role: "tester",
             },
         };
         allSchedules.push(scheduler.schedule(thirdCommand));
@@ -128,7 +129,7 @@ describe('Snapshot Integration Tests', () => {
         //verify last event
         events = await waitForNewEvents(eventStore, tenantId, aggregateType, orderId, 2, 1);
         const lastEvent = events[0];
-        expect(lastEvent.type).toBe(OrderEventType.TEST_EXECUTED);
+        expect(lastEvent.type).toBe(SystemEventType.TEST_EXECUTED);
         expect(lastEvent.payload.numberExecutedTests).toBe(3);
     }, TEST_TIMEOUT);
 });
