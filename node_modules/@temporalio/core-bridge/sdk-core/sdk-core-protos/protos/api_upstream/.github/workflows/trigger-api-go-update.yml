@@ -1,0 +1,71 @@
+name: 'Trigger api-go Update'
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch in api-go repo to trigger update protos (default: master)"
+        required: true
+        default: master
+
+jobs:
+  notify:
+    name: 'Trigger api-go update'
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.TEMPORAL_CICD_APP_ID }}
+          private-key: ${{ secrets.TEMPORAL_CICD_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: api-go # generate a token with permissions to trigger GHA in api-go repo
+
+      - name: Prepare inputs
+        id: prepare_inputs
+        run: |
+          case "${{ github.event_name }}" in
+            "push")
+              BRANCH=${{ github.event.ref }}
+              BRANCH=${BRANCH#refs/heads/}
+              COMMIT_AUTHOR=${{ toJSON(github.event.head_commit.author.name) }}
+              COMMIT_AUTHOR_EMAIL=${{ toJSON(github.event.head_commit.author.email) }}
+              COMMIT_MESSAGE=${{ toJSON(github.event.head_commit.message) }}
+              ;;
+
+            "workflow_dispatch")
+              BRANCH="${{ github.event.inputs.branch }}"
+              COMMIT_AUTHOR="Temporal Data"
+              COMMIT_AUTHOR_EMAIL="commander-data@temporal.io"
+              COMMIT_MESSAGE="Update proto"
+              ;;
+          esac
+
+          echo "BRANCH=${BRANCH}" >> $GITHUB_OUTPUT
+          echo "COMMIT_AUTHOR=${COMMIT_AUTHOR}" >> $GITHUB_OUTPUT
+          echo "COMMIT_AUTHOR_EMAIL=${COMMIT_AUTHOR_EMAIL}" >> $GITHUB_OUTPUT
+          echo "COMMIT_MESSAGE=${COMMIT_MESSAGE}" >> $GITHUB_OUTPUT
+
+      - name: Dispatch api-go Github Action
+        env:
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
+          BRANCH: ${{ steps.prepare_inputs.outputs.BRANCH }}
+          COMMIT_AUTHOR: ${{ steps.prepare_inputs.outputs.COMMIT_AUTHOR }}
+          COMMIT_AUTHOR_EMAIL: ${{ steps.prepare_inputs.outputs.COMMIT_AUTHOR_EMAIL }}
+          COMMIT_MESSAGE: ${{ steps.prepare_inputs.outputs.COMMIT_MESSAGE }}
+        run: |
+          gh workflow run update-proto.yml -R https://github.com/temporalio/api-go \
+            -r master \
+            -f branch="${BRANCH}" \
+            -f commit_author="${COMMIT_AUTHOR}" \
+            -f commit_author_email="${COMMIT_AUTHOR_EMAIL}" \
+            -f commit_message="${COMMIT_MESSAGE}"

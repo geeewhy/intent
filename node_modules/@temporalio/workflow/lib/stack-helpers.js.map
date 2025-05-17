@@ -1,0 +1,1 @@
+{"version":3,"file":"stack-helpers.js","sourceRoot":"","sources":["../src/stack-helpers.ts"],"names":[],"mappings":";;AAMA,wCAKC;AAXD,2DAA+D;AAG/D;;GAEG;AACH,SAAgB,cAAc,CAAC,OAAyB;IACtD,MAAM,KAAK,GAAI,IAAA,4CAAwB,GAAU,EAAE,iBAAkD,CAAC;IACtG,IAAI,CAAC,KAAK;QAAE,OAAO;IACnB,KAAK,CAAC,aAAa,CAAC,MAAM,CAAC,OAAO,CAAC,CAAC;IACpC,KAAK,CAAC,cAAc,CAAC,MAAM,CAAC,OAAO,CAAC,CAAC;AACvC,CAAC"}
