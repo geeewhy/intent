@@ -4,6 +4,11 @@
 
 This file defines system instructions for AI-based agents (e.g. Codex, Copilot PR bots) operating in this codebase. It enforces architectural rules, behavior contracts, and change management required to evolve this project into a reusable ES/DDD framework with Temporal integration.
 
+### GROUND RULES
+
+* DO NOT RUN ANY INTERNET SEARCHES OR EXTERNAL API CALLS
+* DO NOT TRY TO INSTALL ANY DEPENDENCIES YOU DO NOT HAVE INTERNET ACCESS TO INSTALL
+
 ---
 
 ## 🔍 Scope
