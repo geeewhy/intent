@@ -66,6 +66,10 @@ All code changes must trigger the following checks:
 npm run build
 npm run test
 npm run test:core
+```
+
+DO NOT RUN:
+```
 npm run test:integration
 npm run migration:projections
 ```
