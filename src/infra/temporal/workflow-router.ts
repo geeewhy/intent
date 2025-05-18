@@ -3,7 +3,7 @@ import {Connection, WorkflowClient, WorkflowIdReusePolicy} from '@temporalio/cli
 import {SagaRegistry} from '../../core/domains';
 import {Command, Event, UUID} from '../../core/contracts';
 import {CommandHandler} from '../../core/command-bus';
-import {EventHandler} from '../../core/event-bus';
+import {EventHandler} from '../../core/contracts';
 import {BaseAggregate} from "../../core/base/aggregate";
 
 // Define the result type for the workflow
