@@ -19,7 +19,7 @@ import {
     RetryableTestExecutedPayload
 } from '../contracts';
 import {buildEvent} from '../../utils/event-factory';
-import {evaluateCondition} from '../../policy-registry';
+import {evaluateCondition, isCommandAllowed} from '../../policy-registry';
 import {
     autoRegisteredCommandAccessConditions,
     SystemCommandAccessCondition, GeneratedSystemCommandConditions
@@ -158,14 +158,6 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
     }
 
     private handleExecuteTest(cmd: Command<ExecuteTestPayload>): Event[] {
-
-        function isCommandAllowed(
-            condition: SystemCommandAccessCondition,
-            context: AccessContext
-        ) {
-            return evaluateCondition(condition, context);
-        }
-
         if (!cmd.metadata?.userId) {
             throw new BusinessRuleViolation(`User ID is required for test execution`);
         }
@@ -173,7 +165,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
             role: cmd.metadata?.role ?? 'unknown', // or throw if not present
             userId: cmd.metadata?.userId
         };
-        if (!evaluateCondition(GeneratedSystemCommandConditions.EXECUTETEST, accessContext)) {
+        if (!isCommandAllowed(GeneratedSystemCommandConditions.EXECUTETEST, accessContext)) {
             throw new BusinessRuleViolation(`User ${cmd.metadata.userId} does not have access to execute test`);
         }
         const now = new Date();

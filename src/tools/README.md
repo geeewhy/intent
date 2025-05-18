@@ -5,7 +5,11 @@ A CLI tool that validates the structure, completeness, and correctness of all `R
 ## Usage
 
 ```bash
+# Run linter in normal mode
 npm run lint:rls
+
+# Run linter in fix mode to generate patch-ready fixes
+npm run lint:rls -- --fix
 ```
 
 ## What it checks
@@ -56,7 +60,47 @@ You can add this linter to your CI pipeline to ensure that all RLS policies are 
   run: npm run lint:rls
 ```
 
+## Fix Mode
+
+When run with the `--fix` flag, the linter will generate patch-ready fixes for certain issues:
+
+- Missing tenant_id checks: Adds the appropriate tenant_id check to the SQL condition
+- Incorrect table names: Suggests the correct table name based on projection files
+
+### Example Fix Output
+
+```
+🔍 RLS Policy Linter
+====================
+
+Running in FIX mode - will generate patch-ready fixes
+
+Found 1 read-access files
+
+Found 1 projection tables in src/core/system/read-models
+
+❌ RLS Policy Linter Failed:
+
+🔴 Errors:
+  - Table 'system_statusx' in policy 'system.read.system_status.own' not found in any projection file
+    Consider changing to 'system_status'
+
+✅ Found 2 total policies, 1 errors, 0 warnings
+
+🔧 Generated fixes:
+
+--- src/core/system/read-models/read-access.ts
++++ src/core/system/read-models/read-access.ts
+
+@@ Fix table name for policy system.read.system_status.own from 'system_statusx' to 'system_status' @@
+- table: 'system_statusx'
++ table: 'system_status'
+
+To apply these fixes, you can manually edit the files or use a patch tool.
+```
+
 ## Future enhancements
 
 - Export audit JSON (e.g. `rls-policy-report.json`)
 - Add more checks for policy completeness and correctness
+- Add ability to automatically apply fixes with a `--fix-apply` flag
