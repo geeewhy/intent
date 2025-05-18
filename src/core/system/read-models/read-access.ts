@@ -39,7 +39,7 @@ export const ReadModelPolicies: Record<SystemReadModelScope, ReadAccessPolicy> =
         enforcement: {
             sql: () => `
 current_setting('request.jwt.claims', true)::json->>'user_id' = "testerId"
-AND current_setting('request.jwt.claims', true)::json->>'tenant_id' = tenant_id::text
+    AND current_setting('request.jwt.claims', true)::json->>'tenant_id' = tenant_id::text
 `,
             redact: (record, ctx) => {
                 if (ctx.role === 'tester') {
@@ -56,7 +56,8 @@ AND current_setting('request.jwt.claims', true)::json->>'tenant_id' = tenant_id:
         isAuthorized: ({ scopes }) => scopes?.includes(SystemReadModelScopes.SYSTEM_STATUS_ALL) ?? false,
         enforcement: {
             sql: () => `
-current_setting('request.jwt.claims', true)::json->>'tenant_id' = tenant_id::text
+current_setting('request.jwt.claims', true)::json->>'role' IN ('developer', 'system')
+AND current_setting('request.jwt.claims', true)::json->>'tenant_id' = tenant_id::text  
       `,
         },
     },
