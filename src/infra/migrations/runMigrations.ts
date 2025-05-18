@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import { genRlsSql } from '../projections/genRlsSql';
 
 dotenv.config();
 
@@ -99,6 +100,22 @@ export async function runAllMigrations() {
       });
 
       await umzug.up();
+    }
+
+    const rlsMigrations = genRlsSql();
+    if (rlsMigrations.length) {
+      const rlsUmzug = new Umzug({
+        migrations: rlsMigrations.map(({ name, sql }) => ({
+          name,
+          up: async () => pool.query(sql),
+          down: async () => console.log(`Down migration not supported for ${name}`),
+        })),
+        context: pool,
+        storage: new UmzugPostgresStorage({ pool, tableName: 'migrations' }),
+        logger: console,
+      });
+
+      await rlsUmzug.up();
     }
 
     console.log('All migrations completed successfully');

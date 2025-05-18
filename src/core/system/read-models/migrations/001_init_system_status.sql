@@ -11,3 +11,4 @@ CREATE TABLE system_status (
    "numberExecutedTests" INTEGER,
    updated_at TIMESTAMP
 );
+
