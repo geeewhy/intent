@@ -37,7 +37,10 @@ export const ReadModelPolicies: Record<SystemReadModelScope, ReadAccessPolicy> =
         condition: SystemReadModelScopes.SYSTEM_STATUS_OWN,
         isAuthorized: ({ scopes }) => scopes?.includes(SystemReadModelScopes.SYSTEM_STATUS_OWN) ?? false,
         enforcement: {
-            sql: () => `current_setting('request.jwt.claims', true)::json->>'user_id' = "testerId"`,
+            sql: () => `
+current_setting('request.jwt.claims', true)::json->>'user_id' = "testerId"
+AND current_setting('request.jwt.claims', true)::json->>'tenant_id' = tenant_id::text
+`,
             redact: (record, ctx) => {
                 if (ctx.role === 'tester') {
                     const { privateNotes, ...rest } = record
@@ -53,7 +56,7 @@ export const ReadModelPolicies: Record<SystemReadModelScope, ReadAccessPolicy> =
         isAuthorized: ({ scopes }) => scopes?.includes(SystemReadModelScopes.SYSTEM_STATUS_ALL) ?? false,
         enforcement: {
             sql: () => `
-        current_setting('request.jwt.claims', true)::json->>'role' IN ('developer', 'system')
+current_setting('request.jwt.claims', true)::json->>'tenant_id' = tenant_id::text
       `,
         },
     },
