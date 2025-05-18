@@ -1,3 +1,4 @@
+//src/core/system/read-models/system-status.projection.ts
 import { Event, EventHandler, ReadModelUpdaterPort } from '../../contracts';
 import { SystemEventType } from '../contracts';
 import { TestExecutedPayload } from '../contracts';

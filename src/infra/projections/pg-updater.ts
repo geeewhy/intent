@@ -1,3 +1,4 @@
+//src/infra/projections/pg-updater.ts
 import { ReadModelUpdaterPort } from '../../core/contracts';
 import { sql } from 'slonik';
 import type { DatabasePool } from 'slonik';

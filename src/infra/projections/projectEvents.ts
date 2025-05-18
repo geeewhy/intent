@@ -1,3 +1,4 @@
+//src/infra/projections/projectEvents.ts
 import { Event } from '../../core/contracts';
 import { loadAllProjections } from './loadProjections';
 import { createPool } from './pg-pool';

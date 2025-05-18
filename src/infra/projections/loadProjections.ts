@@ -1,3 +1,4 @@
+//src/infra/projections/loadProjections.ts
 import { DatabasePool } from 'slonik';
 import { EventHandler } from '../../core/contracts';
 

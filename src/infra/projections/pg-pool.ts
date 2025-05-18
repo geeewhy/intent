@@ -1,3 +1,4 @@
+//src/infra/projections/pg-pool.ts
 import { createPool as createSlonikPool } from 'slonik';
 
 /**
