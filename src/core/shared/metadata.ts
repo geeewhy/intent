@@ -1,4 +1,5 @@
-//core/utils/metadata.ts
+// core/shared/metadata.ts
+// Shared helper for propagating metadata between commands and events
 import { Command, Event, Metadata  } from '../contracts';
 
 export function inheritMetadata(

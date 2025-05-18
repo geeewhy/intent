@@ -57,7 +57,7 @@
 │   │   │       └── order.service.ts  # Optional command orchestration or query utilities (used by activities)
 │   │   ├── policy-registry.ts        # Global condition registry for RBAC and custom rule evaluation
 │   │   ├── ports.ts                  # Interfaces/ports: event store, read model adapters, external deps
-│   │   └── utils                     # 🧰 Core shared logic: type guards, factories, tracing, metadata propagation
+│   │   └── shared                    # 🧰 Cross-domain helpers like tracing and factories
 │   │       ├── command-factory.ts
 │   │       ├── event-factory.ts
 │   │       ├── metadata.ts

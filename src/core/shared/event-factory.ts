@@ -1,4 +1,5 @@
-//core/utils/event-factory.ts
+// core/shared/event-factory.ts
+// Generates events with standard metadata across domains
 
 import { Event, UUID } from '../contracts';
 

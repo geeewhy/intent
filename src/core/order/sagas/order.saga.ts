@@ -1,8 +1,8 @@
 // core/order/sagas/order.saga.ts
 import { Command, Event, ProcessPlan, SagaContext } from '../../contracts';
-import { trace } from '../../utils/observability';
-import { buildCommand } from '../../utils/command-factory';
-import { inheritMetadata } from '../../utils/metadata';
+import { trace } from '../../shared/observability';
+import { buildCommand } from '../../shared/command-factory';
+import { inheritMetadata } from '../../shared/metadata';
 import {
     OrderCommandType,
     OrderEventType,

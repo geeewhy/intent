@@ -79,7 +79,7 @@ export function registerSystemProjections(pool: DatabasePool): EventHandler[] {
 **Why**: You already track correlation and causation. Tracing projection executions aids debugging and root-cause analysis.
 
 **Change**:
-Wrap each handler in `trace()`, helpers for tracing is in src/core/utils/observability.ts
+Wrap each handler in `trace()`, helpers for tracing is in src/core/shared/observability.ts
 
 ```ts
 await trace(`projection.handle.${event.type}`, { event }, async () => {
@@ -330,7 +330,7 @@ test('creates a status row for TEST_EXECUTED', async () => {
 
 ### Test Utility Scaffold
 
-**File**: `src/core/utils/test-utils.ts`
+**File**: `src/core/shared/test-utils.ts`
 
 ```ts
 export function createMockUpdater(): ReadModelUpdaterPort<any> {

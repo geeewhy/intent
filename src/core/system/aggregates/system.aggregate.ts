@@ -18,7 +18,7 @@ import {
     TestExecutedPayload,
     RetryableTestExecutedPayload
 } from '../contracts';
-import {buildEvent} from '../../utils/event-factory';
+import { buildEvent } from '../../shared/event-factory';
 import {evaluateCondition, isCommandAllowed} from '../../policy-registry';
 import {
     autoRegisteredCommandAccessConditions,

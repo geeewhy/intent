@@ -1,4 +1,5 @@
-//core/utils/type-guards.ts
+// core/shared/type-guards.ts
+// Runtime type checks used across commands and events
 
 import { Command, Event } from '../contracts';
 

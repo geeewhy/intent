@@ -1,4 +1,5 @@
-//core/utils/command-factory.ts
+// core/shared/command-factory.ts
+// Cross-domain utility to build commands with consistent metadata
 
 import { Command, UUID } from '../contracts';
 

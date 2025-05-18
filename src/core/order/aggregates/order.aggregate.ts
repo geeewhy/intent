@@ -32,7 +32,7 @@ import {
 } from '../contracts';
 import {BaseAggregate} from '../../base/aggregate';
 import {orderExists, orderIsPending, orderIsNotCancelled} from '../conditions/order-conditions';
-import {buildEvent} from '../../utils/event-factory';
+import { buildEvent } from '../../shared/event-factory';
 
 type OrderSnapshotState = {
     userId: UUID;
