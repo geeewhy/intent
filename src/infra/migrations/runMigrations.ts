@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import { generateRlsPolicies, RlsPolicySql } from '../projections/genRlsSql';
 
 dotenv.config();
 
@@ -81,6 +82,7 @@ export async function runAllMigrations() {
               up: async () => {
                 const sql = fs.readFileSync(migrationPath, 'utf8');
                 try {
+                  console.log(`Running migration: ${relativeName}`);
                   return context.query(sql);
                 } catch (error) {
                   console.error(`Migration failed: ${relativeName}`, error);
@@ -102,6 +104,50 @@ export async function runAllMigrations() {
     }
 
     console.log('All migrations completed successfully');
+
+    // Generate and apply RLS policies
+    console.log('Generating RLS policies...');
+    const rlsPolicies = await generateRlsPolicies();
+
+    if (rlsPolicies.length > 0) {
+      console.log(`Applying ${rlsPolicies.length} RLS policies...`);
+
+      // Create a new Umzug instance for RLS policies
+      const rlsUmzug = new Umzug({
+        migrations: rlsPolicies.map((policy, index) => {
+          const policyName = `rls-policy-${policy.tableName}-${index}`;
+          return {
+            name: policyName,
+            up: async () => {
+              console.log(`Running RLS policy migration`, policy);
+              // Execute the RLS policy SQL statements
+              await pool.query(policy.enableRlsQuery);
+              await pool.query(policy.dropPolicyQuery);
+              await pool.query(policy.createPolicyQuery);
+
+              // Execute the comment policy SQL statement if it exists
+              if (policy.commentPolicyQuery) {
+                await pool.query(policy.commentPolicyQuery);
+              }
+
+              return Promise.resolve();
+            },
+            down: async () => {
+              console.log(`Down migration not supported for RLS policy ${policyName}`);
+              return Promise.resolve();
+            }
+          };
+        }),
+        context: pool,
+        storage: new UmzugPostgresStorage({ pool, tableName: 'rls_policy_migrations' }),
+        logger: console,
+      });
+
+      await rlsUmzug.up();
+      console.log('RLS policies applied successfully');
+    } else {
+      console.log('No RLS policies to apply');
+    }
   } finally {
     await pool.end();
   }
