@@ -23,7 +23,7 @@ export function getScopesForRole(role: SystemRole): SystemReadModelScope[] {
 export type ReadAccessPolicy = {
     table: string
     condition: string
-    authorize?: (ctx: AccessContext) => boolean
+    isAuthorized?: (ctx: AccessContext) => boolean
     enforcement?: {
         sql?: () => string
         mongo?: (ctx: AccessContext) => any
@@ -31,11 +31,11 @@ export type ReadAccessPolicy = {
     }
 }
 
-export const SystemReadModelPolicies: Record<SystemReadModelScope, ReadAccessPolicy> = {
+export const ReadModelPolicies: Record<SystemReadModelScope, ReadAccessPolicy> = {
     [SystemReadModelScopes.SYSTEM_STATUS_OWN]: {
         table: 'system_status',
         condition: SystemReadModelScopes.SYSTEM_STATUS_OWN,
-        authorize: ({ scopes }) => scopes?.includes(SystemReadModelScopes.SYSTEM_STATUS_OWN) ?? false,
+        isAuthorized: ({ scopes }) => scopes?.includes(SystemReadModelScopes.SYSTEM_STATUS_OWN) ?? false,
         enforcement: {
             sql: () => `current_setting('request.jwt.claims', true)::json->>'user_id' = tester_id`,
             redact: (record, ctx) => {
@@ -50,7 +50,7 @@ export const SystemReadModelPolicies: Record<SystemReadModelScope, ReadAccessPol
     [SystemReadModelScopes.SYSTEM_STATUS_ALL]: {
         table: 'system_status',
         condition: SystemReadModelScopes.SYSTEM_STATUS_ALL,
-        authorize: ({ scopes }) => scopes?.includes(SystemReadModelScopes.SYSTEM_STATUS_ALL) ?? false,
+        isAuthorized: ({ scopes }) => scopes?.includes(SystemReadModelScopes.SYSTEM_STATUS_ALL) ?? false,
         enforcement: {
             sql: () => `
         current_setting('request.jwt.claims', true)::json->>'role' IN ('developer', 'system')

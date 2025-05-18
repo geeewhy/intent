@@ -1,4 +1,4 @@
-//src/core/system/access.ts
+//src/core/system/command-access.ts
 import {
     registerCondition,
     registerCommandConditionsFromModel,
