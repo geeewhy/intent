@@ -37,7 +37,7 @@ export const ReadModelPolicies: Record<SystemReadModelScope, ReadAccessPolicy> =
         condition: SystemReadModelScopes.SYSTEM_STATUS_OWN,
         isAuthorized: ({ scopes }) => scopes?.includes(SystemReadModelScopes.SYSTEM_STATUS_OWN) ?? false,
         enforcement: {
-            sql: () => `current_setting('request.jwt.claims', true)::json->>'user_id' = tester_id`,
+            sql: () => `current_setting('request.jwt.claims', true)::json->>'user_id' = "testerId"`,
             redact: (record, ctx) => {
                 if (ctx.role === 'tester') {
                     const { privateNotes, ...rest } = record
