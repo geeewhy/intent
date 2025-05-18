@@ -1,4 +1,5 @@
-//core/order/index.ts
+// core/shared/observability.ts
+// Tracing helper shared across sagas for instrumentation
 import {SagaContext} from "../contracts";
 
 export function trace(

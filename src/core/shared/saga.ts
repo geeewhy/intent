@@ -1,4 +1,5 @@
-// core/utils/saga.ts
+// core/shared/saga.ts
+// Utility for building delayed commands used by multiple sagas
 
 import { Command, Event, UUID, SagaContext, Metadata } from '../contracts';
 import { inheritMetadata } from './metadata';

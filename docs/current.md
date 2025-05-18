@@ -45,7 +45,7 @@
 
 #### 8. **Separation of Concerns**
 
-* `core/`: business logic, coordination, contracts, policies, projections, utils.
+* `core/`: business logic, coordination, contracts, policies, projections, shared helpers.
 * `infra/`: event stores, pumps, Temporal bindings, Supabase plumbing.
 * Clean modular boundaries with minimal leakage between intent and mechanism.
 

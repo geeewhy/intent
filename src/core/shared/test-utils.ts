@@ -1,3 +1,5 @@
+// core/shared/test-utils.ts
+// Helper utilities for unit tests across domains
 import { ReadModelUpdaterPort } from '../contracts';
 
 /**

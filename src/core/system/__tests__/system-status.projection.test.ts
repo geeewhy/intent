@@ -1,5 +1,5 @@
 import { createSystemStatusProjection } from '../read-models/system-status.projection';
-import { createMockUpdater } from '../../utils/test-utils';
+import { createMockUpdater } from '../../shared/test-utils';
 import { SystemEventType } from '../contracts';
 
 describe('System Status Projection', () => {
