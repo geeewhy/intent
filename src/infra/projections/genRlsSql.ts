@@ -21,6 +21,7 @@ interface ReadAccessPolicy {
  */
 export interface RlsPolicySql {
   tableName: string;
+  condition: string;
   enableRlsQuery: string;
   dropPolicyQuery: string;
   createPolicyQuery: string;
@@ -142,6 +143,7 @@ IS 'RLS for ${policy.condition} access';
 
         policies.push({
           tableName: policy.table,
+          condition: policy.condition,
           enableRlsQuery,
           dropPolicyQuery,
           createPolicyQuery,

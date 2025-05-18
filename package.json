@@ -21,6 +21,7 @@
     "test:core": "jest --selectProjects core",
     "test:integration": "jest --selectProjects integration",
     "migration:projections": "ts-node src/infra/migrations/runMigrations.ts",
+    "migration:projections:force-rls": "ts-node src/infra/migrations/runMigrations.ts --force-rls",
     "lint:rls": "ts-node src/tools/lint-rls-policies.ts"
   },
   "dependencies": {

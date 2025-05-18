@@ -6,8 +6,18 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { generateRlsPolicies, RlsPolicySql } from '../projections/genRlsSql';
+import crypto from 'crypto';
 
 dotenv.config();
+
+/**
+ * Creates a stable hash of a SQL string
+ * @param sql SQL string to hash
+ * @returns First 8 characters of the SHA-256 hash
+ */
+function hashSql(sql: string): string {
+  return crypto.createHash('sha256').update(sql).digest('hex').slice(0, 8);
+}
 
 /**
  * Postgres storage adapter for Umzug
@@ -54,8 +64,9 @@ class UmzugPostgresStorage {
 
 /**
  * Runs all migrations for read models
+ * @param forceRls Whether to force reapplication of RLS policies
  */
-export async function runAllMigrations() {
+export async function runAllMigrations(forceRls: boolean = false) {
   const pool = new Pool({
     host: process.env.LOCAL_DB_HOST || 'localhost',
     port: parseInt(process.env.LOCAL_DB_PORT || '5432'),
@@ -112,10 +123,16 @@ export async function runAllMigrations() {
     if (rlsPolicies.length > 0) {
       console.log(`Applying ${rlsPolicies.length} RLS policies...`);
 
+      // When force mode is enabled, we use a timestamp in the migration name
+      // This ensures that all policies are reapplied regardless of their content
+
       // Create a new Umzug instance for RLS policies
       const rlsUmzug = new Umzug({
         migrations: rlsPolicies.map((policy, index) => {
-          const policyName = `rls-policy-${policy.tableName}-${index}`;
+          const sqlHash = hashSql(policy.createPolicyQuery);
+          const policyName = forceRls
+            ? `rls-policy-${policy.tableName}-${policy.condition}-forced-${new Date().getTime()}`
+            : `rls-policy-${policy.tableName}-${policy.condition}-${sqlHash}`;
           return {
             name: policyName,
             up: async () => {
@@ -155,7 +172,14 @@ export async function runAllMigrations() {
 
 // If this file is run directly, run all migrations
 if (require.main === module) {
-  runAllMigrations()
+  // Check if --force-rls flag is present
+  const forceRls = process.argv.includes('--force-rls');
+
+  if (forceRls) {
+    console.log('Force RLS mode enabled - all RLS policies will be reapplied');
+  }
+
+  runAllMigrations(forceRls)
       .then(() => process.exit(0))
       .catch((error) => {
         console.error('Migration failed:', error);
