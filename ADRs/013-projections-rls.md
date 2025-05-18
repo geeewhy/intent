@@ -102,23 +102,23 @@ A utility function scans all read model policies and generates SQL statements to
 export async function generateRlsPolicies(): Promise<RlsPolicySql[]> {
   // Find all read-access.ts files
   const readAccessFiles = globSync('src/core/**/read-models/read-access.ts');
-  
+
   for (const filePath of readAccessFiles) {
     // Dynamically import the read-access.ts file
     const module = await import(modulePath);
-    
+
     if (!module.ReadModelPolicies) continue;
-    
+
     const readModelPolicies = module.ReadModelPolicies as Record<string, ReadAccessPolicy>;
-    
+
     // Process each policy
     for (const [scopeName, policy] of Object.entries(readModelPolicies)) {
       if (!policy.table || !policy.enforcement?.sql) continue;
-      
+
       // Generate SQL for enabling RLS, dropping existing policies, and creating new policies
       // Add type casting for all ID fields
       // Add tenant_id check for multi-tenant tables if not already present
-      
+
       policies.push({
         tableName: policy.table,
         enableRlsQuery,
@@ -128,7 +128,7 @@ export async function generateRlsPolicies(): Promise<RlsPolicySql[]> {
       });
     }
   }
-  
+
   return policies;
 }
 ```
@@ -143,10 +143,16 @@ RLS policies are applied after schema migrations using Umzug:
 const rlsPolicies = await generateRlsPolicies();
 
 if (rlsPolicies.length > 0) {
+  // When force mode is enabled, we use a timestamp in the migration name
+  // This ensures that all policies are reapplied regardless of their content
+
   // Create a new Umzug instance for RLS policies
   const rlsUmzug = new Umzug({
     migrations: rlsPolicies.map((policy, index) => {
-      const policyName = `rls-policy-${policy.tableName}-${index}`;
+      const sqlHash = hashSql(policy.createPolicyQuery);
+      const policyName = forceRls
+        ? `rls-policy-${policy.tableName}-${policy.condition}-forced-${new Date().getTime()}`
+        : `rls-policy-${policy.tableName}-${policy.condition}-${sqlHash}`;
       return {
         name: policyName,
         up: async () => {
@@ -154,12 +160,12 @@ if (rlsPolicies.length > 0) {
           await pool.query(policy.enableRlsQuery);
           await pool.query(policy.dropPolicyQuery);
           await pool.query(policy.createPolicyQuery);
-          
+
           // Execute the comment policy SQL statement if it exists
           if (policy.commentPolicyQuery) {
             await pool.query(policy.commentPolicyQuery);
           }
-          
+
           return Promise.resolve();
         },
         down: async () => {
@@ -172,7 +178,7 @@ if (rlsPolicies.length > 0) {
     storage: new UmzugPostgresStorage({ pool, tableName: 'rls_policy_migrations' }),
     logger: console,
   });
-  
+
   await rlsUmzug.up();
 }
 ```
@@ -184,6 +190,7 @@ if (rlsPolicies.length > 0) {
 3. **Policy Comments**: Each policy includes a comment for better documentation and auditing
 4. **Idempotent Application**: Policies are dropped and recreated to ensure changes are applied
 5. **Migration Tracking**: RLS policies are tracked in a separate migration table to avoid reapplying them
+6. **Force Mode**: A `--force-rls` option allows for forced reapplication of all RLS policies when needed
 
 ---
 
@@ -195,7 +202,7 @@ Integration tests verify that RLS policies are correctly applied and enforced:
 // src/infra/integration-tests/projection.integration.test.ts
 describe('RLS Integration Tests', () => {
   // Test cases:
-  
+
   test('Tester can only read their own records', async () => {
     // Set JWT claims for tester role
     await testPool.query(sql`
@@ -205,28 +212,28 @@ describe('RLS Integration Tests', () => {
         false
       )
     `);
-    
+
     // Query system_status table
     const result = await testPool.query(sql`SELECT * FROM system_status WHERE "testerId" IN (${testerId1}, ${testerId2})`);
-    
+
     // Tester should only see their own records
     expect(result.rows.length).toBe(1);
     expect(result.rows[0].testerId).toBe(testerId1);
   });
-  
+
   test('Developer can read all records within their tenant', async () => {
     // Set JWT claims for developer role
     // ...
-    
+
     // Developer should see all records within their tenant
     expect(result.rows.length).toBe(2);
     expect(result.rows.map(row => row.testerId).sort()).toEqual([testerId1, testerId2].sort());
     expect(result.rows.every(row => row.tenant_id === tenantId)).toBe(true);
   });
-  
+
   test('Developer can only read records from their own tenant', async () => {
     // ...
-    
+
     // Developer should only see records from their own tenant
     expect(result.rows.length).toBe(2);
     expect(result.rows.every(row => row.tenant_id === tenantId)).toBe(true);
@@ -261,7 +268,9 @@ describe('RLS Integration Tests', () => {
 ## Future Considerations
 
 1. **Policy Versioning**: Consider versioning policies to track changes over time
-2. **Dynamic Policy Application**: Allow policies to be updated without requiring a full migration
+2. **Dynamic Policy Application**: ✅ Implemented with `--force-rls` option that allows policies to be reapplied without requiring a full migration
+   - Use `npm run migration:projections:force-rls` to force reapplication of all RLS policies
+   - Useful for recovery from partial corruption or when bootstrapping a new environment
 3. **Policy Testing Framework**: Develop a more comprehensive testing framework for policies
 4. **Policy Documentation**: Generate documentation from policies for better visibility
 

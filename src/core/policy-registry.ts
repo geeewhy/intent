@@ -1,5 +1,6 @@
 //src/core/policy-registry.ts
 import { AccessContext } from './contracts';
+import {SystemCommandAccessCondition} from "./system";
 
 export type AccessPolicy = (context: AccessContext) => boolean;
 const conditionMap: Record<string, (args: AccessPolicy) => boolean> = {};
@@ -15,6 +16,13 @@ export function evaluateCondition(name: string, args: any): boolean {
     const fn = conditionMap[name];
     if (!fn) throw new Error(`Unknown condition: ${name}, conditions available: ${listRegisteredConditions().join(', ')}`);
     return fn(args);
+}
+
+export function isCommandAllowed(
+    condition: string,
+    context: AccessContext
+) {
+    return evaluateCondition(condition, context);
 }
 
 export function listRegisteredConditions() {
