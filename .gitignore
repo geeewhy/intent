@@ -6,3 +6,4 @@ _obsolete
 misc
 codex.md
 node_modules
+.DS_Store
