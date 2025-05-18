@@ -7,7 +7,7 @@ import { Command, Event, UUID } from '../../contracts';
 import { CommandPort, EventPort, EventStorePort, EventPublisherPort } from '../../ports';
 import { OrderAggregate } from '../aggregates/order.aggregate';
 import { CommandHandler } from '../../command-bus';
-import { EventHandler } from '../../event-bus';
+import { EventHandler } from '../../contracts';
 import { createAggregatePayload } from '../../aggregates';
 import {BaseAggregate} from "../../base/aggregate";
 

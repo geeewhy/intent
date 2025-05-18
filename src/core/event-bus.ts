@@ -3,26 +3,12 @@
  * Event bus and event handler interfaces
  */
 
-import { Event } from './contracts';
+import { Event, EventHandler } from './contracts';
 
 /**
  * Event handler interface
  * Each process manager or projection implements this interface to handle specific event types
  */
-export interface EventHandler<E extends Event = Event> {
-  /**
-   * Check if this handler supports the given event
-   * @param event The event to check
-   * @returns True if this handler supports the event, false otherwise
-   */
-  supportsEvent(event: Event): event is E;
-
-  /**
-   * Handle the event
-   * @param event The event to handle
-   */
-  handle(event: E): Promise<void>;
-}
 
 /**
  * Event bus
