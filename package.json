@@ -1,7 +1,7 @@
 {
   "name": "kitchen-eats-backend",
   "version": "1.0.0",
-  "description": "KitchenEats backend with hexagonal architecture",
+  "description": "Intent, Event-sourced Execution Model backends with hexagonal architecture",
   "main": "dist/index.js",
   "engines": {
     "node": ">=22.0.0"
