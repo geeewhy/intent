@@ -83,7 +83,7 @@ export const handler = async (req: Request): Promise<Response> => {
     // Insert the command into the database
     // Supabase will enforce RLS policies based on the JWT
     const { error: insertError } = await supabase
-      .from('commands')
+      .from('core.commands')
       .insert(command);
 
     if (insertError) {

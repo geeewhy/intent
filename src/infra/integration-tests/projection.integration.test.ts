@@ -215,6 +215,8 @@ describe('RLS Integration Tests', () => {
             role: 'tester'
         });
 
+        console.log('testerClaims:', testerClaimsJson);
+
         await testPool.query(sql`
             SELECT set_config(
                 'request.jwt.claims',
@@ -222,6 +224,7 @@ describe('RLS Integration Tests', () => {
                 false
             )
         `);
+
 
         // Query system_status table
         const result = await testPool.query(sql`SELECT * FROM system_status WHERE "testerId" IN (${testerId1}, ${testerId2})`);
