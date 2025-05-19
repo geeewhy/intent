@@ -26,7 +26,7 @@ class UmzugPostgresStorage {
   constructor(private readonly options: { pool: any; tableName: string }) {
     // Ensure tableName is properly schema-qualified if it doesn't already include a schema
     if (!this.options.tableName.includes('.')) {
-      this.options.tableName = `core.${this.options.tableName}`;
+      this.options.tableName = `infra.${this.options.tableName}`;
     }
   }
 

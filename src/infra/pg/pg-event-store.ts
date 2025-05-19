@@ -35,7 +35,7 @@ export class PgEventStore implements EventStorePort {
   async snapshotAggregate(tenantId: UUID, aggregate: BaseAggregate<any>): Promise<void> {
     const snapshot = aggregate.toSnapshot();
     await this.pool.query(`
-      INSERT INTO core.aggregates (id, tenant_id, type, version, snapshot, created_at, schema_version)
+      INSERT INTO infra.aggregates (id, tenant_id, type, version, snapshot, created_at, schema_version)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (id, tenant_id) DO UPDATE
       SET version = EXCLUDED.version,
@@ -72,7 +72,7 @@ export class PgEventStore implements EventStorePort {
       await this.setTenantContext(client, tenantId);
 
       await client.query(`
-      SELECT 1 FROM core.events 
+      SELECT 1 FROM infra.events 
       WHERE tenant_id = $1 AND aggregate_id = $2
       FOR UPDATE
     `, [tenantId, aggregateId]);
@@ -83,7 +83,7 @@ export class PgEventStore implements EventStorePort {
         const version = expectedVersion + i;
 
         await client.query(`
-        INSERT INTO core.events (
+        INSERT INTO infra.events (
           tenant_id, id, aggregate_id, aggregate_type, type, payload, version, metadata, created_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `, [
@@ -123,7 +123,7 @@ export class PgEventStore implements EventStorePort {
 
       // Check if a snapshot exists
       const snapshotResult = await client.query(`
-        SELECT version, snapshot, schema_version FROM core.aggregates
+        SELECT version, snapshot, schema_version FROM infra.aggregates
         WHERE tenant_id = $1 AND id = $2 AND type = $3
       `, [tenantId, aggregateId, aggregateType]);
 
@@ -162,7 +162,7 @@ export class PgEventStore implements EventStorePort {
 
       // Query events from the specified version
       const eventsQuery = `
-        SELECT * FROM core.events
+        SELECT * FROM infra.events
         WHERE tenant_id = $1 AND aggregate_id = $2 AND aggregate_type = $3 AND version > $4
         ORDER BY version ASC
       `;

@@ -10,7 +10,7 @@ import { sbAdmin } from './supabase-client';
  * @param id The command ID
  */
 export const markConsumed = (id: string) =>
-  sbAdmin.from('core.commands').update({ status: 'consumed' }).eq('id', id);
+  sbAdmin.from('infra.commands').update({ status: 'consumed' }).eq('id', id);
 
 /**
  * Mark a command as failed
@@ -18,7 +18,7 @@ export const markConsumed = (id: string) =>
  * @param err The error that occurred
  */
 export const markFailed = (id: string, err: Error) =>
-  sbAdmin.from('core.commands').update({
+  sbAdmin.from('infra.commands').update({
     status: 'failed', 
     error_message: err.message
   }).eq('id', id);

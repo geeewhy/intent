@@ -44,7 +44,7 @@ const supabase = createClient(
  */
 export async function dispatchCommand(cmd: Command): Promise<void> {
     const {error} = await supabase
-        .from('core.commands')
+        .from('infra.commands')
         .insert([{...cmd, status: 'pending', created_at: new Date()}]);
 
     if (error) {
