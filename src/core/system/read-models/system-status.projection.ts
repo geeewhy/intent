@@ -4,6 +4,25 @@ import { SystemEventType } from '../contracts';
 import { TestExecutedPayload } from '../contracts';
 
 /**
+ * Metadata for the system status projection
+ * This is used by the schema drift detection tool
+ */
+export const projectionMeta = {
+  table: 'system_status',
+  columnTypes: {
+    'id': 'uuid',
+    'tenant_id': 'uuid',
+    'testerId': 'uuid',
+    'testName': 'text',
+    'result': 'text', // enum: 'success' | 'failure'
+    'executedAt': 'timestamp',
+    'parameters': 'jsonb',
+    'numberExecutedTests': 'integer',
+    'updated_at': 'timestamp',
+  }
+};
+
+/**
  * Creates a projection handler for the TEST_EXECUTED event
  * @param updater The read model updater to use
  * @returns An event handler for the TEST_EXECUTED event
