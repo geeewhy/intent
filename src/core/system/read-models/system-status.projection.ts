@@ -19,7 +19,8 @@ export const projectionMeta = {
     'parameters': 'jsonb',
     'numberExecutedTests': 'integer',
     'updated_at': 'timestamp',
-  }
+  },
+  eventTypes: ['testExecuted'],
 };
 
 /**
@@ -32,11 +33,16 @@ export function createSystemStatusProjection(
 ): EventHandler {
   return {
     supportsEvent(event): event is Event<TestExecutedPayload> {
-      return event.type === SystemEventType.TEST_EXECUTED;
+      return projectionMeta.eventTypes.includes(event.type);
     },
 
     async handle(event) {
+      console.log(`[System-Status-Projection] Handling event ${event.type} for tenant ${event.tenant_id} with aggregate ID ${event.aggregateId}`);
       const { tenant_id, aggregateId, payload, metadata } = event;
+
+      if (!tenant_id || !aggregateId || !payload) {
+        throw new Error(`[System-Status-Projection] Invalid event ${event.type}. Missing tenant_id, aggregateId, or payload.`);
+      }
 
       await updater.upsert(tenant_id, aggregateId, {
         id: aggregateId,

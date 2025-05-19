@@ -13,3 +13,9 @@ export function registerSystemProjections(pool: DatabasePool): EventHandler[] {
   const updater = createPgUpdaterFor(projectionMeta.table, pool);
   return [createSystemStatusProjection(updater)];
 }
+
+/**
+ * Exports the projection metadata(s) for easy access
+ */
+export { projectionMeta };
+
