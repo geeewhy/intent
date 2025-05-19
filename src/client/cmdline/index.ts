@@ -64,7 +64,7 @@ async function subscribeToEvents(supabase: SupabaseClient, tenantId: string): Pr
             'postgres_changes',
             {
                 event: 'INSERT',
-                schema: 'public',
+                schema: 'core',
                 table: 'events',
                 filter,
             },
@@ -191,7 +191,7 @@ async function sendCreateOrderCommand(supabase: SupabaseClient, tenantId: string
 
         console.log('Sending createOrder command:', JSON.stringify(command, null, 2));
 
-        const {error, data} = await supabase.from('commands').insert(command).select();
+        const {error, data} = await supabase.from('core.commands').insert(command).select();
 
         if (error) {
             console.error('Error inserting command:', error);
@@ -244,7 +244,7 @@ async function main(): Promise<void> {
                 if (!supabaseClient) return;
 
                 // Simple query to test connection
-                const {error} = await supabaseClient.from('events').select('id').limit(1);
+                const {error} = await supabaseClient.from('core.events').select('id').limit(1);
 
                 if (error) {
                     console.error('Heartbeat failed:', error.message);

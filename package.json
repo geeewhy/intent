@@ -22,7 +22,9 @@
     "test:integration": "jest --selectProjects integration",
     "migration:projections": "ts-node src/infra/migrations/runMigrations.ts",
     "migration:projections:force-rls": "ts-node src/infra/migrations/runMigrations.ts --force-rls",
-    "lint:rls": "ts-node src/tools/lint-rls-policies.ts"
+    "lint:rls": "ts-node src/tools/lint-rls-policies.ts",
+    "check:projection-drift": "ts-node src/tools/check-projection-drift.ts",
+    "repair:projection-drift": "ts-node src/tools/repair-projection-drift.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

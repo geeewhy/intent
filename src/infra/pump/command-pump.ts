@@ -23,7 +23,7 @@ export async function startCommandPump() {
     channel: 'commands-pump',
     eventSpec: {
       event: 'INSERT',
-      schema: 'public',
+      schema: 'core',
       table: 'commands',
       filter: 'status=eq.pending'
     },
@@ -31,7 +31,7 @@ export async function startCommandPump() {
     validate: cmd => cmd && cmd.status === 'pending' && !!cmd.type,
     processBatch: async commands => {
       console.log(`[CommandPump] Processing batch of ${commands.length} commands`);
-      
+
       for (const cmd of commands) {
         try {
           console.log(`[CommandPump] Scheduling workflow for command: ${cmd.id}, type: ${cmd.type}`);

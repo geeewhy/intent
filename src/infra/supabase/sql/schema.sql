@@ -29,7 +29,7 @@ CREATE TABLE events (
                         type           text NOT NULL,
                         payload        jsonb NOT NULL,
                         created_at     timestamptz NOT NULL DEFAULT now(),
-                        aggregate_id   uuid,
+                        aggregateId   uuid,
                         aggregate_type text
 );
 

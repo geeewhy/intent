@@ -1,7 +1,8 @@
+//src/core/system/read-models/register.ts
 import { DatabasePool } from 'slonik';
 import { EventHandler } from '../../contracts';
 import { createPgUpdaterFor } from '../../../infra/projections/pg-updater';
-import { createSystemStatusProjection } from './system-status.projection';
+import { createSystemStatusProjection, projectionMeta } from './system-status.projection';
 
 /**
  * Registers all projection handlers for the system slice
@@ -9,6 +10,12 @@ import { createSystemStatusProjection } from './system-status.projection';
  * @returns An array of event handlers
  */
 export function registerSystemProjections(pool: DatabasePool): EventHandler[] {
-  const updater = createPgUpdaterFor('system_status', pool);
+  const updater = createPgUpdaterFor(projectionMeta.table, pool);
   return [createSystemStatusProjection(updater)];
 }
+
+/**
+ * Exports the projection metadata(s) for easy access
+ */
+export { projectionMeta };
+
