@@ -10,29 +10,11 @@ Directory structure is in [docs/structure.md](docs/structure.md).
 
 This project implements a hexagonal architecture (ports and adapters) pattern to separate the core domain logic from infrastructure concerns. The system is designed to be multi-tenant, with each household (tenant) having its own isolated data and real-time communication.
 
-### Key Components
-
-- **Core Domain**: Pure TypeScript business logic with no dependencies on external frameworks
-- **Supabase**: Real-time communication, authentication, and Edge Functions
-- **PostgreSQL**: Event store and data persistence with tenant isolation using Row-Level Security
-- **Temporal**: Workflow orchestration for long-running processes
-- **Command-Pump**: Worker that listens for new commands and starts Temporal workflows
-
-### System Flow
-
-1. **Client** sends commands to the **Edge Function** with JWT authentication
-2. **Edge Function** validates JWT, extracts tenant_id, and inserts command into database
-3. **Command-Pump** listens for new commands via PostgreSQL notifications
-4. **Command-Pump** starts a Temporal workflow for each command
-5. **Temporal Workflow** processes the command and appends events to the event store
-6. **Supabase Realtime** streams events to clients via WebSockets
-7. **Client** hydrates from snapshots and applies events to build the current state
-
 ### Hexagonal Architecture
 
 The project follows a strict hexagonal architecture:
 
-- **Domain Core**: Aggregates, services, and business logic
+- **Domain Core**: Aggregates and slices of business logic
 - **Ports**: Interfaces that define how the domain interacts with the outside world
 - **Adapters**: Implementations of the ports that connect to specific technologies
 
