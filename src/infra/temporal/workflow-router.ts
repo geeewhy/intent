@@ -7,7 +7,7 @@ import {EventHandler} from '../../core/contracts';
 import {BaseAggregate} from "../../core/base/aggregate";
 
 // Define the result type for the workflow
-type CommandResult = {
+export type CommandResult = {
     status: 'success' | 'fail';
     events?: Event[];
     error?: string;
@@ -42,7 +42,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
     }
 
     /** Handle a command (always route to aggregate's processCommand workflow) */
-    async handle(cmd: Command): Promise<void> {
+    async handle(cmd: Command): Promise<CommandResult> {
         if (this.isAggregateCommand(cmd)) {
             const {tenant_id} = cmd;
             const aggregateType = cmd.payload?.aggregateType;
@@ -86,6 +86,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
                         console.log(`[WorkflowRouter] Signaling saga for command ${cmd.type} after aggregate workflow completion`);
                         return this.routeSagaCommand(cmd);
                     }
+                    return result;
                 } catch (error) {
                     console.error(`[WorkflowRouter] Error waiting for aggregate workflow ${workflowId} to complete:`, error);
                     // Still signal the saga even if the aggregate workflow fails
@@ -93,6 +94,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
                         console.log(`[WorkflowRouter] Signaling saga for command ${cmd.type} after aggregate workflow failure`);
                         return this.routeSagaCommand(cmd);
                     }
+                    return {status: 'fail', error: `Error waiting for aggregate workflow: ${error}`};
                 }
             });
         } else if (this.isSagaCommand(cmd)) {
@@ -100,6 +102,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
             return this.routeSagaCommand(cmd);
         } else {
             console.warn(`[WorkflowRouter] Ignored unsupported command: ${cmd.type}`);
+            return { status: 'fail', error: `Unsupported command: ${cmd.type}` };
         }
     }
 
@@ -150,9 +153,9 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
     }
 
     /** Route a command to a saga (process manager) */
-    private async routeSagaCommand(cmd: Command): Promise<void> {
+    private async routeSagaCommand(cmd: Command): Promise<CommandResult> {
         const match = Object.values(SagaRegistry).find((s) => s.idFor(cmd));
-        if (!match) return;
+        if (!match) return {status: 'fail', error: `No matching saga for command ${cmd.type}`};
 
         const workflowId = match.idFor(cmd)!;
         const workflow = match.workflow || 'processSaga';
@@ -179,6 +182,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
             signalArgs: [cmd],
             //workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE, //prevent sequential execution
         });
+        return {status: 'success'};
     }
 
     /** Check if a command is for a saga */

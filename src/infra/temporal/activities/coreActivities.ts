@@ -1,12 +1,11 @@
 //src/infra/temporal/activities/coreActivities.ts
 import type {Command, Event, UUID} from '../../../core/contracts';
-import {createClient} from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import {v4 as uuidv4} from 'uuid';
 import {PgEventStore} from '../../pg/pg-event-store';
 import {getAggregateClass, supportsAggregateType, createAggregatePayload} from '../../../core/aggregates';
 import {BusinessRuleViolation} from '../../../core/errors';
-import {WorkflowRouter} from '../workflow-router';
+import {WorkflowRouter, CommandResult} from '../workflow-router';
 import {getCommandBus} from "../../../core/domains";
 
 dotenv.config();
@@ -21,38 +20,46 @@ export async function routeEvent(event: Event): Promise<void> {
     return router.on(event);
 }
 
+//route the command
+export async function routeCommand(command: Command): Promise<CommandResult> {
+    if (!router) {
+        router = await WorkflowRouter.create();
+    }
+    return router.handle(command);
+}
+
+
 // Initialize the event store
 const eventStore = new PgEventStore();
-
-const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-        auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-        },
-        global: {
-            headers: {'x-supabase-auth-role': 'service_role'}
-        }
-    }
-);
 
 /**
  * Dispatch a command by inserting it into the `commands` table
  * This will be picked up by the CommandPump to run via Temporal
  */
 export async function dispatchCommand(cmd: Command): Promise<void> {
-    const {error} = await supabase
-        .from('infra.commands')
-        .insert([{...cmd, status: 'pending', created_at: new Date()}]);
+    let pool = eventStore.pool;
 
-    if (error) {
+    try {
+        console.log(`[dispatchCommand] Dispatching command:`, cmd);
+
+        await pool.query(`
+            INSERT INTO infra.commands (
+              tenant_id, id, type, payload, metadata, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+          `, [
+            cmd.tenant_id,
+            cmd.id,
+            cmd.type,
+            JSON.stringify(cmd.payload || {}),
+            JSON.stringify(cmd.metadata || {}),
+            cmd.metadata?.timestamp || new Date()
+        ]);
+        let res = await routeCommand(cmd);
+        console.log(`[dispatchCommand] Dispatched command: ${cmd.type} (${cmd.id})`, res);
+    } catch (error) {
         console.error(`[dispatchCommand] Failed to insert command ${cmd.type}:`, error);
         throw error;
     }
-
-    console.log(`[dispatchCommand] Dispatched command: ${cmd.type} (${cmd.id})`);
 }
 
 /**

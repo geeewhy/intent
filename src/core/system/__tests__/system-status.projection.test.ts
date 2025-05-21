@@ -26,7 +26,7 @@ describe('System Status Projection', () => {
     };
 
     expect(handler.supportsEvent(event)).toBe(true);
-    await handler.handle(event);
+    await handler.on(event);
 
     expect(mock.store.get('system-123')).toMatchObject({
       testName: 'health-check',

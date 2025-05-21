@@ -36,7 +36,7 @@ export function createSystemStatusProjection(
       return projectionMeta.eventTypes.includes(event.type);
     },
 
-    async handle(event) {
+    async on(event) {
       console.log(`[System-Status-Projection] Handling event ${event.type} for tenant ${event.tenant_id} with aggregate ID ${event.aggregateId}`);
       const { tenant_id, aggregateId, payload, metadata } = event;
 

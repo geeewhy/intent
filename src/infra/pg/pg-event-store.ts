@@ -12,7 +12,7 @@ import { BaseAggregate } from '../../core/base/aggregate';
  * PostgreSQL implementation of the EventStorePort
  */
 export class PgEventStore implements EventStorePort {
-  private pool: Pool;
+  public pool: Pool;
 
   /**
    * Constructor

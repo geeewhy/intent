@@ -26,7 +26,7 @@ describe('SystemSaga', () => {
 
     expect(plan.commands).toHaveLength(1);
     expect(plan.commands[0].type).toBe(SystemCommandType.LOG_MESSAGE);
-    expect(plan.commands[0].payload.message).toBe('auto-triggered from saga');
+    expect(plan.commands[0].payload.message).toBe('auto-trigger immediate from saga');
     expect(ctx.emitInternalSignal).toHaveBeenCalledWith('obs.trace', expect.any(Object));
   });
 

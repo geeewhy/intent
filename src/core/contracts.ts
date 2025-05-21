@@ -99,7 +99,7 @@ export type InternalSignalPayload =
  */
 export interface EventHandler<E extends Event = Event> {
   supportsEvent(event: Event): event is E;
-  handle(event: E): Promise<void>;
+  on(event: E): Promise<void>;
 }
 
 /**

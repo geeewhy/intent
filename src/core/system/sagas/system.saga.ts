@@ -24,6 +24,8 @@ export class SystemSaga {
         const tenantId = input.tenant_id;
         const baseMeta = inheritMetadata(input, ctx, { source: this.sagaName });
 
+        console.log(`[SystemSaga] Reacting to ${input.type} with id ${input.id}`, input);
+
         switch (input.type) {
             case SystemCommandType.EMIT_MULTIPLE_EVENTS: {
                 plan.delays?.push({
@@ -32,15 +34,18 @@ export class SystemSaga {
                         tenantId,
                         SystemCommandType.LOG_MESSAGE,
                         {
+                            aggregateType: 'system',
+                            aggregateId: input.payload.aggregateId,
                             count: input.payload.count,
                             systemId: input.payload.systemId,
+                            message: 'auto-trigger delayed from saga',
                         },
                         {
                             ...baseMeta,
                             causationId: input.id,
                         }
                     ),
-                    ms: 10000,
+                    ms: 3000,
                 });
                 break;
             }
@@ -54,7 +59,7 @@ export class SystemSaga {
                             {
                                 aggregateType: 'system',
                                 aggregateId: input.payload.systemId,
-                                message: 'auto-triggered from saga',
+                                message: 'auto-trigger immediate from saga',
                             } as LogMessagePayload,
                             {
                                 ...baseMeta,
