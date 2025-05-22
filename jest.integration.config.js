@@ -9,6 +9,5 @@ module.exports = {
     '^.+\\.tsx?$': 'ts-jest',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  verbose: true,
   setupFiles: ['<rootDir>/src/infra/integration-tests/setup.ts'],
 };

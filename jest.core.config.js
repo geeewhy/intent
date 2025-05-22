@@ -9,11 +9,9 @@ module.exports = {
     '^.+\\.tsx?$': 'ts-jest',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  collectCoverage: true,
   coverageDirectory: 'coverage/core',
   collectCoverageFrom: [
     'src/core/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
   ],
-  verbose: true,
 };

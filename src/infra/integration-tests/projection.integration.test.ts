@@ -188,14 +188,16 @@ describe('RLS Integration Tests', () => {
         const testConnectionString = `postgres://${process.env.LOCAL_DB_TEST_USER}:${process.env.LOCAL_DB_TEST_PASSWORD}@${process.env.LOCAL_DB_HOST}:${process.env.LOCAL_DB_PORT || '5432'}/${process.env.LOCAL_DB_NAME}`;
         testPool = createPool({ connectionString: testConnectionString });
 
+        let lastEventUuid = uuidv4();
+
         // Insert test data with admin pool - records for both tenants
         await adminPool.query(sql`
-            INSERT INTO system_status (id, tenant_id, "testerId", "testName", result, "executedAt", parameters, "numberExecutedTests", updated_at)
+            INSERT INTO system_status (id, tenant_id, "testerId", "testName", result, "executedAt", parameters, "numberExecutedTests", updated_at, "last_event_id", "last_event_version")
             VALUES 
-                (${uuidv4()}, ${tenantId}, ${testerId1}, 'Test 1', 'success', NOW(), '{"test": 1}'::jsonb, 1, NOW()),
-                (${uuidv4()}, ${tenantId}, ${testerId2}, 'Test 2', 'success', NOW(), '{"test": 2}'::jsonb, 1, NOW()),
-                (${uuidv4()}, ${tenantId2}, ${testerId1}, 'Test 3', 'success', NOW(), '{"test": 3}'::jsonb, 1, NOW()),
-                (${uuidv4()}, ${tenantId2}, ${testerId2}, 'Test 4', 'success', NOW(), '{"test": 4}'::jsonb, 1, NOW())
+                (${uuidv4()}, ${tenantId}, ${testerId1}, 'Test 1', 'success', NOW(), '{"test": 1}'::jsonb, 1, NOW(), ${lastEventUuid}, 0),
+                (${uuidv4()}, ${tenantId}, ${testerId2}, 'Test 2', 'success', NOW(), '{"test": 2}'::jsonb, 1, NOW(), ${lastEventUuid}, 0),
+                (${uuidv4()}, ${tenantId2}, ${testerId1}, 'Test 3', 'success', NOW(), '{"test": 3}'::jsonb, 1, NOW(),${lastEventUuid}, 0),
+                (${uuidv4()}, ${tenantId2}, ${testerId2}, 'Test 4', 'success', NOW(), '{"test": 4}'::jsonb, 1, NOW(), ${lastEventUuid}, 0)
         `);
     }, TEST_TIMEOUT);
 

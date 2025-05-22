@@ -2,6 +2,7 @@
 import { Event, EventHandler, ReadModelUpdaterPort } from '../../contracts';
 import { SystemEventType } from '../contracts';
 import { TestExecutedPayload } from '../contracts';
+import { assertDataPropsMatchMapKeys } from '../../shared/type-guards';
 
 /**
  * Metadata for the system status projection
@@ -19,8 +20,16 @@ export const projectionMeta = {
     'parameters': 'jsonb',
     'numberExecutedTests': 'integer',
     'updated_at': 'timestamp',
+    'last_event_id': 'uuid',
+    'last_event_version': 'integer',
   },
   eventTypes: ['testExecuted'],
+};
+
+//compile time guardrails
+type SystemStatusProjectionKeys = keyof typeof projectionMeta.columnTypes;
+type SystemStatusProjectionShape = {
+  [K in SystemStatusProjectionKeys]: any;
 };
 
 /**
@@ -44,7 +53,7 @@ export function createSystemStatusProjection(
         throw new Error(`[System-Status-Projection] Invalid event ${event.type}. Missing tenant_id, aggregateId, or payload.`);
       }
 
-      await updater.upsert(tenant_id, aggregateId, {
+      const upsertData: SystemStatusProjectionShape = {
         id: aggregateId,
         tenant_id,
         testerId: payload.testerId,
@@ -54,7 +63,14 @@ export function createSystemStatusProjection(
         parameters: payload.parameters,
         numberExecutedTests: payload.numberExecutedTests,
         updated_at: metadata?.timestamp,
-      });
+        last_event_id: event.id,
+        last_event_version: event.version,
+      }
+
+      //runtime type guard
+      assertDataPropsMatchMapKeys(upsertData, projectionMeta.columnTypes);
+
+      await updater.upsert(tenant_id, aggregateId, upsertData);
     },
   };
 }
