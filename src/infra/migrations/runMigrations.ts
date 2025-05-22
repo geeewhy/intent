@@ -1,3 +1,9 @@
+/*
+
+OBSOLETE
+
+ */
+
 //src/infra/migrations/runMigrations.ts
 import { Umzug } from 'umzug';
 import { globSync } from 'glob';
