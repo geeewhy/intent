@@ -39,6 +39,7 @@ describe('Snapshot Integration Tests', () => {
         // Any cleanup needed
         await eventStore.close();
         await Promise.all(allSchedules);
+        await scheduler.close();
     });
 
     /**

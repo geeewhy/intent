@@ -165,23 +165,8 @@ async function fetchEvents(pool: DatabasePool, eventTypes: string[]): Promise<re
   });
 
   try {
-    // Check if the events table exists
-    const tableExistsResult = await pgPool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'events'
-      )
-    `);
-
-    const tableExists = tableExistsResult.rows[0].exists;
-
-    if (!tableExists) {
-      console.log(`[REPAIR] Events table does not exist, skipping event replay`);
-      return [];
-    }
-
     const result = await pgPool.query(`
-      SELECT *, aggregate_id as "aggregateId" FROM events
+      SELECT *, aggregate_id as "aggregateId" FROM infra.events
       WHERE type = ANY($1)
       ORDER BY created_at ASC
     `, [eventTypes]);
@@ -252,7 +237,7 @@ async function repairProjection({
 
           try {
             console.log(`[REPAIR] Projecting event ${event.type} for table ${table}`);
-            await handler.handle(event);
+            await handler.on(event);
           } catch (err) {
             console.warn('Projection failed', { eventType: event.type, error: err });
           }

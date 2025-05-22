@@ -38,7 +38,7 @@ export async function projectEvents(events: Event[]): Promise<void> {
       
       try {
         await trace(`projection.handle.${event.type}`, { event }, async () => {
-          await handler.handle(event);
+          await handler.on(event);
         });
       } catch (err) {
         console.warn('Projection failed', { eventType: event.type, error: err });

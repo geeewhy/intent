@@ -5,8 +5,10 @@ import {v4 as uuidv4} from 'uuid';
 import {PgEventStore} from '../../pg/pg-event-store';
 import {getAggregateClass, supportsAggregateType, createAggregatePayload} from '../../../core/aggregates';
 import {BusinessRuleViolation} from '../../../core/errors';
-import {WorkflowRouter, CommandResult} from '../workflow-router';
+import {WorkflowRouter} from '../workflow-router';
 import {getCommandBus} from "../../../core/domains";
+import {CommandResult} from '../../contracts';
+import { PgCommandStore } from '../../pg/pg-command-store';
 
 dotenv.config();
 
@@ -31,33 +33,26 @@ export async function routeCommand(command: Command): Promise<CommandResult> {
 
 // Initialize the event store
 const eventStore = new PgEventStore();
+const pgCommandStore = new PgCommandStore();
 
 /**
  * Dispatch a command by inserting it into the `commands` table
  * This will be picked up by the CommandPump to run via Temporal
  */
 export async function dispatchCommand(cmd: Command): Promise<void> {
-    let pool = eventStore.pool;
-
     try {
-        console.log(`[dispatchCommand] Dispatching command:`, cmd);
+        console.log(`[dispatchCommand] Upserting command into database: ${cmd.id}`);
+        await pgCommandStore.upsert(cmd);
 
-        await pool.query(`
-            INSERT INTO infra.commands (
-              tenant_id, id, type, payload, metadata, created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6)
-          `, [
-            cmd.tenant_id,
-            cmd.id,
-            cmd.type,
-            JSON.stringify(cmd.payload || {}),
-            JSON.stringify(cmd.metadata || {}),
-            cmd.metadata?.timestamp || new Date()
-        ]);
-        let res = await routeCommand(cmd);
-        console.log(`[dispatchCommand] Dispatched command: ${cmd.type} (${cmd.id})`, res);
-    } catch (error) {
-        console.error(`[dispatchCommand] Failed to insert command ${cmd.type}:`, error);
+        const result: CommandResult = await routeCommand(cmd);
+
+        const infraStatus = result.status === 'success' ? 'consumed' : 'failed';
+        await pgCommandStore.markStatus(cmd.id, infraStatus, result);
+
+        console.log(`[dispatchCommand] Command ${cmd.id} dispatched successfully with status: ${infraStatus}`);
+    } catch (error: any) {
+        await pgCommandStore.markStatus(cmd.id, 'failed', { status: 'fail', error: error.message });
+        console.error(`[dispatchCommand] Failed to dispatch command ${cmd.type}:`, error);
         throw error;
     }
 }
@@ -164,16 +159,16 @@ export async function getEventsForCommand(
 ): Promise<{ events?: Event[]; status: 'success' | 'fail'; error?: string }> {
     try {
         const tenantId = cmd.tenant_id;
-        const { aggregateType, aggregateId } = cmd.payload;
+        const {aggregateType, aggregateId} = cmd.payload;
 
         const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId); // Activity
         const commandBus = getCommandBus();
         const events = await commandBus.dispatchWithAggregate(cmd, aggregate); // Pure
 
-        return { events, status: 'success' };
+        return {events, status: 'success'};
     } catch (err) {
         if (err instanceof BusinessRuleViolation) {
-            return { status: 'fail', error: err.reason };
+            return {status: 'fail', error: err.reason};
         }
         throw err;
     }
@@ -239,4 +234,4 @@ export async function snapshotAggregate(
  * Project events to read models
  * @param events The events to project
  */
-export { projectEvents as projectEventsActivity } from '../../../infra/projections/projectEvents';
+export {projectEvents as projectEventsActivity} from '../../../infra/projections/projectEvents';

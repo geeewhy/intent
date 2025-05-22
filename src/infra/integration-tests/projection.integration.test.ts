@@ -28,6 +28,7 @@ describe('Projection Integration Tests', () => {
     afterAll(async () => {
         await pool.end();
         await eventStore.close();
+        await scheduler.close();
     });
 
     /**

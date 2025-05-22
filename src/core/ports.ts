@@ -1,3 +1,4 @@
+//src/core/ports.ts
 /**
  * Ports (interfaces) for the hexagonal architecture
  */
@@ -82,3 +83,43 @@ export interface ReadModelUpdaterPort<T> {
   upsert(tenant: UUID, entity: T): Promise<void>;
   delete(tenant: UUID, id: UUID): Promise<void>;
 }
+
+/**
+ * Outbound port for storing and tracking commands
+ */
+export interface CommandStorePort {
+  /**
+   * Persist a new command or upsert if it already exists (idempotent).
+   */
+  upsert(cmd: Command): Promise<void>;
+
+  /**
+   * Mark command status (e.g. after handling: 'consumed', 'failed', etc).
+   * Optionally attach result/metadata.
+   */
+  markStatus(id: UUID, status: 'pending' | 'consumed' | 'failed', result?: any): Promise<void>;
+
+  /**
+   * Get a command by its ID.
+   */
+  getById(id: UUID): Promise<Command | null>;
+
+  /**
+   * Query commands (by status, type, tenant, etc).
+   * Useful for pumps, audits, retries, or
+   * replay: Cmd sourcing is generally discouraged. Use it for your edge cases if need be.
+   */
+  query(filter: {
+    status?: 'pending' | 'consumed' | 'failed';
+    tenant_id?: UUID;
+    type?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<Command[]>;
+
+  /**
+   * Close the command store connection.
+   */
+    close(): Promise<void>;
+}
+

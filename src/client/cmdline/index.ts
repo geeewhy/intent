@@ -3,7 +3,6 @@ import {SupabaseClient} from '@supabase/supabase-js';
 import {v4 as uuidv4} from 'uuid';
 import * as dotenv from 'dotenv';
 import {Event} from '../../core/contracts';
-import {OrderCommandType} from '../../core/order';
 import {createAuthenticatedClient} from './test-auth';
 
 // Load environment variables
@@ -172,7 +171,7 @@ async function sendCreateOrderCommand(supabase: SupabaseClient, tenantId: string
         const command = {
                 id: uuidv4(),
                 tenant_id: tenantId,
-                type: `order.${OrderCommandType.CREATE_ORDER}`, // keep domain prefix properly
+                type: `executeTest`,
                 payload: {
                     orderId,
                     userId: `user-${Math.floor(Math.random() * 1000)}`,

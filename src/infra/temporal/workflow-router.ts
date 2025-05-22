@@ -5,13 +5,7 @@ import {Command, Event, UUID} from '../../core/contracts';
 import {CommandHandler} from '../../core/command-bus';
 import {EventHandler} from '../../core/contracts';
 import {BaseAggregate} from "../../core/base/aggregate";
-
-// Define the result type for the workflow
-export type CommandResult = {
-    status: 'success' | 'fail';
-    events?: Event[];
-    error?: string;
-};
+import {CommandResult} from "../contracts";
 
 /**
  * Unified workflow router for aggregates and sagas

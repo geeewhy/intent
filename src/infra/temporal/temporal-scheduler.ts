@@ -1,9 +1,12 @@
 // infra/temporal/temporal-scheduler.ts
 import {WorkflowClient, WorkflowExecutionInfo, WorkflowHandle} from '@temporalio/client';
 import {Command, Event} from '../../core/contracts';
+import {CommandResult} from "../contracts";
 import {WorkflowRouter} from './workflow-router';
-import {JobSchedulerPort, EventPublisherPort} from '../../core/ports';
+import {JobSchedulerPort, EventPublisherPort, CommandStorePort} from '../../core/ports';
 import {markConsumed} from '../pump/helpers/command-helpers';
+import {PgCommandStore} from "../pg/pg-command-store";
+import * as pg from "pg";
 
 /**
  * TemporalScheduler - schedules commands and events via Temporal workflows
@@ -12,6 +15,7 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
     private constructor(
         private readonly router: WorkflowRouter,
         private readonly client: WorkflowClient,
+        private readonly commandStore:CommandStorePort
     ) {
     }
 
@@ -19,7 +23,8 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
     static async create(cfg?: any): Promise<TemporalScheduler> {
         const router = await WorkflowRouter.create(cfg);
         const client = (router as any)['client'] as WorkflowClient; // reuse internal client
-        return new TemporalScheduler(router, client);
+        const pgCommandStore = new PgCommandStore();
+        return new TemporalScheduler(router, client, pgCommandStore);
     }
 
     /* ---------- main API ---------- */
@@ -38,16 +43,16 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
     async schedule(cmd: Command): Promise<void> {
         console.log(`[TemporalScheduler] Routing command ${cmd.type}`);
         if (this.router.supportsCommand(cmd)) {
-            // The router.handle method now starts the workflow and waits for it to complete
-            // before signaling any sagas, so we don't need to track it here
-            return this.router.handle(cmd)
-                .then(() => {
-                    console.log(`[TemporalScheduler] Marking command ${cmd.id} as consumed`);
-                    markConsumed(cmd.id);
-                })
-                .catch(e => {
-                    console.error(`[TemporalScheduler] Failed to schedule command ${cmd.type}`, e);
-                });
+            try {
+                await this.commandStore.upsert(cmd);
+                const res: CommandResult = await this.router.handle(cmd);
+                const infraStatus = res.status === 'success' ? 'consumed' : 'failed';
+                await this.commandStore.markStatus(cmd.id, infraStatus, res);
+                console.log(`[TemporalScheduler] Marked command ${cmd.id} as ${infraStatus}`);
+            } catch (e: any) {
+                await this.commandStore.markStatus(cmd.id, 'failed', { status: 'fail', error: e.message });
+                console.error(`[TemporalScheduler] Failed to schedule command ${cmd.type}`, e);
+            }
         } else {
             console.warn(`[TemporalScheduler] No router supports command ${cmd.type}`);
         }
@@ -64,5 +69,9 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
                 await this.router.on(event);
             }
         }
+    }
+
+    async close(): Promise<void> {
+        await this.commandStore.close();
     }
 }

@@ -2,13 +2,13 @@ import { Worker } from '@temporalio/worker';
 import { SagaRegistry } from './core/domains'; // central registry
 import dotenv from 'dotenv';
 import path from 'path';
-import * as order from './core/order';
+import * as system from './core/system';
 import * as coreActivities from './infra/temporal/activities/coreActivities';
 import * as domainActivities from './core/activities';
 import * as workflows from './infra/temporal/workflows';
 
 const activities = {
-    ...order.activities,
+    ...system.activities,
     ...coreActivities,
     ...domainActivities
 }
