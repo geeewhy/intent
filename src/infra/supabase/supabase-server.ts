@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { Command, Event, UUID } from '../../core/contracts';
 import { CommandPort } from '../../core/ports';
-import { OrderService } from '../../core/order';
 import { PgEventStore } from '../pg/pg-event-store';
 import { PgNotifyListener } from '../pg/pg-notify-listener';
 import { TemporalScheduler } from '../temporal/temporal-scheduler';
@@ -19,7 +18,6 @@ import { SupabasePublisher } from './supabase-publisher';
  */
 export class SupabaseServer {
   private client: SupabaseClient;
-  private tenantServices: Map<UUID, OrderService> = new Map();
   private eventListeners: Map<UUID, PgNotifyListener> = new Map();
 
   /**
@@ -118,38 +116,30 @@ export class SupabaseServer {
   /**
    * Get or create a service for a tenant
    */
-  private async getOrCreateService(tenantId: UUID): Promise<OrderService> {
-    // Check if we already have a service for this tenant
-    if (this.tenantServices.has(tenantId)) {
-      return this.tenantServices.get(tenantId)!;
-    }
+  private async getOrCreateService(tenantId: UUID): Promise<any> {
 
     console.log(`[SupabaseServer] Creating service for tenant: ${tenantId}`);
 
     // Create adapters
     const eventStore = new PgEventStore();
     const scheduler = await TemporalScheduler.create();
-
-    // Use the TemporalScheduler as both JobSchedulerPort and EventPublisherPort
-    // This ensures events are published to the appropriate aggregate workflows
-    const publisher = scheduler;
-
-    // Create domain service
-    const service = new OrderService(eventStore, publisher);
-
-    // Create event listener
-    const eventListener = new PgNotifyListener(tenantId, service);
-
-    // Start listening for events
-    await eventListener.start();
-
-    // Store the service and event listener
-    this.tenantServices.set(tenantId, service);
-    this.eventListeners.set(tenantId, eventListener);
-
-    console.log(`[SupabaseServer] Service created for tenant: ${tenantId}`);
-
-    return service;
+    //
+    // // Use the TemporalScheduler as both JobSchedulerPort and EventPublisherPort
+    // // This ensures events are published to the appropriate aggregate workflows
+    // const publisher = scheduler;
+    //
+    // // Create event listener
+    // //const eventListener = new PgNotifyListener(tenantId, service);
+    //
+    // // Start listening for events
+    // //await eventListener.start();
+    //
+    // // Store the service and event listener
+    // this.eventListeners.set(tenantId, eventListener);
+    //
+    // console.log(`[SupabaseServer] Service created for tenant: ${tenantId}`);
+    //
+    // return service;
   }
 
   /**
@@ -165,7 +155,6 @@ export class SupabaseServer {
     }
 
     // Clear the maps
-    this.tenantServices.clear();
     this.eventListeners.clear();
 
     console.log('[SupabaseServer] Server stopped');

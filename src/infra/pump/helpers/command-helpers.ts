@@ -4,13 +4,14 @@
  */
 
 import { sbAdmin } from './supabase-client';
+import {CommandResult} from "../../contracts";
 
 /**
  * Mark a command as consumed (workflow started)
  * @param id The command ID
  */
-export const markConsumed = (id: string) =>
-  sbAdmin.from('infra.commands').update({ status: 'consumed' }).eq('id', id);
+export const markConsumed = (id: string, res:CommandResult) =>
+  sbAdmin.from('infra.commands').update({ status: res.status }).eq('id', id);
 
 /**
  * Mark a command as failed

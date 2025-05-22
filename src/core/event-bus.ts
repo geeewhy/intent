@@ -42,7 +42,7 @@ export class EventBus {
       await Promise.all(
         this.handlers
           .filter(handler => handler.supportsEvent(event))
-          .map(handler => handler.handle(event))
+          .map(handler => handler.on(event))
       );
     }
   }

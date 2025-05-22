@@ -2,7 +2,6 @@
 /**
  * Registry of all aggregate types and their corresponding classes
  */
-import { OrderAggregate } from './order/aggregates/order.aggregate';
 import { SystemAggregate } from './system/aggregates/system.aggregate';
 
 // Interface for aggregate classes with static methods
@@ -32,7 +31,6 @@ export function createAggregatePayload(aggregateType: string, aggregateId: strin
 
 // Registry of aggregate types to their corresponding classes
 export const AggregateRegistry: Record<string, AggregateClass> = {
-  order: OrderAggregate,
   system: SystemAggregate,
 };
 
