@@ -2,6 +2,8 @@
 import { ReadModelUpdaterPort } from '../../core/contracts';
 import { sql } from 'slonik';
 import type { DatabasePool } from 'slonik';
+import {temporal} from "@temporalio/proto";
+import update = temporal.api.update;
 
 export function createPgUpdaterFor<T>(tableName: string, pool: DatabasePool): ReadModelUpdaterPort<T> {
   return {
@@ -23,7 +25,7 @@ export function createPgUpdaterFor<T>(tableName: string, pool: DatabasePool): Re
         return sql`${v}`;
       });
 
-      await pool.query(sql`
+      const updateQuery = sql`
         INSERT INTO ${sql.identifier([tableName])} (
           ${sql.join(columns.map(c => sql.identifier([c])), sql`, `)}
         )
@@ -32,10 +34,11 @@ export function createPgUpdaterFor<T>(tableName: string, pool: DatabasePool): Re
                )
           ON CONFLICT (id) DO UPDATE SET
           ${sql.join(
-              columns.map(c => sql`${sql.identifier([c])} = EXCLUDED.${sql.identifier([c])}`),
-              sql`, `
-          )}
-      `);
+          columns.map(c => sql`${sql.identifier([c])} = EXCLUDED.${sql.identifier([c])}`),
+          sql`, `
+      )}
+      `;
+      await pool.query(updateQuery);
     },
 
     async remove(tenantId: string, id: string): Promise<void> {

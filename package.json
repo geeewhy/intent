@@ -23,7 +23,7 @@
     "projections:migrate": "ts-node src/infra/projections/migrations-pg/cli.ts",
     "lint:rls": "ts-node src/tools/lint-rls-policies.ts",
     "tool:projection-check-drift": "ts-node src/tools/check-projection-drift.ts",
-    "tool:projection-repair-drift": "ts-node src/tools/repair-projection-drift.ts"
+    "tool:projection-repair": "ts-node src/tools/repair-projection-drift.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
@@ -38,6 +38,7 @@
     "express": "^4.18.2",
     "glob": "^11.0.2",
     "pg": "^8.7.3",
+    "pg-query-stream": "^4.10.0",
     "slonik": "^29.2.0",
     "umzug": "^3.8.2",
     "uuid": "^9.0.1",

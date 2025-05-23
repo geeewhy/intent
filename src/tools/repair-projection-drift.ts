@@ -1,201 +1,315 @@
 #!/usr/bin/env ts-node
+/**
+ * Projection Drift Repair Tool
+ * - Validation now uses scanProjections()
+ * - Each projection must have a register.ts beside it or we abort
+ */
 
-import { createPool } from '../infra/projections/pg-pool';
-import { runAllMigrations } from '../infra/migrations/runMigrations';
-import { Pool } from 'pg';
-import { globSync } from 'glob';
+import minimist from 'minimist';
 import * as fs from 'fs';
+import * as path from 'path';
+import {runMigrations} from '../infra/projections/migrations-pg';
+import {createPool} from '../infra/projections/pg-pool';
+import {scanProjections} from '../infra/projections/migrations-pg/scanner';
 import * as dotenv from 'dotenv';
+import {Pool, PoolClient} from 'pg';
+import QueryStream from 'pg-query-stream';
+import {sql} from "slonik";
+
 dotenv.config();
 
-interface CommandLineArgs {
-  tables: string[];
-  domain?: string;
-  all: boolean;
-  fromDriftReport?: string;
-  help: boolean;
+const EVENT_STREAM_BATCH_SIZE = 1_000;
+const CP_CHECKPOINT_SIZE = 10_000;
+
+const poolConnectionConfig = {
+    host: process.env.LOCAL_DB_HOST ?? 'localhost',
+    port: +(process.env.LOCAL_DB_PORT ?? '5432'),
+    user: process.env.LOCAL_DB_USER ?? 'postgres',
+    password: process.env.LOCAL_DB_PASSWORD ?? 'postgres',
+    database: process.env.LOCAL_DB_NAME ?? 'postgres',
 }
 
-function parseArgs(): CommandLineArgs {
-  const args: CommandLineArgs = { tables: [], all: false, help: false };
-  for (let i = 2; i < process.argv.length; i++) {
-    const arg = process.argv[i];
-    if (arg === '--help') args.help = true;
-    else if (arg === '--all') args.all = true;
-    else if (arg === '--table' && i + 1 < process.argv.length) args.tables.push(process.argv[++i]);
-    else if (arg === '--domain' && i + 1 < process.argv.length) args.domain = process.argv[++i];
-    else if (arg === '--from-drift-report' && i + 1 < process.argv.length) args.fromDriftReport = process.argv[++i];
-  }
-  return args;
+/* ---------- CLI ------------------------------------------------------ */
+const argv = minimist(process.argv.slice(2), {
+    string: ['table', 'projection', 'drift-report'],
+    boolean: ['all', 'resume', 'help', 'h'],
+    alias: {h: 'help'},
+});
+
+if (argv.help) {
+    console.log(`Usage:
+  --resume                 Replay only events newer than current table state
+  --table <name>           Full rebuild of one table   (drops & replays ALL)
+  --projection <id>        Full rebuild of one projection
+  --all                    Full rebuild of every projection
+  --drift-report <file>    Full rebuild for tables present in report
+  --help, -h               Show help`);
+    process.exit(0);
 }
 
-function showHelp() {
-  console.log(`
-Projection Drift Repair Tool
+/* ----- disallow conflict: resume vs rebuild flags ------------------- */
+// const rebuildFlags = argv.table || argv.projection || argv['drift-report'] || argv.all;
+// if (argv.resume && rebuildFlags) {
+//     console.error('--resume cannot be combined with rebuild flags');
+//     process.exit(1);
+// }
 
-Usage: 
-  npm run repair:projection-drift -- --table <table_name> [--table <another_table>]
-  npm run repair:projection-drift -- --domain <domain_name>
-  npm run repair:projection-drift -- --all
-  npm run repair:projection-drift -- --from-drift-report <file_path>
+/* ---------- helper: prepare checkpoints as a temp table ------------------------------------- */
+// returns how many rows inserted – optional
+async function prepareCheckpoints(table: string, client: PoolClient): Promise<number> {
+    await client.query(`BEGIN`);
+    await client.query(`
+    CREATE TEMP TABLE cp_checkpoints (
+      aggregate_id uuid PRIMARY KEY,
+      last_version int
+    ) ON COMMIT PRESERVE ROWS;
+  `);
 
-Options:
-  --table <table_name>       Repair specific table(s)
-  --domain <domain_name>     Repair all tables in a specific domain
-  --all                      Repair all tables (use with caution)
-  --from-drift-report <path> Read tables to repair from a drift report file
-  --help                     Show this help message
-`);
-}
+    // Pull projection+event gaps directly and bulk-insert
+    // We stream results in chunks to avoid client memory blow-up
+    const streamQuery = sql`
+      WITH projection_checkpoint AS (
+          SELECT e.aggregate_id, p.last_event_version
+            FROM ${sql.identifier([table])} p
+            JOIN infra.events e ON e.id = p.last_event_id
+      ), latest_event AS (
+          SELECT aggregate_id, MAX(version) AS latest_event_version
+            FROM infra.events GROUP BY aggregate_id
+      )
+      SELECT l.aggregate_id,
+             COALESCE(pc.last_event_version,0)::int AS last_version
+        FROM latest_event l
+   LEFT JOIN projection_checkpoint pc USING (aggregate_id)`;
+    const qs = new QueryStream(streamQuery.sql,
+        [],
+        { batchSize: CP_CHECKPOINT_SIZE },
+    );
 
-function readTablesFromDriftReport(filePath: string): string[] {
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const regex = /\[DRIFT\] Projection '[^']*' \(table '([^']*)'\):/g;
-    const tables: string[] = [];
-    let match;
-    while ((match = regex.exec(content)) !== null) {
-      if (match[1]) tables.push(match[1]);
+    const stream = client.query(qs);
+    let inserted = 0;
+    const rows: string[] = [];
+    const vals: any[]    = [];
+    let p = 1;
+
+    for await (const r of stream) {
+        rows.push(`($${p++}, $${p++})`);
+        vals.push(r.aggregate_id, r.last_version);
+        inserted++;
+
+        if (rows.length === 1_000) {
+            await client.query(`INSERT INTO cp_checkpoints VALUES ${rows.join(',')}`, vals);
+            rows.length = 0; vals.length = 0; p = 1;
+        }
     }
-    return tables;
-  } catch (error: any) {
-    console.error(`Error reading drift report file: ${error.message || error}`);
-    process.exit(1);
-    return [];
-  }
+    if (rows.length) await client.query(`INSERT INTO cp_checkpoints VALUES ${rows.join(',')}`, vals);
+
+    await client.query(`ANALYZE cp_checkpoints`);
+    return inserted;
 }
 
-interface ProjectionMeta {
-  table: string;
-  columnTypes: Record<string, string>;
-  eventTypes: string[];
-}
 
-function discoverProjectionRegistries() {
-  const results: {
-    meta: ProjectionMeta;
-    registerHandlers: (pool: any) => any[];
-    registerFile: string;
-  }[] = [];
-  const registerFiles = globSync('src/core/**/read-models/register.ts', { absolute: true });
-  for (const file of registerFiles) {
-    delete require.cache[require.resolve(file)];
-    const mod = require(file);
-    if (mod.projectionMeta) {
-      const metas = Array.isArray(mod.projectionMeta) ? mod.projectionMeta : [mod.projectionMeta];
-      for (const meta of metas) {
-        const handlerFuncKey = Object.keys(mod).find(
-            k => k.startsWith('register') && typeof mod[k] === 'function'
+/* ---------- helper: read checkpoints ------------------------------- */
+async function fetchCheckpoints(table: string) {
+    const pool = createPool();
+    const rows = await pool.query(sql`
+        WITH projection_checkpoint AS (SELECT e.aggregate_id,
+                                              p.last_event_version
+                                       FROM ${sql.identifier([table])} p
+                                                JOIN infra.events e ON e.id = p.last_event_id),
+             latest_event AS (SELECT aggregate_id, MAX(version) AS latest_event_version
+                              FROM infra.events
+                              GROUP BY aggregate_id)
+        SELECT l.aggregate_id AS                     "aggregateId",
+               COALESCE(pc.last_event_version, 0) AS last_event_version,
+               l.latest_event_version
+        FROM latest_event l
+                 LEFT JOIN projection_checkpoint pc
+                           ON pc.aggregate_id = l.aggregate_id;
+    `);
+
+    type Checkpoint = { last: number; latest: number };
+
+    const tuples = rows.rows
+        .filter((r): r is {
+                aggregateId: string;
+                last_event_version: string | number;
+                latest_event_version: string | number
+            } =>
+                r.aggregateId !== null,
+        )
+        .map(
+            (r): [string, Checkpoint] => [
+                r.aggregateId,
+                {
+                    last: Number(r.last_event_version ?? 0),
+                    latest: Number(r.latest_event_version),
+                },
+            ],
         );
-        if (handlerFuncKey) {
-          results.push({
-            meta,
-            registerHandlers: mod[handlerFuncKey],
-            registerFile: file,
-          });
-        }
-      }
+
+    return new Map<string, Checkpoint>(tuples);
+}
+
+/* ---------- stream function (delta mode) --------------------------- */
+async function streamDelta(
+    eventTypes: string[],
+    client: PoolClient,
+    processEvent: (ev:any)=>Promise<void>,
+) {
+    const qs = new QueryStream(`
+      SELECT e.*, e.aggregate_id AS "aggregateId"
+        FROM infra.events e
+        JOIN cp_checkpoints c USING (aggregate_id)
+       WHERE e.type = ANY($1)
+         AND e.version > c.last_version
+       ORDER BY e.created_at`,
+        [eventTypes],
+        { batchSize: EVENT_STREAM_BATCH_SIZE },
+    );
+    const stream = client.query(qs);
+    for await (const ev of stream) {
+        await processEvent(ev);
     }
-  }
-  return results;
+    console.log(`[DELTA] Finished delta streaming events for ${eventTypes.join(',')}`);
 }
 
-async function fetchEvents(eventTypes: string[]): Promise<readonly any[]> {
-  const pgPool = new Pool({
-    host: process.env.LOCAL_DB_HOST || 'localhost',
-    port: parseInt(process.env.LOCAL_DB_PORT || '5432'),
-    user: process.env.LOCAL_DB_USER || 'postgres',
-    password: process.env.LOCAL_DB_PASSWORD || 'postgres',
-    database: process.env.LOCAL_DB_NAME || 'postgres',
-  });
-  try {
-    const result = await pgPool.query(`
-      SELECT *, aggregate_id as "aggregateId" FROM infra.events
-      WHERE type = ANY($1)
-      ORDER BY created_at ASC
-    `, [eventTypes]);
-    return result.rows;
-  } finally {
-    await pgPool.end();
-  }
+/* ---------- discover projections via scanner ------------------------ */
+const scanned = scanProjections();                 // authoritative list
+const metaById = new Map(scanned.map(p => [p.name, p]));
+const metaByTable = new Map(
+    scanned.flatMap(p => p.tables.map(t => [t, p] as const))
+);
+
+/* ---------- helper: load register.ts -------------------------------- */
+function loadRegistry(pMeta: typeof scanned[number]) {
+    const registerFile = path.join(pMeta.dir, 'register.ts');
+    if (!fs.existsSync(registerFile))
+        throw new Error(`register.ts missing for projection '${pMeta.name}' (${registerFile})`);
+
+    delete require.cache[require.resolve(registerFile)];
+    const mod = require(registerFile);
+
+    if (!mod.projectionMeta) throw new Error(`projectionMeta export missing in ${registerFile}`);
+
+    const metas = Array.isArray(mod.projectionMeta) ? mod.projectionMeta : [mod.projectionMeta];
+    const regFn = Object.values(mod).find(v => typeof v === 'function');
+    if (typeof regFn !== 'function')
+        throw new Error(`No register function found in ${registerFile}`);
+
+    return metas.map((m: any) => ({
+        meta: m,
+        registerHandlers: regFn as (pool: any) => any[],
+        projectionId: pMeta.name,
+    }));
 }
 
-async function repairProjection({
-                                  table,
-                                  eventTypes,
-                                  registerHandlers,
-                                }: {
-  table: string;
-  eventTypes: string[];
-  registerHandlers: (pool: any) => any[];
-}) {
-  await runAllMigrations(true);
-  const pool = createPool();
-  const events = await fetchEvents(eventTypes);
-  const handlers = registerHandlers(pool);
-  if (events.length && handlers.length) {
-    for (const event of events) {
-      for (const handler of handlers) {
-        if (!handler.supportsEvent(event)) continue;
-        try {
-          await handler.on(event);
-        } catch (err) {
-          console.warn('Projection failed', { eventType: event.type, error: err });
-        }
-      }
+/* ---------- build target list -------------------------------------- */
+let targets: ReturnType<typeof loadRegistry>[number][] = [];
+
+if (argv['drift-report']) {
+    const drift = JSON.parse(fs.readFileSync(argv['drift-report'], 'utf8'));
+    const tables: string[] = drift.filter((e: any) => e.issues?.length).map((e: any) => e.table);
+    tables.forEach(t => {
+        const p = metaByTable.get(t);
+        if (!p) console.error(`Table '${t}' not recognised`);
+        else targets.push(...loadRegistry(p));
+    });
+} else if (argv.table) {
+    const p = metaByTable.get(argv.table);
+    if (!p) {
+        console.error(`Unknown table '${argv.table}'`);
+        process.exit(1);
     }
-  }
-  await pool.end();
-  console.log(`[REPAIR] Repair for table '${table}' complete.`);
+    targets = loadRegistry(p);
+} else if (argv.projection) {
+    const p = metaById.get(argv.projection);
+    if (!p) {
+        console.error(`Unknown projection '${argv.projection}'`);
+        process.exit(1);
+    }
+    targets = loadRegistry(p);
+} else if (argv.all) {
+    scanned.forEach(p => targets.push(...loadRegistry(p)));
+} else {
+    console.error('Must specify --table, --projection, --all, or --drift-report');
+    process.exit(1);
 }
 
-async function main() {
-  const args = parseArgs();
-  if (args.help) {
-    showHelp();
-    return;
-  }
-  const registries = discoverProjectionRegistries();
-  if (!registries.length) {
-    console.log('No projections found.');
-    return;
-  }
-  let projectionsToBuild: Array<{ meta: ProjectionMeta; registerHandlers: any }> = [];
-  if (args.fromDriftReport) {
-    const tablesToRepair = readTablesFromDriftReport(args.fromDriftReport);
-    projectionsToBuild = registries.filter(({ meta }) => tablesToRepair.includes(meta.table));
-  } else if (args.tables.length > 0) {
-    projectionsToBuild = registries.filter(({ meta }) => args.tables.includes(meta.table));
-  } else if (args.domain) {
-    projectionsToBuild = registries.filter(({ registerFile }) => {
-      const domainMatch = registerFile.match(/src\/core\/([^/]+)/);
-      return domainMatch && domainMatch[1] === args.domain;
-    });
-  } else if (args.all) {
-    projectionsToBuild = registries;
-  } else {
-    console.error('Error: Must specify one of --table, --domain, --all, or --from-drift-report');
-    showHelp();
+if (!targets.length) {
+    console.error('Nothing to repair');
     process.exit(1);
-  }
-  if (projectionsToBuild.length === 0) {
-    console.error('No matching projections found for the specified filters.');
-    process.exit(1);
-  }
-  for (const { meta, registerHandlers } of projectionsToBuild) {
-    console.log(`\n[REPAIR] Repairing projection for table '${meta.table}'...`);
-    await repairProjection({
-      table: meta.table,
-      eventTypes: meta.eventTypes,
-      registerHandlers,
-    });
-  }
-  console.log('\n✅ Projection drift repair finished.');
 }
 
-if (require.main === module) {
-  main().catch(error => {
-    console.error('Error:', error);
-    process.exit(1);
-  });
+
+// --- stream events to prevent memory hogs ----
+async function streamEvents(
+    eventTypes: string[],
+    processEvent: (ev: any) => Promise<void>,
+) {
+    const pg = new Pool(poolConnectionConfig);
+    const client = await pg.connect();
+
+    try {
+        const qs = new QueryStream(
+            `select *, aggregate_id as "aggregateId"
+             from infra.events
+             where type = any ($1)
+             order by created_at`,
+            [eventTypes],
+            {batchSize: EVENT_STREAM_BATCH_SIZE},
+        );
+
+        const stream = client.query(qs);
+        for await (const row of stream) await processEvent(row);
+    } finally {
+        client.release();
+        await pg.end();
+    }
 }
+
+/* ---------- main repair loop --------------------------------------- */
+(async () => {
+    const pg     = new Pool(poolConnectionConfig);
+    const poolClient = await pg.connect();
+    const mode = argv.resume ? 'RESUME' : 'REPAIR';
+    for (const t of targets) {
+
+        if (argv.resume) {
+            console.info(`[INFO] Preparing checkpoints for ${mode} mode`);
+            const rows = await prepareCheckpoints(t.meta.table, poolClient);
+            console.info(`[INFO] Prepared ${rows} checkpoints in temp table`);
+        }
+
+        console.log(`\n[${mode}] Working on ${t.meta.table}`);
+
+        if (!argv.resume) {
+            await runMigrations(['--rebuild-from-table', t.meta.table]); // full rebuild
+        }
+
+        const pool = createPool();
+        const handlers = t.registerHandlers(pool);
+
+        let count = 0;
+
+        const streamer = argv.resume
+            ? streamDelta(t.meta.eventTypes, poolClient, replay)
+            : streamEvents(t.meta.eventTypes, replay);      // old full-stream fn
+
+        async function replay(ev: any) {
+            for (const h of handlers) if (h.supportsEvent(ev)) await h.on(ev);
+            count++;
+        }
+
+        await streamer;
+        poolClient.release();
+        await pool.end();
+        await pg.end();
+        console.log(`[${mode}] Finished ${t.meta.table} (${count} events)`);
+        if (count > 0) {
+            console.log(`[OK] ${t.meta.table} processed ${count} events for ${t.meta.eventTypes.join(',')}`);
+        } else {
+            console.log(`[OK] Projection table ${t.meta.table} is not behind current events of ${t.meta.eventTypes.join(',')}`);
+        }
+    }
+    console.log('\n✅ Projection repair finished');
+})();
