@@ -293,7 +293,7 @@ async function streamEvents(
 
         const streamer = argv.resume
             ? streamDelta(t.meta.eventTypes, poolClient, replay)
-            : streamEvents(t.meta.eventTypes, replay);      // old full-stream fn
+            : streamEvents(t.meta.eventTypes, replay);
 
         async function replay(ev: any) {
             for (const h of handlers) if (h.supportsEvent(ev)) await h.on(ev);
