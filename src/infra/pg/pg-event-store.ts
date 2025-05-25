@@ -7,6 +7,7 @@ import {Pool, PoolClient} from 'pg';
 import {Event, UUID} from '../../core/contracts';
 import {EventStorePort} from '../../core/ports';
 import {BaseAggregate, Snapshot} from '../../core/base/aggregate';
+import {upcastEvent} from "../../core/shared/event-upcaster";
 
 export const SNAPSHOT_EVERY = 2; // Number of events after which to take a snapshot
 
@@ -245,16 +246,20 @@ export class PgEventStore implements EventStorePort {
             }
 
             // Convert rows to Event objects
-            const events = eventsResult.rows.map(row => ({
-                id: row.id,
-                tenant_id: row.tenant_id,
-                type: row.type,
-                aggregateType: row.aggregate_type,
-                aggregateId: row.aggregate_id,
-                version: row.version,
-                payload: row.payload,
-                metadata: row.metadata,
-            }));
+            const events = eventsResult.rows.map(row => {
+                const schemaVersion = row.metadata.schemaVersion || 1;
+
+                return {
+                    id: row.id,
+                    tenant_id: row.tenant_id,
+                    type: row.type,
+                    aggregateType: row.aggregate_type,
+                    aggregateId: row.aggregate_id,
+                    version: row.version,
+                    payload: upcastEvent(row.type, row.payload, schemaVersion),
+                    metadata: row.metadata,
+                }
+            });
 
             // Calculate the current version (max of fromVersion and highest event version)
             const maxEventVersion = events.length > 0

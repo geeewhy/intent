@@ -1,4 +1,4 @@
-## CURRENT SYSTEM OUTLOOK — May 23 2025
+## CURRENT SYSTEM OUTLOOK — May 24 2025
 
 | Vertical Concern           | Current State / Design Choice | Tests / Tooling |
 |----------------------------| ----------------------------- | --------------- |
@@ -14,6 +14,7 @@
 | **Schema Safety**          | Umzug migrations; drift scanner & selective checkpoint rewind (ADR 016) | CI job; repair script |
 | **Resilience**             | Idempotent command insert, optimistic version check, workflow retries with jitter, snapshot roll-forward logic | Failure-path simulations |
 | **Dev-X Tooling & CI/CD** | CLI command-pump; in-mem event store; drift scanner → JSON/MD report → auto-repair; RLS linter; SQL migration planner; ADR & debt dashboards | CI pipeline matrix: lint → unit → integration → drift-scan *(fail-fast)*; optional `repair` stage; local Jest watch |
+| **Upcasting Strategy**            | Enable schema evolution for historical event compatibility with clearly defined migration tests.       | integration tests for upcasting logic; snapshot tests for event schema changes. |
 
 ---
 

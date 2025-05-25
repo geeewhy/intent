@@ -14,6 +14,7 @@ export interface Metadata {
     requestId?: string; // Useful for cross-service tracing
     source?: string;    // Service or workflow origin
     tags?: Record<string, string | number>; // For flexible enrichment
+    schemaVersion?: number;
 }
 
 /**
