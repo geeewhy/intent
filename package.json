@@ -20,6 +20,7 @@
     "test": "jest",
     "test:core": "jest --selectProjects core",
     "test:integration": "jest --selectProjects integration",
+    "test:integration:target": "npx jest --selectProjects integration --testPathPattern",
     "projections:migrate": "ts-node src/infra/projections/migrations-pg/cli.ts",
     "lint:rls": "ts-node src/tools/lint-rls-policies.ts",
     "tool:projection-check-drift": "ts-node src/tools/check-projection-drift.ts",
