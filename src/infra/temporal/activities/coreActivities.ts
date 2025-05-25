@@ -9,10 +9,23 @@ import {WorkflowRouter} from '../workflow-router';
 import {getCommandBus} from "../../../core/domains";
 import {CommandResult} from '../../contracts';
 import {PgCommandStore} from '../../pg/pg-command-store';
+import { createPool } from '../../projections/pg-pool';
 
+let router: WorkflowRouter;
+
+// inits, activities are init at worker runtime
 dotenv.config();
+const projectionPool = createPool();
 
-let router: WorkflowRouter | undefined;
+/**
+ * Project events to read models
+ * @param events The events to project
+ */
+import {projectEvents as projectEventsInfra} from '../../../infra/projections/projectEvents';
+
+export async function projectEvents(events: Event[]) {
+    await projectEventsInfra(events, projectionPool);
+}
 
 //route the event
 export async function routeEvent(event: Event): Promise<void> {
@@ -249,9 +262,3 @@ export async function snapshotAggregate(
         throw error;
     }
 }
-
-/**
- * Project events to read models
- * @param events The events to project
- */
-export {projectEvents as projectEventsActivity} from '../../../infra/projections/projectEvents';

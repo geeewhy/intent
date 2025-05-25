@@ -27,6 +27,8 @@
     "tool:projection-repair": "ts-node src/tools/repair-projection-drift.ts"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/sdk-trace-base": "^2.0.1",
     "@supabase/supabase-js": "^2.39.0",
     "@temporalio/activity": "^1.7.4",
     "@temporalio/client": "^1.7.4",
@@ -46,6 +48,8 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@opentelemetry/context-async-hooks": "^2.0.1",
+    "@opentelemetry/sdk-trace-node": "^2.0.1",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.10",
     "@types/minimist": "^1.2.5",

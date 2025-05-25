@@ -134,3 +134,10 @@ export interface AccessRequestContext {
     tenantId: string;
     access: AccessContext;
 }
+
+/**
+ * Trace context for observability
+ */
+export interface TraceContext {
+    emitInternalSignal?(signalName: string, payload?: any): void;
+}

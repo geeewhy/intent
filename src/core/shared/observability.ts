@@ -1,9 +1,8 @@
 // core/shared/observability.ts
 // Tracing helper shared across sagas for instrumentation
-import {SagaContext} from "../contracts";
-
+import { TraceContext } from '../contracts';
 export function trace(
-    ctx: SagaContext,
+    ctx: TraceContext,
     span: string,
     data?: Record<string, any>
 ) {
