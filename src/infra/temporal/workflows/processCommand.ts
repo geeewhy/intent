@@ -18,7 +18,6 @@ const commandSignal = defineSignal<[Command]>('command');
 
 const {
     getEventsForCommand,
-    snapshotAggregate,
     routeEvent,
     applyEvents,
     projectEventsActivity
@@ -35,7 +34,6 @@ export async function processCommand(
 ): Promise<CommandResult> {
     const commandQueue: Command[] = [];
     let lastCommandId: string | null = null;
-    let appliesSinceLastSnapshot = 0;
 
     setHandler(commandSignal, (cmd) => {
         commandQueue.push(cmd);
@@ -52,19 +50,9 @@ export async function processCommand(
 
             await applyEvents(cmd.tenant_id, cmd.payload.aggregateType, cmd.payload.aggregateId, events);
             await projectEventsActivity(events);
-            appliesSinceLastSnapshot += events.length;
 
             for (const evt of events) {
                 await routeEvent(evt);
-            }
-
-            if (appliesSinceLastSnapshot >= 2) {
-                await snapshotAggregate(
-                    cmd.tenant_id,
-                    cmd.payload.aggregateType,
-                    cmd.payload.aggregateId
-                );
-                appliesSinceLastSnapshot = 0;
             }
         }
 

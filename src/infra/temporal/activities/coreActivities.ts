@@ -8,7 +8,7 @@ import {BusinessRuleViolation} from '../../../core/errors';
 import {WorkflowRouter} from '../workflow-router';
 import {getCommandBus} from "../../../core/domains";
 import {CommandResult} from '../../contracts';
-import { PgCommandStore } from '../../pg/pg-command-store';
+import {PgCommandStore} from '../../pg/pg-command-store';
 
 dotenv.config();
 
@@ -51,7 +51,7 @@ export async function dispatchCommand(cmd: Command): Promise<void> {
 
         console.log(`[dispatchCommand] Command ${cmd.id} dispatched successfully with status: ${infraStatus}`);
     } catch (error: any) {
-        await pgCommandStore.markStatus(cmd.id, 'failed', { status: 'fail', error: error.message });
+        await pgCommandStore.markStatus(cmd.id, 'failed', {status: 'fail', error: error.message});
         console.error(`[dispatchCommand] Failed to dispatch command ${cmd.type}:`, error);
         throw error;
     }
@@ -181,17 +181,37 @@ export async function getEventsForCommand(
  * @param aggregateId
  * @param events
  */
+// src/infra/temporal/activities/coreActivities.ts (applyEvents)
+
 export async function applyEvents(
     tenantId: UUID,
     aggregateType: string,
     aggregateId: UUID,
-    events: Event[]
+    events: Event[],
 ): Promise<void> {
     const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId);
-    for (const evt of events) aggregate.apply(evt);
 
-    const version = aggregate.getVersion();
-    await eventStore.append(tenantId, aggregateType, aggregateId, events, version);
+    const currentVersion = aggregate.getVersion();
+    for (const evt of events) aggregate.apply(evt);
+    const newVersion = aggregate.getVersion();
+
+    const snapshot = {
+        id: aggregate.id,
+        type: aggregateType,
+        version: newVersion,
+        state: aggregate.extractSnapshotState(),
+        schemaVersion: (aggregate.constructor as any).CURRENT_SCHEMA_VERSION,
+        createdAt: new Date().toISOString(),
+    };
+
+    await eventStore.append(
+        tenantId,
+        aggregateType,
+        aggregateId,
+        events,
+        currentVersion,
+        snapshot,
+    );
 }
 
 /**

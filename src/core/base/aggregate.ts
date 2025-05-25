@@ -64,4 +64,5 @@ export interface Snapshot<T> {
     state: T;
     createdAt: string;
     schemaVersion: number;
+    version?: number;
 }
