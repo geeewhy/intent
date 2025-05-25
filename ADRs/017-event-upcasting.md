@@ -53,6 +53,15 @@ const payload      = upcastEvent(row.type, row.payload, schemaVersion);
     2. Deploy an upcaster + bump `schemaVersion` constant.
     3. Update writers to emit the new shape.
 
+### 2.4 Observability
+
+| Span name              | When emitted                                                                               | Key attributes                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| **`event.upcast`**     | Every time an event payload is transformed by `upcastEvent()` inside `PgEventStore.load()` | `event_type` · `from_version` · `to_version` · `aggregate_id` |
+| **`snapshot.persist`** | Inside `PgEventStore.append()` when we write a snapshot                                    | `aggregate_type` · `aggregate_id` · `version` · `bytes`       |
+| **`snapshot.restore`** | When a snapshot is loaded via `loadSnapshot()`                                             | same as above                                                 |
+
+
 ## 3. Consequences
 
 | Positive                                                                                                                         | Negative                                                                                                   |
