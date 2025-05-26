@@ -1,10 +1,19 @@
-# Hexagonal Architecture Multi-Tenant Backend with simplistic, principal driven but pragmatic ES/DDD
+# Intent
 
-Intent, Event-sourced Execution Model using hexagonal architecture.
+``Intent`` is a multi-tenant, hexagonal backend that serves as a pragmatic, principled reference implementation for event-sourced CQRS systems.
 
-Current outlook is in [docs/current.md](docs/current.md).
+Highlights include:
+- **Ports-first architecture** – primary adapters include PostgreSQL (event store, RLS projections) and Temporal (workflow orchestration), fully isolated behind core-defined interfaces.
+- **Workflow-native execution model** – commands and events are processed inside workflows, enabling exactly-once handling, idempotency, durable retries, and strong aggregate isolation.
+- **Snapshot-aware event sourcing** – aggregates load from snapshots plus delta events, with snapshots triggered by access frequency to minimize replay and rehydration costs.
+- **RLS-secured projections** – access control rules are defined in domain code and compiled into deterministic Postgres row-level policies, enforcing tenant and role isolation.
+- **Developer tooling for drift and determinism** – includes a projection drift scanner, auto-repair scripts, RLS linter, and a CLI command-pump for real-time debugging.
 
-Directory structure is in [docs/structure.md](docs/structure.md).
+See reflections on the architecture and design decisions in [reflections](docs/reflections/index.md) and [ADRs](ADRs/) directory.
+
+See [docs/current.md](docs/current.md) for current system state and [docs/structure.md](docs/structure.md) for directory layout.
+
+You can also check out the [project roadmap](docs/next.md) for future enhancements and features.
 
 ## Architecture
 
