@@ -1,5 +1,7 @@
 dist
 .env
+.env_test_generated
+.env.local
 coverage/
 _obsolete
 .idea

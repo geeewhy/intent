@@ -1,0 +1,19 @@
+# Eventstore flow configuration
+
+# Default provider to use if not specified
+defaultProvider: postgres
+
+# Description of the flow
+description: Setup and manage event store infrastructure
+
+# Available paths for this flow
+paths:
+  initial:
+    description: Fresh bootstrap of event store
+    steps: [connection, reset, schema]
+  upgrade:
+    description: Apply migrations on existing store
+    steps: [connection, schema]
+  test:
+    description: Run tests on existing store
+    steps: [connection, test]

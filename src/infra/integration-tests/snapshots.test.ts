@@ -11,9 +11,9 @@ import {
 import { PgEventStore } from '../pg/pg-event-store';
 
 // Test timeout - increase if needed for slower environments
-const TEST_TIMEOUT = 30000; // 30 seconds
+const TEST_TIMEOUT = 30_000; // 30 seconds
 
-describe('Snapshot Integration Tests', () => {
+describe.only('Snapshot Integration Tests', () => {
     let scheduler: TemporalScheduler;
     let tenantId: string;
     let eventStore: PgEventStore;
