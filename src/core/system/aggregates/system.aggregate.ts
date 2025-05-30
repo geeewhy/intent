@@ -27,6 +27,8 @@ import {
 
 type SystemSnapshotState = {
     numberExecutedTests: number;
+    testName?: string;
+    parameters?: Record<string, any>;
 };
 
 export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
@@ -43,6 +45,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
     id: UUID;
     version = 0;
     numberExecutedTests = 0;
+    lastExecutedTestName = '';
 
     constructor(id: UUID) {
         super(id);
@@ -239,6 +242,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
 
     private applyTestExecuted(_: Event<TestExecutedPayload>): void {
         this.numberExecutedTests++;
+        this.lastExecutedTestName = _.payload.testName;
     }
 
     private applyRetryableTestExecuted(_: Event<RetryableTestExecutedPayload>): void {
@@ -255,6 +259,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
 
     extractSnapshotState(): SystemSnapshotState {
         return {
+            testName: this.lastExecutedTestName,
             numberExecutedTests: this.numberExecutedTests,
         };
     }
