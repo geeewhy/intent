@@ -1,4 +1,4 @@
-## CURRENT SYSTEM OUTLOOK — May 24 2025
+## CURRENT SYSTEM OUTLOOK — May 30 2025
 
 | Vertical Concern           | Current State / Design Choice | Tests / Tooling |
 |----------------------------| ----------------------------- | --------------- |
@@ -19,6 +19,16 @@
 ---
 
 ### Highlights
+
+* **DevEx infra bootstrap**
+
+  * Consistent CLI for setting up event store, scheduler, projections, etc.
+  * Works in both CI and local interactive mode
+  * No manual script editing - pick a flow and run
+  * New environments and providers can be added without touching core logic
+  * Clear test feedback if steps misconfigured or incomplete
+
+Let me know if you want to tie this to DX goals like onboarding or drift prevention.
 
 * **Workflow-first execution model**
     - Commands enter through a workflow engine, giving exactly-once delivery, back-pressure, and durable retries.  
