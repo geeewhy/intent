@@ -44,6 +44,7 @@ export async function processCommand(
         commandQueue.push(cmd);
     });
 
+    //todo doesnt belong here, start a separate flow
     setHandler(obsTraceSignal, async ({span, data}) => {
         await emitObservabilitySpan(span, data);
     });

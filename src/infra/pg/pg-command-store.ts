@@ -17,7 +17,8 @@ export class PgCommandStore implements CommandStorePort {
     }
 
     private async setTenantContext(client: PoolClient, tenantId: UUID): Promise<void> {
-        await client.query(`SET LOCAL app.tenant_id = '${tenantId}'`);
+        //todo add RLS to schema & test
+        //await client.query(`SET LOCAL app.tenant_id = '${tenantId}'`);
     }
 
     async upsert(cmd: Command): Promise<void> {
