@@ -28,8 +28,6 @@
   * New environments and providers can be added without touching core logic
   * Clear test feedback if steps misconfigured or incomplete
 
-Let me know if you want to tie this to DX goals like onboarding or drift prevention.
-
 * **Workflow-first execution model**
     - Commands enter through a workflow engine, giving exactly-once delivery, back-pressure, and durable retries.  
       Axon/Lagom rely on brokers and manual sagas; most Node kits run in-process buses.
@@ -67,7 +65,7 @@ Let me know if you want to tie this to DX goals like onboarding or drift prevent
     * **Event-sourced replay insight** – When a projection rewinds, emitted spans include the original event timestamp vs. replay timestamp, so dashboards can differentiate live flow from catch-up.
 
 * **Failure-path instrumentation**
-    - CI exercises rate-limits, retries, and compensation flows—not just happy paths.
+    * CI exercises rate-limits, retries, and compensation flows, not just happy paths.
 
 Goals:
 * Emphasise determinism and explicit boundaries
