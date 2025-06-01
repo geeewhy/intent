@@ -1,8 +1,18 @@
-# Setup Tool
+# Tools Index
+
+This directory contains various tools for managing and configuring the backend services.
+
+## Available Tools
+
+- [Setup Tool](../setup/README.md) - A modular infrastructure setup CLI for managing and configuring backend services
+- [Projection Drift Check Tool](../projections-drift-check/README.md) - Checks for drift between projection definitions in code and actual database tables
+- [Projection Repair Tool](../projections-repair/README.md) - Repairs drift between projection definitions in code and actual database tables
+
+## Setup Tool
 
 A modular infrastructure setup CLI for managing and configuring backend services.
 
-## Overview
+### Overview
 
 The Setup Tool provides a flexible and extensible way to manage infrastructure components through a command-line interface. It's designed around the concept of "flows" - sequences of steps that perform specific infrastructure tasks.
 
@@ -102,10 +112,10 @@ import { FlowCtx } from '../../../../../shared/types';
 
 export default async function step(ctx: FlowCtx): Promise<void> {
   ctx.logger.info('Executing step');
-  
+
   // Step implementation
   // ...
-  
+
   // Store data in context for other steps
   ctx.vars.myData = 'some value';
 }

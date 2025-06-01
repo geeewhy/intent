@@ -22,9 +22,9 @@
     "test:integration": "npx jest --selectProjects integration --testPathPattern",
     "test:tools:setup": "jest --config src/tools/setup/jest.config.js",
     "projections:migrate": "ts-node src/infra/projections/migrations-pg/cli.ts",
-    "lint:rls": "ts-node src/tools/lint-rls-policies.ts",
-    "tool:projection-check-drift": "ts-node src/tools/check-projection-drift.ts",
-    "tool:projection-repair": "ts-node src/tools/repair-projection-drift.ts",
+    "tool:projections-lint": "ts-node src/tools/projections-lint/index.ts",
+    "tool:projection-check-drift": "ts-node src/tools/projections-drift-check/index.ts",
+    "tool:projection-repair": "ts-node src/tools/projections-repair/index.ts",
     "setup": "ts-node src/tools/setup/setup.ts"
   },
   "dependencies": {
