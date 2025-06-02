@@ -2,6 +2,7 @@
 
 ![Intent logo](docs/assets/logo-text.svg)
 
+[![CI](https://github.com/geeewhy/intent/actions/workflows/build.yml/badge.svg)](https://github.com/geeewhy/intent/actions/workflows/build.yml)
 [![CI](https://github.com/geeewhy/intent/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/geeewhy/intent/actions/workflows/unit-tests.yml)
 [![CI](https://github.com/geeewhy/intent/actions/workflows/projection-linter.yml/badge.svg)](https://github.com/geeewhy/intent/actions/workflows/projection-linter.yml)
 
