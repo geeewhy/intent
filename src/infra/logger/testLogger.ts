@@ -12,12 +12,27 @@ function getPosition(): string {
 
 // Extract current test info using Jest globals
 export function getTestContext(): Record<string, unknown> {
-  const test = expect.getState();
   const caller = getCallerInfo(4);
 
+  // Check if we're in a test context (expect is defined)
+  if (typeof expect !== 'undefined') {
+    try {
+      const test = expect.getState();
+      return {
+        suite: test.currentTestName?.split(' ')[0],
+        test: test.currentTestName,
+        sourceURI: `file://${caller.position}`,
+        operation: caller.function,
+      };
+    } catch (e) {
+      // If expect.getState() fails, fall back to basic context
+    }
+  }
+
+  // Default context when not in a test or expect.getState() fails
   return {
-    suite: test.currentTestName?.split(' ')[0],
-    test: test.currentTestName,
+    suite: 'setup',
+    test: 'initialization',
     sourceURI: `file://${caller.position}`,
     operation: caller.function,
   };

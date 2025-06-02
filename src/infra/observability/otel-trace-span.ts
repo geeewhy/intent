@@ -1,5 +1,6 @@
 // src/infra/observability/otel-trace-span.ts
 import { trace } from '@opentelemetry/api';
+import { log } from '../../core/logger';
 
 const tracer = trace.getTracer('infra');
 
@@ -8,7 +9,11 @@ export async function traceSpan<T>(
     attributes: Record<string, any>,
     fn: () => Promise<T>
 ): Promise<T> {
-    console.log(`[otel-traceSpan] Starting span: ${name}`, attributes);
+    log()?.debug('Starting span', { 
+        spanName: name, 
+        attributes,
+        component: 'otel-tracing'
+    });
     return tracer.startActiveSpan(name, { attributes }, async (span) => {
         try {
             return await fn();

@@ -7,6 +7,7 @@ import {sql} from 'slonik';
 import {waitForNewEvents, wait} from './utils';
 import {PgEventStore} from '../pg/pg-event-store';
 import * as dotenv from 'dotenv';
+import {log} from '../../core/logger';
 
 dotenv.config();
 const TEST_TIMEOUT = 30000;
@@ -20,15 +21,19 @@ describe('Projection Integration Tests', () => {
 
     beforeAll(async () => {
         tenantId = process.env.TEST_TENANT_ID || 'test-tenant';
+        log()?.info('Setting up Projection Integration Tests', { tenantId });
         scheduler = await TemporalScheduler.create(tenantId);
         eventStore = new PgEventStore();
         pool = createPool();
+        log()?.info('Projection Integration Tests setup complete');
     }, TEST_TIMEOUT);
 
     afterAll(async () => {
+        log()?.info('Cleaning up Projection Integration Tests');
         await pool.end();
         await eventStore.close();
         await scheduler.close();
+        log()?.info('Projection Integration Tests cleanup complete');
     });
 
     /**
@@ -41,6 +46,12 @@ describe('Projection Integration Tests', () => {
     ): Promise<any> => {
         const start = Date.now();
 
+        log()?.debug('Waiting for system_status record', { 
+            aggregateId, 
+            timeoutMs, 
+            intervalMs 
+        });
+
         while (Date.now() - start < timeoutMs) {
             try {
                 const result = await pool.query(sql`
@@ -50,16 +61,30 @@ describe('Projection Integration Tests', () => {
                 `);
 
                 if (result.rows.length > 0) {
+                    log()?.debug('Found system_status record', { 
+                        aggregateId,
+                        recordId: result.rows[0].id,
+                        elapsedMs: Date.now() - start
+                    });
                     return result.rows[0];
                 }
             } catch (error) {
-                console.error('Error querying system_status table:', error);
+                log()?.error('Error querying system_status table', { 
+                    aggregateId, 
+                    error 
+                });
             }
 
             await wait(intervalMs);
         }
 
-        throw new Error(`Timed out waiting for system_status record with id ${aggregateId}`);
+        const err = new Error(`Timed out waiting for system_status record with id ${aggregateId}`);
+        log()?.error('Timeout waiting for system_status record', { 
+            aggregateId, 
+            timeoutMs,
+            error: err
+        });
+        throw err;
     };
 
     test('TEST_EXECUTED command creates a record in system_status table', async () => {
@@ -68,6 +93,12 @@ describe('Projection Integration Tests', () => {
         const aggregateType = 'system';
         const testId = uuidv4();
         const testName = 'integration-test';
+
+        log()?.info('Starting test for TEST_EXECUTED command', { 
+            aggregateId, 
+            aggregateType, 
+            testName 
+        });
 
         const command: Command = {
             id: uuidv4(),
@@ -104,12 +135,24 @@ describe('Projection Integration Tests', () => {
         expect(record.result).toBe('success');
         expect(record.parameters).toEqual({integration: true});
         expect(record.numberExecutedTests).toBe(1);
+
+        log()?.info('TEST_EXECUTED command projection test passed', { 
+            recordId: record.id,
+            testName: record.testName,
+            result: record.result,
+            numberExecutedTests: record.numberExecutedTests
+        });
     }, TEST_TIMEOUT);
 
     test('Multiple TEST_EXECUTED commands update the numberExecutedTests counter', async () => {
         // Setup
         const aggregateId = uuidv4();
         const aggregateType = 'system';
+
+        log()?.info('Starting test for multiple TEST_EXECUTED commands', { 
+            aggregateId, 
+            aggregateType 
+        });
 
         // Send three commands in sequence
         for (let i = 0; i < 3; i++) {
@@ -148,6 +191,14 @@ describe('Projection Integration Tests', () => {
         expect(record.result).toBe('success');
         expect(record.parameters).toEqual({sequence: 2}); // Last parameters
         expect(record.numberExecutedTests).toBe(3); // Should be incremented to 3
+
+        log()?.info('Multiple TEST_EXECUTED commands projection test passed', { 
+            recordId: record.id,
+            testName: record.testName,
+            result: record.result,
+            numberExecutedTests: record.numberExecutedTests,
+            parameters: record.parameters
+        });
     }, TEST_TIMEOUT);
 });
 
@@ -181,6 +232,13 @@ describe('RLS Integration Tests', () => {
         testerId1 = uuidv4();
         testerId2 = uuidv4();
 
+        log()?.info('Setting up RLS Integration Tests', { 
+            tenantId, 
+            tenantId2, 
+            testerId1, 
+            testerId2 
+        });
+
         // Create admin pool for setup
         adminPool = createPool();
 
@@ -189,6 +247,8 @@ describe('RLS Integration Tests', () => {
         testPool = createPool({ connectionString: testConnectionString });
 
         let lastEventUuid = uuidv4();
+
+        log()?.info('Inserting test data for RLS tests');
 
         // Insert test data with admin pool - records for both tenants
         await adminPool.query(sql`
@@ -199,15 +259,21 @@ describe('RLS Integration Tests', () => {
                 (${uuidv4()}, ${tenantId2}, ${testerId1}, 'Test 3', 'success', NOW(), '{"test": 3}'::jsonb, 1, NOW(),${lastEventUuid}, 0),
                 (${uuidv4()}, ${tenantId2}, ${testerId2}, 'Test 4', 'success', NOW(), '{"test": 4}'::jsonb, 1, NOW(), ${lastEventUuid}, 0)
         `);
+
+        log()?.info('RLS Integration Tests setup complete');
     }, TEST_TIMEOUT);
 
     afterAll(async () => {
+        log()?.info('Cleaning up RLS Integration Tests');
+
         // Clean up test data for both tenants
         await adminPool.query(sql`DELETE FROM system_status WHERE "testerId" IN (${testerId1}, ${testerId2}) AND tenant_id IN (${tenantId}, ${tenantId2})`);
 
         // Close pools
         await adminPool.end();
         await testPool.end();
+
+        log()?.info('RLS Integration Tests cleanup complete');
     });
 
     test('Tester can only read their own records', async () => {
@@ -218,7 +284,11 @@ describe('RLS Integration Tests', () => {
             role: 'tester'
         });
 
-        console.log('testerClaims:', testerClaimsJson);
+        log()?.info('Setting tester claims for RLS test', { 
+            testerClaims: testerClaimsJson,
+            testerId: testerId1,
+            tenantId
+        });
 
         await testPool.query(sql`
             SELECT set_config(
@@ -235,6 +305,11 @@ describe('RLS Integration Tests', () => {
         // Tester should only see their own records
         expect(result.rows.length).toBe(1);
         expect(result.rows[0].testerId).toBe(testerId1);
+
+        log()?.info('Tester RLS test passed', { 
+            rowCount: result.rows.length,
+            testerId: result.rows[0].testerId
+        });
     });
 
     test('Developer can read all records within their tenant', async () => {
@@ -243,6 +318,11 @@ describe('RLS Integration Tests', () => {
             user_id: uuidv4(),
             tenant_id: tenantId,
             role: 'developer'
+        });
+
+        log()?.info('Setting developer claims for RLS test', { 
+            developerClaims: developerClaimsJson,
+            tenantId
         });
 
         await testPool.query(sql`
@@ -261,6 +341,12 @@ describe('RLS Integration Tests', () => {
         expect(result.rows.map((row: { testerId: any; }) => row.testerId).sort()).toEqual([testerId1, testerId2].sort());
         // All records should be from the developer's tenant
         expect(result.rows.every((row: { tenant_id: any; }) => row.tenant_id === tenantId)).toBe(true);
+
+        log()?.info('Developer tenant access RLS test passed', { 
+            rowCount: result.rows.length,
+            testerIds: result.rows.map((row: { testerId: any; }) => row.testerId),
+            allFromSameTenant: result.rows.every((row: { tenant_id: any; }) => row.tenant_id === tenantId)
+        });
     });
 
     test('Developer can only read records from their own tenant', async () => {
@@ -269,6 +355,12 @@ describe('RLS Integration Tests', () => {
             user_id: uuidv4(),
             tenant_id: tenantId,
             role: 'developer'
+        });
+
+        log()?.info('Setting developer claims for cross-tenant RLS test', { 
+            developerClaims: developerClaimsJson,
+            tenantId,
+            otherTenantId: tenantId2
         });
 
         await testPool.query(sql`
@@ -289,5 +381,11 @@ describe('RLS Integration Tests', () => {
         expect(result.rows.length).toBe(2);
         expect(result.rows.every((row: { tenant_id: any; }) => row.tenant_id === tenantId)).toBe(true);
         expect(result.rows.every((row: { tenant_id: any; }) => row.tenant_id !== tenantId2)).toBe(true);
+
+        log()?.info('Developer cross-tenant RLS test passed', { 
+            rowCount: result.rows.length,
+            allFromCorrectTenant: result.rows.every((row: { tenant_id: any; }) => row.tenant_id === tenantId),
+            noRecordsFromOtherTenant: result.rows.every((row: { tenant_id: any; }) => row.tenant_id !== tenantId2)
+        });
     });
 });
