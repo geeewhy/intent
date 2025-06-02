@@ -1,0 +1,14 @@
+<!-- intent-logo-wordmark.svg -->
+<svg viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg" fill="none">
+    <!-- Symbol -->
+    <g stroke="#2D3748" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="60,6 108,34 108,86 60,114 12,86 12,34"/>
+        <polyline points="50,40 80,60 50,80" fill="#2D3748"/>
+        <circle cx="38" cy="60" r="5" fill="#2D3748" stroke="none"/>
+    </g>
+
+    <!-- Wordmark -->
+    <text x="130" y="75" fill="#2D3748" font-size="42" font-family="Inter, Helvetica, Arial, sans-serif" letter-spacing="1">
+        Intent
+    </text>
+</svg>

@@ -1,129 +1,146 @@
 # Intent
 
-``Intent`` is a multi-tenant, hexagonal backend that serves as a pragmatic, principled reference implementation for event-sourced CQRS systems.
+![Intent logo](docs/assets/logo-text.svg)
 
-Highlights include:
-- **Ports-first architecture** – primary adapters include PostgreSQL (event store, RLS projections) and Temporal (workflow orchestration), fully isolated behind core-defined interfaces.
-- **Workflow-native execution model** – commands and events are processed inside workflows, enabling exactly-once handling, idempotency, durable retries, and strong aggregate isolation.
-- **Snapshot-aware event sourcing** – aggregates load from snapshots plus delta events, with snapshots triggered by access frequency to minimize replay and rehydration costs.
-- **RLS-secured projections** – access control rules are defined in domain code and compiled into deterministic Postgres row-level policies, enforcing tenant and role isolation.
-- **Developer tooling for drift and determinism** – includes a projection drift scanner, auto-repair scripts, RLS linter, and a CLI command-pump for real-time debugging.
+![CI]([![Unit Tests](https://github.com/geeewhy/intent/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/geeewhy/intent/actions/workflows/unit-tests.yml))
 
-See reflections on the architecture and design decisions in [reflections](docs/reflections/index.md) and [ADRs](ADRs/) directory.
+> **Intent** turns event-sourcing theory into a platform you can demo in five minutes. It’s a pragmatic, ports-first reference for multi-tenant, event-sourced CQRS back-ends powered by TypeScript and Temporal for durable workflow execution.
 
-See [docs/current.md](docs/current.md) for current system state and [docs/structure.md](docs/structure.md) for directory layout.
+---
 
-You can also check out the [project roadmap](docs/next.md) for future enhancements and features.
+## Highlights
 
-## Architecture
+| Capability                      | What it gives you                                                                                                                                                                                                                                                                                                             |
+|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Lossless backend processing** | Event-sourced core guarantees no data loss, even under retries, crashes, or partial failures. Every command, event, and projection is persisted and replayable.                                                                                                                                                               |
+| **Ports-first hexagon**         | Technology-agnostic core logic. Adapters for PostgreSQL (event store + RLS) and Temporal (workflows) plug in via explicit, testable ports. [What’s a hexagonal architecture?](https://en.wikipedia.org/wiki/Hexagonal_architecture_(software)).                                                                               |
+| **Self-healing infra bootstrap** | Unified CLI flow runner sets up eventstore, scheduler, and projections interactively or in CI -- zero manual scripting, clear test feedback, and easily extendable for new providers.                                                                                                                                         |
+| **Built-in authorization** | Each projection declares access rules in metadata; they are compiled into Postgres RLS policies. CI linter blocks insecure access before it ships.                                                                                                                                                                            |
+| **Tenant isolation by default** | Tenant IDs propagate edge → core → infra. Row isolation in DB and namespaced workflows prevent accidental cross-tenant access or leaks.                                                                                                                                                                                       |
+| **Production-grade observability** | Unified structured logging with context-aware `LoggerPort`, customizable log levels, and error serialization. OpenTelemetry spans wrap all key flows; logs and traces correlate via causation/correlation IDs. Logging behavior tunable via `.env` for local vs production.                                                   |
+| **Workflow-native execution**   | Commands and events are processed in durable Temporal workflows → supports back-pressure, retries, and exactly-once delivery at the source of truth.                                                                                                                                                                          |
+| **Full-circle event governance** | Events flow from command → event → projection → saga with full traceability. Snapshot-aware loading and event upcasting support long-lived schemas and backward compatibility. See [ADR-017](ADRs/017-event-upcasting.md) and [ADR-010](ADRs/010-snapshot-upcasting.md) for snapshot implementation and upcasting rules. |
+| **Projection drift protection** | Tools detect schema drifts vs. history and auto-generate repair plans. Avoids full rebuilds, supports CI failure gating and controlled rewinds.                                                                                                                                                                               |
+| **Schema evolution support**    | Events are immutable, but projections and snapshots are versioned. Upcasters evolve event formats safely without breaking consumers.                                                                                                                                                                                          |
+| **Tooling for velocity**        | Includes a CLI command-pump, drift scanner, RLS linter, and interactive setup runner to ensure reproducibility and rapid local debugging                                                                                                                                                                                      |
 
-This project implements a hexagonal architecture (ports and adapters) pattern to separate the core domain logic from infrastructure concerns. The system is designed to be multi-tenant, with each household (tenant) having its own isolated data and real-time communication.
+Deep-dives: [Reflections](docs/reflections/index.md) · [ADRs](ADRs/) · [Current state](docs/current.md) · [Roadmap](docs/next.md)
 
-### Hexagonal Architecture
+---
 
-The project follows a strict hexagonal architecture:
+## Prerequisites
 
-- **Domain Core**: Aggregates and slices of business logic
-- **Ports**: Interfaces that define how the domain interacts with the outside world
-- **Adapters**: Implementations of the ports that connect to specific technologies
+| Tool | Minimum Version | Notes                                                                                         |
+|------|-----------------|-----------------------------------------------------------------------------------------------|
+| **Docker** | `24.x` | Engine + CLI; enables `docker compose` used by the Quick-start.                               |
+| **Node.js** | `22.x` (current LTS) | TS/ESM project; lower versions are not tested.                                                |
+| **Git** | any modern release | Needed to clone the repo.                                                                     |
+| **Unix-like shell** | bash/zsh/fish | Commands assume a POSIX shell. Windows users can use WSL2 or Git Bash (untested; PRs welcome) |
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 22+
-- Docker and Docker Compose
-- PostgreSQL client (optional, for direct database access)
-- Supabase account (for real-time communication)
-
-## Running the Application
-
-1. Start the infrastructure services (PostgreSQL, Temporal):
-
-```bash
-docker-compose up -d
-```
-
-2. Build the TypeScript code:
+## Quick-start (⏱ ~5 min)
 
 ```bash
-npm run build
+git clone https://github.com/geeewhy/intent.git
+cd intent
+docker compose up -d infra    # Postgres + Temporal UI
+npm run setup eventstore      # creates schemas, seeds RLS
+cp .env.example .env          # edit creds if needed
+npm run dev:worker aggregates # starts the aggregates worker
+npm run dev:worker sagas      # starts the sagas worker
+````
+
+<details>
+  <summary>.env example</summary>
+
+```env
+# Database
+LOCAL_DB_HOST=localhost
+LOCAL_DB_USER=postgres
+LOCAL_DB_PASSWORD=postgres
+LOCAL_DB_NAME=intent
+
+# Temporal
+TEMPORAL_ADDRESS=localhost:7233
+
+# App
+PORT=3000
+NODE_ENV=development
+LOG_LEVEL=info
+LOG_ERRORS_TO_STDERR=false
+
+# Tenancy
+TEST_TENANT_ID=0af03580-98d5-4884-96e4-e75168d8b887
+ACTIVE_TENANTS=$TEST_TENANT_ID
 ```
 
-3. Start the Temporal worker:
+</details>
 
-```bash
-npm run start:worker
+---
+
+## Architecture snapshot
+
+```mermaid
+flowchart LR
+  subgraph Core
+    Domains --ports--> Ports
+  end
+  Ports --adapters--> Postgres[(Event Store + Projection RLS)]
+  Ports --adapters--> Temporal[(Workflow Engine)]
+  Postgres <--row-level security--> Clients
 ```
 
-### Development
+*Full rationale lives in* **[docs/reflections](docs/reflections/index.md)** and [ADRs](ADRs).
 
-For development with hot reloading:
+---
 
-1. Start the infrastructure services:
+## Scripts & Tasks
 
-```bash
-docker-compose up -d
+| Task                                           | Command                                                               |
+|------------------------------------------------|-----------------------------------------------------------------------|
+| Run aggregates worker                   | `npm run dev:worker aggregates`                                       |
+| Run sagas worker                        | `npm run dev:worker sagas`                                            |
+| Unit tests (pure domain)                       | `npm run test:core`                                                   |
+| Integration tests (Postgres + Temporal)        | `npm run test:integration`                                            |
+| Dev tools: setup, repair, drift-check, and more | View available DevEx tools at [tools/README.md](src/tools/README.md). |
+
+---
+
+## Project layout
+
+See [docs/structure.md](docs/structure.md) for the full tree.
+
+```
+src/
+  core/            ← aggregates, commands, events, ports
+  infra/
+    pg/            ← Postgres adapter
+    temporal/      ← workflows + activities
+    projections/   ← RLS helpers, Kysely/Slonik impls
+  tools/           ← Tooling, setup & projection tooling, ...
+docker/
+  infra/compose.yaml  ← Postgres + Temporal services
 ```
 
-2. Start the Temporal worker in development mode:
+---
 
-```bash
-npm run dev:worker
-```
+## Contributing
 
-3. In a separate terminal, start the Colyseus server in development mode:
+1. Fork -> feature branch.
+2. `npm run test:core` and `npm run test:integration` must pass.
+3. Use conventional-commits (`feat:`, `fix:`).
+4. PRs touching architecture must link an ADR.
 
-```bash
-npm run dev
-```
+---
 
-## Multi-tenancy
+## Growing ecosystem
 
-The system supports multi-tenancy through the following mechanisms:
-
-1. **Tenant Isolation in PostgreSQL**: Row-Level Security ensures each tenant can only access their own data
-2. **JWT with tenant_id claim**: Authentication tokens include a tenant_id claim that is used for authorization
-3. **Tenant-specific Supabase Channels**: Each household has its own channel for real-time communication
-4. **Tenant-specific Temporal Workflows**: Workflows are isolated by tenant ID in the workflow ID and task queue
-5. **Snapshots per tenant**: Aggregate snapshots are stored with tenant_id for efficient hydration
-
-
-## Project Structure
-
-See [directory structure](docs/structure.md) for a detailed overview of the project structure.
-
-### Running the Command-Pump Worker
-
-The command-pump worker listens for new commands via PostgreSQL notifications and starts Temporal workflows. To run it:
-
-```bash
-# In development mode
-npm run dev:command-pump
-
-# In production mode
-npm run start:command-pump
-```
-
-### Supabase Edge Functions
-
-The Edge Functions are serverless functions that run on Supabase's infrastructure. They handle commands from clients, validate JWT tokens, and insert commands into the database. To deploy them:
-
-```bash
-# Install Supabase CLI
-npm install -g supabase
-
-# Login to Supabase
-supabase login
-
-# Deploy the Edge Functions
-supabase functions deploy command
-```
-
-### Temporal Configuration
-
-The `temporal-config` directory contains configuration files for the Temporal server. The `development.yaml` file is required for the Temporal server to start properly. It contains dynamic configuration settings that control various aspects of the Temporal server's behavior, such as task queue settings, workflow execution limits, and system features.
+- **📚 Docs site** – richer guides and ADR index *(coming soon at intent.heart.dev)*
+- **🧑‍💻 Sample apps** – see [`intent-samples`](https://github.com/geeewhy/intent-samples) for a multi-tenant Food Delivery app demo
+- **📦 VS Code snippets** – install `intent-es-snippets` for boilerplate aggregate/command/event files
+- **💬 Community chat** – join `#intent` on the **Event Sourcing Community** Slack (contact `gy` at `heart` dot `dev` for invite)
+- **🛠 Third-party adapters** – early adapters for Kurrent/EventStore, MongoDB event store, AWS SNS/SQS and Kafka Consumer/Producer transports
 
 ## License
 
-TBD. Means you can not do anything with it yet.
+All rights reserved © DevHeart Technologies Inc.  
+OSS licensing is under consideration. Until an explicit license is published, you may not use, copy, modify, distribute, or deploy this code in any production, commercial, or public context.
