@@ -44,7 +44,7 @@ Deep-dives: [Reflections](docs/reflections/index.md) · [ADRs](ADRs/) · [Curren
 ```bash
 git clone https://github.com/geeewhy/intent.git
 cd intent
-docker compose up -d infra    # Postgres + Temporal UI
+docker compose up -d postgres temporal temporal-ui
 npm run setup eventstore      # creates schemas, seeds RLS
 cp .env.example .env          # edit creds if needed
 npm run dev:worker aggregates # starts the aggregates worker
@@ -79,16 +79,73 @@ ACTIVE_TENANTS=$TEST_TENANT_ID
 
 ---
 
-## Architecture snapshot
+## High-level Architecture
+```mermaid
+flowchart TB
+  UI["UI"]
+  APIGW["API GW / BFF / Edge"]
+  Projections(["Read Only<br>Projections"])
+  Core["Core<br><code>Contains domains,<br/>handles Cmds, serves Events<br>builds PM, Saga and<br/> Projection plans</code>"]
+  Workflow["Deterministic Workflows:<br><code>ProcessCommand</code><br><code>ProcessEvent</code><br><code>ProcessSaga</code>/<code>PM</code>"]
+  Router["Workflow Router"]
+  Activities["Side effect activities:<br><code>Load Aggregate</code><br><code>Apply Event</code><br><code>DispatchCommand</code>"]
 
+  APIGW -->|sync projections| UI
+  UI -->|send commands| APIGW
+  APIGW -->|relay commands| Router
+  APIGW ---|stream projections| Projections
+
+  Projections ---|build projections| Workflow
+  Core ---|In: Cmd| Workflow
+  Core ---|Out: Event| Workflow
+  Router -->|start workflows| Workflow
+
+  Workflow --> Activities
+
+  click UI href "#" "UI layer"
+  click APIGW href "#" "API Gateway and Edge"
+  click Domain href "#" "Domain Model"
+```
 ```mermaid
 flowchart LR
   subgraph Core
     Domains --ports--> Ports
   end
-  Ports --adapters--> Postgres[(Event Store + Projection RLS)]
-  Ports --adapters--> Temporal[(Workflow Engine)]
-  Postgres <--row-level security--> Clients
+  Ports <--infra adapters--> Postgres[(Event Store + Projection RLS)]
+  Ports <--infra adapters --> Router[[Workflow Engine]] --> Postgres
+  Postgres <-- RLS--> GW[[Optional BFF/GW]] <--> UI
+```
+
+```mermaid
+C4Container
+    title Intent Platform - Container View
+
+    Person(dev, "Developer", "Runs CLI and dev tooling")
+    Person(user, "End User", "Interacts with UI or APIs")
+
+    System_Boundary(intent, "Intent Platform") {
+        Container(core, "Domain Core", "TypeScript Module", "Aggregates, command/event handlers, pure logic")
+        Container(router, "Workflow Engine", "Temporal", "Handles command routing and durable execution")
+        Container(eventstore, "Event Store", "PostgreSQL", "Stores immutable events, snapshots, and RLS-protected projections")
+        Container(gateway, "API Gateway / BFF", "Node.js / Express (optional)", "Exposes tenant-scoped UI/data APIs")
+        Container(ui, "Frontend App", "React (or other)", "Tenant UI consuming projections")
+    }
+
+    Rel(dev, router, "Sends commands via CLI / dev tools")
+    Rel(dev, eventstore, "Runs migrations & snapshots")
+
+    Rel(user, ui, "Uses")
+    Rel(ui, gateway, "Calls APIs")
+    Rel(gateway, eventstore, "Executes RLS queries")
+    Rel(gateway, eventstore, "Issue Commands")
+    Rel(router, core, "Invokes Commands")
+    Rel(core, eventstore, "Uses EventStorePort")
+    Rel(router, eventstore, "Uses EventStorePort")
+    Rel(core, router, "Emits commands/events via port")
+
+    BiRel(core, gateway, "Optionally invokes commands")
+
+    UpdateElementStyle(core, $shape="Hexagon")
 ```
 
 *Full rationale lives in* **[docs/reflections](docs/reflections/index.md)** and [ADRs](ADRs).
