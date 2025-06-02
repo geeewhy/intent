@@ -1,5 +1,5 @@
 //src/core/system/command-handler.ts
-import { CommandHandler } from '../command-bus';
+import { CommandHandler } from '../contracts';
 import { Command, Event } from '../contracts';
 import { BaseAggregate } from '../base/aggregate';
 import { SystemAggregate } from './aggregates/system.aggregate';

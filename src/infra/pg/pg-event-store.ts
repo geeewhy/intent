@@ -5,6 +5,7 @@
 
 import {Pool, PoolClient} from 'pg';
 import {Event, UUID} from '../../core/contracts';
+import {log} from '../../core/logger';
 import {EventStorePort} from '../../core/ports';
 import {BaseAggregate, Snapshot} from '../../core/base/aggregate';
 import {upcastEvent} from "../../core/shared/event-upcaster";
@@ -156,7 +157,13 @@ export class PgEventStore implements EventStorePort {
             await client.query('COMMIT');
         } catch (e) {
             await client.query('ROLLBACK');
-            console.error('Error appending events:', e);
+            const logger = log()?.child({ 
+                tenantId, 
+                aggregateType, 
+                aggregateId, 
+                eventCount: events.length 
+            });
+            logger?.error('Failed to append events', { error: e });
             throw e;
         } finally {
             client.release();
@@ -200,7 +207,12 @@ export class PgEventStore implements EventStorePort {
 
             return null;
         } catch (error) {
-            console.error('Error loading snapshot:', error);
+            const logger = log()?.child({ 
+                tenantId, 
+                aggregateType, 
+                aggregateId 
+            });
+            logger?.error('Failed to load snapshot', { error });
             throw error;
         } finally {
             client.release();
@@ -269,7 +281,13 @@ export class PgEventStore implements EventStorePort {
 
             return {events, version};
         } catch (error) {
-            console.error('Error loading events:', error);
+            const logger = log()?.child({ 
+                tenantId, 
+                aggregateType, 
+                aggregateId, 
+                fromVersion 
+            });
+            logger?.error('Failed to load events', { error });
             throw error;
         } finally {
             client.release();

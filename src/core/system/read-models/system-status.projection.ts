@@ -3,6 +3,7 @@ import { Event, EventHandler, ReadModelUpdaterPort } from '../../contracts';
 import { SystemEventType } from '../contracts';
 import { TestExecutedPayload } from '../contracts';
 import { assertDataPropsMatchMapKeys } from '../../shared/type-guards';
+import { log, createLoggerForProjection } from '../../logger';
 
 /**
  * Metadata for the system status projection
@@ -46,11 +47,22 @@ export function createSystemStatusProjection(
     },
 
     async on(event) {
-      console.log(`[System-Status-Projection] Handling event ${event.type} for tenant ${event.tenant_id} with aggregate ID ${event.aggregateId}`);
+      const logger = createLoggerForProjection('SystemStatus');
+      logger?.info('Processing event', {
+        eventType: event.type,
+        tenantId: event.tenant_id,
+        aggregateId: event.aggregateId
+      });
+
       const { tenant_id, aggregateId, payload, metadata } = event;
 
       if (!tenant_id || !aggregateId || !payload) {
-        throw new Error(`[System-Status-Projection] Invalid event ${event.type}. Missing tenant_id, aggregateId, or payload.`);
+        const err = new Error(`Invalid event ${event.type}. Missing tenant_id, aggregateId, or payload.`);
+        logger?.error('Invalid event', {
+          eventType: event.type,
+          error: err
+        });
+        throw err;
       }
 
       const upsertData: SystemStatusProjectionShape = {

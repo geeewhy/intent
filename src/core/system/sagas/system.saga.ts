@@ -2,6 +2,7 @@ import { Command, Event, ProcessPlan, SagaContext } from '../../contracts';
 import { trace } from '../../shared/observability';
 import { buildCommand } from '../../shared/command-factory';
 import { inheritMetadata } from '../../shared/metadata';
+import { log, createLoggerForSaga } from '../../logger';
 import {
     SystemCommandType,
     SystemEventType,
@@ -24,7 +25,12 @@ export class SystemSaga {
         const tenantId = input.tenant_id;
         const baseMeta = inheritMetadata(input, ctx, { source: this.sagaName });
 
-        console.log(`[SystemSaga] Reacting to ${input.type} with id ${input.id}`, input);
+        const logger = createLoggerForSaga(SystemSaga);
+        logger?.info('Saga triggered', {
+            triggeredByType: input.type,
+            triggeredById: input.id,
+            input
+        });
 
         switch (input.type) {
             case SystemCommandType.EMIT_MULTIPLE_EVENTS: {

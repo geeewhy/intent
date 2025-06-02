@@ -1,5 +1,6 @@
 //src/infra/temporal/activities/coreActivities.ts
 import type {Command, Event, UUID} from '../../../core/contracts';
+import { log } from '../../../core/logger';
 import dotenv from 'dotenv';
 import {v4 as uuidv4} from 'uuid';
 import {PgEventStore} from '../../pg/pg-event-store';
@@ -53,8 +54,15 @@ const pgCommandStore = new PgCommandStore();
  * This will be picked up by the CommandPump to run via Temporal
  */
 export async function dispatchCommand(cmd: Command): Promise<void> {
+    const logger = log()?.child({
+        commandId: cmd.id,
+        commandType: cmd.type,
+        tenantId: cmd.tenant_id,
+        correlationId: cmd.metadata?.correlationId
+    });
+
     try {
-        console.log(`[dispatchCommand] Upserting command into database: ${cmd.id}`);
+        logger?.debug('Upserting command into database');
         await pgCommandStore.upsert(cmd);
 
         const result: CommandResult = await routeCommand(cmd);
@@ -62,10 +70,10 @@ export async function dispatchCommand(cmd: Command): Promise<void> {
         const infraStatus = result.status === 'success' ? 'consumed' : 'failed';
         await pgCommandStore.markStatus(cmd.id, infraStatus, result);
 
-        console.log(`[dispatchCommand] Command ${cmd.id} dispatched successfully with status: ${infraStatus}`);
+        logger?.info('Command dispatched successfully', { status: infraStatus });
     } catch (error: any) {
         await pgCommandStore.markStatus(cmd.id, 'failed', {status: 'fail', error: error.message});
-        console.error(`[dispatchCommand] Failed to dispatch command ${cmd.type}:`, error);
+        logger?.error('Failed to dispatch command', { error });
         throw error;
     }
 }
@@ -90,19 +98,25 @@ export async function loadAggregate(
     aggregateType: string,
     aggregateId: UUID
 ): Promise<any | null> {
-    console.log(`[loadAggregate] Loading ${aggregateType}:${aggregateId}`);
+    const logger = log()?.child({
+        tenantId,
+        aggregateType,
+        aggregateId
+    });
+
+    logger?.debug('Loading aggregate');
 
     try {
         // Check if the aggregate type is supported
         if (!supportsAggregateType(aggregateType)) {
-            console.warn(`[loadAggregate] Unsupported aggregate type: ${aggregateType}`);
+            logger?.warn('Unsupported aggregate type');
             return null;
         }
 
         // Get the aggregate class
         const AggregateClass = getAggregateClass(aggregateType);
         if (!AggregateClass) {
-            console.warn(`[loadAggregate] No class found for aggregate type: ${aggregateType}`);
+            logger?.warn('No class found for aggregate type');
             return null;
         }
 
@@ -113,41 +127,45 @@ export async function loadAggregate(
 
         // If a snapshot exists, create an aggregate instance and apply the snapshot state
         if (snapshot) {
-            console.log(`[loadAggregate] Loaded snapshot at version ${snapshot.version} (schema version ${snapshot.schemaVersion})`);
+            logger?.debug('Loaded snapshot', { 
+                version: snapshot.version, 
+                schemaVersion: snapshot.schemaVersion 
+            });
+
             aggregate = new AggregateClass(aggregateId);
             aggregate.applySnapshotState(snapshot.state, snapshot.schemaVersion);
             aggregate.version = snapshot.version;
             fromVersion = snapshot.version;
 
-            console.log(`[loadAggregate] Loaded snapshot, aggregate`, aggregate);
+            logger?.debug('Applied snapshot state to aggregate');
         }
 
         // Load events after the snapshot version (or from 0 if no snapshot)
         const result = await eventStore.load(tenantId, aggregateType, aggregateId, fromVersion);
 
         if (!result && !snapshot) {
-            console.log(`[loadAggregate] No events or snapshot found for ${aggregateType}:${aggregateId}`);
+            logger?.debug('No events or snapshot found, creating new aggregate instance');
             // Create a new instance of the aggregate using a dynamic payload
             let aggregate = AggregateClass.create(createAggregatePayload(aggregateType, aggregateId));
-            console.log(`[loadAggregate] Created new aggregate instance:`, aggregate);
+            logger?.info('Created new aggregate instance');
             return aggregate;
         }
 
         // If we have a snapshot but no events, return the aggregate from the snapshot
         if (!result && snapshot) {
-            console.log(`[loadAggregate] Using snapshot with no additional events`);
+            logger?.debug('Using snapshot with no additional events');
             return aggregate;
         }
 
         // If we have events but no snapshot, rebuild the aggregate from events
         if (result && !snapshot) {
-            console.log(`[loadAggregate] Loaded ${result.events.length} events for ${aggregateType}:${aggregateId}`);
+            logger?.debug('Rebuilding aggregate from events', { eventCount: result.events.length });
             return AggregateClass.rehydrate(result.events);
         }
 
         // If we have both a snapshot and events, apply the events to the aggregate
         if (result && snapshot && aggregate) {
-            console.log(`[loadAggregate] Applying ${result.events.length} events on top of snapshot`);
+            logger?.debug('Applying events on top of snapshot', { eventCount: result.events.length });
             for (const event of result.events) {
                 aggregate.apply(event);
             }
@@ -155,10 +173,10 @@ export async function loadAggregate(
         }
 
         // This should never happen, but just in case
-        console.warn(`[loadAggregate] Unexpected state in loadAggregate`);
+        logger?.warn('Unexpected state in loadAggregate');
         return null;
     } catch (error) {
-        console.error(`[loadAggregate] Error loading aggregate ${aggregateType}:${aggregateId}:`, error);
+        logger?.error('Error loading aggregate', { error });
         throw error;
     }
 }
@@ -202,29 +220,50 @@ export async function applyEvents(
     aggregateId: UUID,
     events: Event[],
 ): Promise<void> {
-    const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId);
-
-    const currentVersion = aggregate.getVersion();
-    for (const evt of events) aggregate.apply(evt);
-    const newVersion = aggregate.getVersion();
-
-    const snapshot = {
-        id: aggregate.id,
-        type: aggregateType,
-        version: newVersion,
-        state: aggregate.extractSnapshotState(),
-        schemaVersion: (aggregate.constructor as any).CURRENT_SCHEMA_VERSION,
-        createdAt: new Date().toISOString(),
-    };
-
-    await eventStore.append(
+    const logger = log()?.child({
         tenantId,
         aggregateType,
         aggregateId,
-        events,
-        currentVersion,
-        snapshot,
-    );
+        eventCount: events.length
+    });
+
+    logger?.debug('Applying events');
+
+    try {
+        const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId);
+
+        const currentVersion = aggregate.getVersion();
+        for (const evt of events) aggregate.apply(evt);
+        const newVersion = aggregate.getVersion();
+
+        logger?.debug('Events applied to aggregate', { 
+            currentVersion, 
+            newVersion 
+        });
+
+        const snapshot = {
+            id: aggregate.id,
+            type: aggregateType,
+            version: newVersion,
+            state: aggregate.extractSnapshotState(),
+            schemaVersion: (aggregate.constructor as any).CURRENT_SCHEMA_VERSION,
+            createdAt: new Date().toISOString(),
+        };
+
+        await eventStore.append(
+            tenantId,
+            aggregateType,
+            aggregateId,
+            events,
+            currentVersion,
+            snapshot,
+        );
+
+        logger?.info('Events applied successfully');
+    } catch (error) {
+        logger?.error('Failed to apply events', { error });
+        throw error;
+    }
 }
 
 /**
@@ -238,27 +277,38 @@ export async function snapshotAggregate(
     aggregateType: string,
     aggregateId: UUID,
 ): Promise<void> {
-    console.log(`[snapshotAggregate] Creating snapshot for ${aggregateType}:${aggregateId}`);
+    const logger = log()?.child({
+        tenantId,
+        aggregateType,
+        aggregateId
+    });
+
+    logger?.debug('Creating snapshot');
 
     try {
         const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId);
         if (aggregate) {
-            console.log(`[snapshotAggregate] Aggregate loaded, version: ${aggregate.version}, creating snapshot...`);
+            logger?.debug('Aggregate loaded, creating snapshot', { 
+                version: aggregate.version 
+            });
+
             await eventStore.snapshotAggregate(tenantId, aggregate);
-            console.log(`[snapshotAggregate] Snapshot taken for ${aggregateType}:${aggregateId}`);
+            logger?.info('Snapshot taken');
 
             // Verify the snapshot was created
             const snapshot = await eventStore.loadSnapshot(tenantId, aggregateType, aggregateId);
             if (snapshot) {
-                console.log(`[snapshotAggregate] Verified snapshot exists with version: ${snapshot.version}`);
+                logger?.debug('Verified snapshot exists', { 
+                    version: snapshot.version 
+                });
             } else {
-                console.error(`[snapshotAggregate] Failed to verify snapshot for ${aggregateType}:${aggregateId}`);
+                logger?.error('Failed to verify snapshot');
             }
         } else {
-            console.error(`[snapshotAggregate] No aggregate found for ${aggregateType}:${aggregateId}`);
+            logger?.error('No aggregate found');
         }
     } catch (error) {
-        console.error(`[snapshotAggregate] Error creating snapshot for ${aggregateType}:${aggregateId}:`, error);
+        logger?.error('Error creating snapshot', { error });
         throw error;
     }
 }
