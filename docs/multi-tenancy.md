@@ -87,9 +87,9 @@ We achieve **multi-tenancy** through a layered, tightly controlled architecture 
 
 ### **4. Multi-Tenant Safe Event Fan-Out**
 
-* Workers (e.g. `event-pump.ts`) listen to shared event streams but filter and dispatch by `tenant_id`.
+* Workers listen to shared event streams but filter and dispatch by `tenant_id`.
 * Process managers (PMs) and sagas act within the tenant context they are registered for.
-
+* RLS policies ensure that projections are created with tenant identifiers and event and command handlers can only access events and data for their own tenant.
 ---
 
 ### **5. Core Logic Agnostic to Tenancy**
@@ -113,7 +113,6 @@ We achieve **multi-tenancy** through a layered, tightly controlled architecture 
 * Command/event lifecycle respects tenant boundaries
 * Core code is shared across tenants, ports allow override if divergence occurs
 
-
 ## Conclusion
 
-Multi-tenant systems are fundamental to delivering **scalable and efficient software services** in the cloud era. By **serving many tenants from one platform**, companies achieve economies of scale: lower costs per customer, easier mass updates, and the ability to rapidly expand their user base. At the same time, careful architecture is required to ensure each tenant’s data is safe and performance remains reliable as the system grows. When designed well, multi-tenancy empowers software providers to innovate faster (since they maintain one codebase) and offer a consistent, high-quality experience to all customers, big or small. This concept underpins most SaaS offerings today, from CRMs to productivity suites, illustrating its value in modern software architecture **for building platforms that are both scalable and cost-effective**. With multi-tenancy, users get the benefits of a shared platform **without sacrificing the privacy and autonomy** they would have in a standalone system -- truly a win-win in software design.
+Multi-tenant systems are fundamental to delivering **scalable and efficient software services** in the cloud era. By **serving many tenants from one platform**, companies achieve economies of scale: lower costs per customer, easier mass updates, and the ability to rapidly expand their user base. At the same time, careful architecture is required to ensure each tenant’s data is safe and performance remains reliable as the system grows. When designed well, multi-tenancy empowers software providers to innovate faster (since they maintain one codebase) and offer a consistent, high-quality experience to all customers, big or small. This concept underpins most SaaS offerings today, from CRMs to productivity suites, illustrating its value in modern software architecture **for building platforms that are both scalable, secure and cost-effective**. With multi-tenancy, users get the benefits of a shared platform **without sacrificing the privacy and autonomy** they would have in a standalone system -- a win-win in software design.

@@ -194,14 +194,19 @@ docker/
 [//]: # (## Growing ecosystem)
 
 [//]: # ()
+[//]: # ()
 [//]: # (- **📚 Docs site** – richer guides and ADR index *&#40;coming soon at intent.heart.dev&#41;*)
 
+[//]: # ()
 [//]: # (- **🧑‍💻 Sample apps** – see [`intent-samples`]&#40;https://github.com/geeewhy/intent-samples&#41; for a multi-tenant Food Delivery app demo)
 
+[//]: # ()
 [//]: # (- **📦 VS Code snippets** – install `intent-es-snippets` for boilerplate aggregate/command/event files)
 
+[//]: # ()
 [//]: # (- **💬 Community chat** – join `#intent` on the **Event Sourcing Community** Slack &#40;contact `gy` at `heart` dot `dev` for invite&#41;)
 
+[//]: # ()
 [//]: # (- **🛠 Third-party adapters** – early adapters for Kurrent/EventStore, MongoDB event store, AWS SNS/SQS and Kafka Consumer/Producer transports)
 
 ## License
