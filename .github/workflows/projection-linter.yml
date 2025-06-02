@@ -1,4 +1,4 @@
-name: Projection Lint
+name: Projection Linter
 
 on:
   pull_request:
