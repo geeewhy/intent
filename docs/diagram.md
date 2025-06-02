@@ -20,7 +20,7 @@ flowchart TB
 
   Workflow --> Activities
 
-  click Core href "src/core" "Core"
-  click Projections href "src/infra/projections" "Projections"
-  click Workflows href "src/infra/temporal/workflows" "Workflows"
+%% click Core href "src/core" "Core"
+%% click Projections href "src/infra/projections" "Projections"
+%% click Workflows href "src/infra/temporal/workflows" "Workflows"
 ```
