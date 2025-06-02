@@ -1,5 +1,5 @@
 {
-  "name": "kitchen-eats-backend",
+  "name": "intent-backends",
   "version": "1.0.0",
   "description": "Intent, Event-sourced Execution Model backends with hexagonal architecture",
   "main": "dist/index.js",
