@@ -101,10 +101,6 @@ flowchart TB
   Router -->|start workflows| Workflow
 
   Workflow --> Activities
-
-  click UI href "#" "UI layer"
-  click APIGW href "#" "API Gateway and Edge"
-  click Domain href "#" "Domain Model"
 ```
 ```mermaid
 flowchart LR
