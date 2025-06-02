@@ -1,4 +1,4 @@
-name: Unit Tests
+name: Projection Linter
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
       - '**'
 
 jobs:
-  unit-tests:
+  lint-projections:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,4 +23,4 @@ jobs:
             ${{ runner.os }}-npm-
 
       - run: npm ci
-      - run: npm run test:core
+      - run: npm run tool:projections-lint
