@@ -20,7 +20,7 @@ flowchart TB
 
   Workflow --> Activities
 
-  click UI href "#" "UI layer"
-  click APIGW href "#" "API Gateway and Edge"
-  click Domain href "#" "Domain Model"
+  click Core href "src/core" "Core"
+  click Projections href "src/infra/projections" "Projections"
+  click Workflows href "src/infra/temporal/workflows" "Workflows"
 ```
