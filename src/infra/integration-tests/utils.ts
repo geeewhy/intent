@@ -3,6 +3,7 @@ import {TemporalScheduler} from '../temporal/temporal-scheduler';
 import {WorkflowExecutionInfo} from '@temporalio/client';
 import {Event} from '../../core/contracts';
 import {PgEventStore} from '../pg/pg-event-store';
+import {log} from '../../core/logger';
 
 /**
  * Helper function to wait for a specific time
@@ -65,7 +66,12 @@ export const waitForSnapshot = async (
         const snapshot = await eventStore.loadSnapshot(tenantId, aggregateType, aggregateId);
 
         if (snapshot) {
-            console.log(`[waitForSnapshot] Snapshot found for ${aggregateType}-${aggregateId} at version ${snapshot.version}`);
+            log()?.info('Snapshot found', {
+                operation: 'waitForSnapshot',
+                aggregateType,
+                aggregateId,
+                version: snapshot.version
+            });
             return snapshot;
         }
 
@@ -112,7 +118,10 @@ export const getWorkflowsById = async (
     const workflows: WorkflowExecutionInfo[] = [];
 
     for (const workflowId of workflowIds) {
-        console.log(`Checking for workflow with ID: ${workflowId}`);
+        log()?.debug('Checking for workflow', {
+            operation: 'getWorkflowsById',
+            workflowId
+        });
         const executions = workflowClient.list({query: `WorkflowId = "${workflowId}"`});
 
         for await (const wf of executions) {
@@ -144,28 +153,41 @@ export const verifyNoLeakedWorkflows = async (
     }
 
     if (leaks.length > 0) {
-        console.error(`[verifyNoLeakedWorkflows] Found ${leaks.length} running workflow(s) for tenant ${tenantId}`);
-        for (const wf of leaks) {
-            console.error(`→ ${wf.workflowId}`);
+        const logger = log()?.child({
+            operation: 'verifyNoLeakedWorkflows',
+            tenantId,
+            leakCount: leaks.length
+        });
 
-            // Terminate the workflow if requested
-            if (terminate) {
+        logger?.error('Found running workflows', {
+            workflowIds: leaks.map(wf => wf.workflowId)
+        });
+
+        // Terminate the workflow if requested
+        if (terminate) {
+            for (const wf of leaks) {
                 try {
-                    console.log(`[verifyNoLeakedWorkflows] Terminating workflow: ${wf.workflowId}`);
+                    logger?.info('Terminating workflow', { workflowId: wf.workflowId });
                     const handle = client.getHandle(wf.workflowId);
                     await handle.terminate('Terminated by test cleanup');
-                    console.log(`[verifyNoLeakedWorkflows] Successfully terminated workflow: ${wf.workflowId}`);
+                    logger?.info('Successfully terminated workflow', { workflowId: wf.workflowId });
                 } catch (error) {
-                    console.error(`[verifyNoLeakedWorkflows] Error terminating workflow ${wf.workflowId}:`, error);
+                    logger?.error('Error terminating workflow', { 
+                        workflowId: wf.workflowId,
+                        error
+                    });
                 }
             }
         }
 
         if (!terminate) {
-            throw new Error(`[verifyNoLeakedWorkflows] ${leaks.length} workflows leaked after tests`);
+            throw new Error(`${leaks.length} workflows leaked after tests`);
         }
     } else {
-        console.log(`[verifyNoLeakedWorkflows] ✅ No workflow leaks for tenant ${tenantId}`);
+        log()?.info('No workflow leaks detected', {
+            operation: 'verifyNoLeakedWorkflows',
+            tenantId
+        });
     }
 };
 

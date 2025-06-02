@@ -2,7 +2,8 @@
 import {Connection, WorkflowClient, WorkflowIdReusePolicy} from '@temporalio/client';
 import {SagaRegistry} from '../../core/domains';
 import {Command, Event, UUID} from '../../core/contracts';
-import {CommandHandler} from '../../core/command-bus';
+import {log} from '../../core/logger';
+import {CommandHandler} from '../../core/contracts';
 import {EventHandler} from '../../core/contracts';
 import {BaseAggregate} from "../../core/base/aggregate";
 import {CommandResult} from "../contracts";
@@ -52,7 +53,15 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
             }
 
             // Start the aggregate workflow
-            console.log(`[WorkflowRouter] Starting aggregate workflow for type ${aggregateType} command ${cmd.type}`);
+            const logger = log()?.child({
+                workflowId,
+                aggregateType,
+                aggregateId,
+                commandType: cmd.type,
+                tenantId: tenant_id
+            });
+
+            logger?.info('Starting aggregate workflow');
             const handle = this.client.signalWithStart('processCommand', {
                 workflowId,
                 taskQueue: 'aggregates',
@@ -62,30 +71,30 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
             });
 
             return handle.then(async (handle) => {
-                console.log(`[WorkflowRouter] Aggregate workflow ${workflowId} started successfully`);
+                logger?.info('Aggregate workflow started successfully');
                 const result = await handle.result() as CommandResult;
                 try {
-                    console.log(`[WorkflowRouter] Waiting for aggregate workflow ${workflowId} to complete`);
+                    logger?.debug('Waiting for aggregate workflow to complete');
 
                     // Check if this is a business rule violation
                     if (result.status === 'fail') {
-                        console.log(`[WorkflowRouter] Business rule violation in workflow ${workflowId}: ${result.error}`);
+                        logger?.warn('Business rule violation in workflow', { error: result.error });
                         // We don't consider this a failure, just log it
                     } else {
-                        console.log(`[WorkflowRouter] Aggregate workflow ${workflowId} completed successfully`);
+                        logger?.info('Aggregate workflow completed successfully');
                     }
 
                     // If Saga listens to commands too, signal Saga after Aggregate workflow completion
                     if (this.isSagaCommand(cmd)) {
-                        console.log(`[WorkflowRouter] Signaling saga for command ${cmd.type} after aggregate workflow completion`);
+                        logger?.info('Signaling saga after aggregate workflow completion');
                         return this.routeSagaCommand(cmd);
                     }
                     return result;
                 } catch (error) {
-                    console.error(`[WorkflowRouter] Error waiting for aggregate workflow ${workflowId} to complete:`, error);
+                    logger?.error('Error waiting for aggregate workflow to complete', { error });
                     // Still signal the saga even if the aggregate workflow fails
                     if (this.isSagaCommand(cmd)) {
-                        console.log(`[WorkflowRouter] Signaling saga for command ${cmd.type} after aggregate workflow failure`);
+                        logger?.info('Signaling saga after aggregate workflow failure');
                         return this.routeSagaCommand(cmd);
                     }
                     return {status: 'fail', error: `Error waiting for aggregate workflow: ${error}`};
@@ -95,7 +104,11 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
             // If it's only a saga command (not an aggregate command), route it to saga
             return this.routeSagaCommand(cmd);
         } else {
-            console.warn(`[WorkflowRouter] Ignored unsupported command: ${cmd.type}`);
+            const logger = log()?.child({
+                commandType: cmd.type,
+                tenantId: cmd.tenant_id
+            });
+            logger?.warn('Ignored unsupported command');
             return { status: 'fail', error: `Unsupported command: ${cmd.type}` };
         }
     }
@@ -107,11 +120,20 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
     /** Handle an event for aggregates and sagas */
     async on(event: Event): Promise<void> {
         if (!this.supportsEvent(event)) {
-            console.warn(`[WorkflowRouter] Ignored unsupported event`, event);
+            const logger = log();
+            logger?.warn('Ignored unsupported event', { event });
             return;
         }
 
-        console.log(`[WorkflowRouter] Handling event: ${event.type}`);
+        const logger = log()?.child({
+            eventType: event.type,
+            aggregateId: event.aggregateId,
+            aggregateType: event.aggregateType,
+            tenantId: event.tenant_id,
+            version: event.version
+        });
+
+        logger?.info('Handling event');
 
         // Route to Aggregate (processEvent)
         const {tenant_id, aggregateId} = event;
@@ -130,7 +152,13 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
         for (const saga of Object.values(SagaRegistry)) {
             const sagaWorkflowId = saga.idFor(event);
             if (sagaWorkflowId) {
-                console.log(`[WorkflowRouter] Routing event ${event.type} to saga workflow ${sagaWorkflowId}`);
+                const sagaLogger = log()?.child({
+                    eventType: event.type,
+                    sagaWorkflowId,
+                    tenantId: event.tenant_id
+                });
+
+                sagaLogger?.info('Routing event to saga workflow');
 
                 const workflow = saga.workflow || 'processSaga';
                 const taskQueue = `sagas`; //-${Object.keys(SagaRegistry).find(k => SagaRegistry[k] === saga)}
@@ -149,7 +177,14 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
     /** Route a command to a saga (process manager) */
     private async routeSagaCommand(cmd: Command): Promise<CommandResult> {
         const match = Object.values(SagaRegistry).find((s) => s.idFor(cmd));
-        if (!match) return {status: 'fail', error: `No matching saga for command ${cmd.type}`};
+        if (!match) {
+            const logger = log()?.child({
+                commandType: cmd.type,
+                tenantId: cmd.tenant_id
+            });
+            logger?.warn('No matching saga for command');
+            return {status: 'fail', error: `No matching saga for command ${cmd.type}`};
+        }
 
         const workflowId = match.idFor(cmd)!;
         const workflow = match.workflow || 'processSaga';
@@ -166,7 +201,16 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
             correlationId: [`${cmd.metadata?.correlationId}`],
         }
 
-        console.log(`[WorkflowRouter] Routing saga command ${cmd.type} to workflow ${workflowId} on taskQueue ${taskQueue}`);
+        const logger = log()?.child({
+            commandType: cmd.type,
+            workflowId,
+            taskQueue,
+            tenantId: tenant_id,
+            aggregateType,
+            aggregateId
+        });
+
+        logger?.info('Routing saga command to workflow');
 
         await this.client.signalWithStart(workflow, {
             workflowId,

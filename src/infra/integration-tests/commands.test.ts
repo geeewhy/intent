@@ -5,6 +5,7 @@ import { SystemCommandType, SystemEventType } from '../../core/system';
 import { getAggregateWorkflowId, getSagaWorkflowId, getWorkflowsById, verifyWorkflowsById, getWorkflowDetails, wait, verifyNoLeakedWorkflows } from './utils';
 import { PgEventStore } from '../pg/pg-event-store';
 import { waitForNewEvents, waitForSnapshot } from './utils';
+import { log } from '../../core/logger';
 
 const TEST_TIMEOUT = 30000;
 
@@ -25,6 +26,7 @@ describe.only('Temporal Workflow Integration Tests', () => {
     });
 
     test('Command should create aggregate and apply event', async () => {
+        log()?.info('Starting test for command creating aggregate and applying event');
         const aggregateId = uuidv4();
         const aggregateType = 'system';
         const userId = uuidv4();
@@ -52,6 +54,7 @@ describe.only('Temporal Workflow Integration Tests', () => {
     }, TEST_TIMEOUT);
 
     test('Sequential commands should reuse same workflow and maintain version', async () => {
+        log()?.info('Starting test for sequential commands');
         const aggregateId = uuidv4();
         const aggregateType = 'system';
         const userId = uuidv4();
@@ -89,6 +92,7 @@ describe.only('Temporal Workflow Integration Tests', () => {
     }, TEST_TIMEOUT);
 
     test('Command should signal Saga after Aggregate is completed', async () => {
+        log()?.info('Starting test for command signaling saga');
         const aggregateId = uuidv4();
         const userId = uuidv4();
         const aggregateType = 'system';

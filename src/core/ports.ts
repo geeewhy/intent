@@ -123,3 +123,13 @@ export interface CommandStorePort {
     close(): Promise<void>;
 }
 
+/**
+ * Outbound port for logging
+ */
+export interface LoggerPort {
+  info(message: string, context?: Record<string, unknown>): void;
+  warn(message: string, context?: Record<string, unknown>): void;
+  error(message: string, context?: Record<string, unknown>): void;
+  debug(message: string, context?: Record<string, unknown>): void;
+  child(context: Record<string, unknown>): LoggerPort;
+}

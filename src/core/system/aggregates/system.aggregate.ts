@@ -258,10 +258,15 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
     }
 
     extractSnapshotState(): SystemSnapshotState {
-        return {
-            testName: this.lastExecutedTestName,
+        const state: SystemSnapshotState = {
             numberExecutedTests: this.numberExecutedTests,
         };
+
+        if (this.lastExecutedTestName) {
+            state.testName = this.lastExecutedTestName;
+        }
+
+        return state;
     }
 
     public getId(): UUID {
