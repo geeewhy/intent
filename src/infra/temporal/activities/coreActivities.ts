@@ -7,16 +7,21 @@ import {PgEventStore} from '../../pg/pg-event-store';
 import {getAggregateClass, supportsAggregateType, createAggregatePayload} from '../../../core/aggregates';
 import {BusinessRuleViolation} from '../../../core/errors';
 import {WorkflowRouter} from '../workflow-router';
-import {getCommandBus} from "../../../core/domains";
+import {CommandBus} from "../../../core/command-bus";
 import {CommandResult} from '../../contracts';
 import {PgCommandStore} from '../../pg/pg-command-store';
 import { createPool } from '../../projections/pg-pool';
+import { initializeCore } from '../../../core/initialize';
 
 let router: WorkflowRouter;
 
 // inits, activities are init at worker runtime
 dotenv.config();
 const projectionPool = createPool();
+
+void initializeCore();
+
+const commandBus = new CommandBus();
 
 /**
  * Project events to read models
@@ -193,7 +198,6 @@ export async function getEventsForCommand(
         const {aggregateType, aggregateId} = cmd.payload;
 
         const aggregate = await loadAggregate(tenantId, aggregateType, aggregateId); // Activity
-        const commandBus = getCommandBus();
         const events = await commandBus.dispatchWithAggregate(cmd, aggregate); // Pure
 
         return {events, status: 'success'};
