@@ -1,11 +1,19 @@
 import { CommandHandler, EventHandler, SagaDefinition, ReadModelUpdaterPort } from './contracts';
 import { AggregateClass } from './aggregates';
 
-export interface ProjectionDefinition<M = any> {
-  /** Static shape & RLS info, lives in the domain */
-  meta: M;
-  /** Build the handler once infra passes an updater */
-  factory(updater: ReadModelUpdaterPort<any>): EventHandler;
+export interface TableMeta {
+  name: string;
+  columnTypes: Record<string, string>;
+}
+
+export interface ProjectionDefinition {
+  /** One projection can own several tables */
+  tables: TableMeta[];
+  eventTypes: string[];
+  /** Build the handler once infra passes a getUpdater function */
+  factory(
+    getUpdater: (table: string) => ReadModelUpdaterPort<any>
+  ): EventHandler;
 }
 
 export interface Registry {
@@ -103,7 +111,7 @@ export function getAllDomains(): string[] {
   return registry.domains;
 }
 
-/* ——— Convenience exports ——— */
+// -- convenience exports
 export const DomainRegistry = {
   aggregates: getAllAggregates,
   commandHandlers: getAllCommandHandlers,

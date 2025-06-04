@@ -1,6 +1,6 @@
 //src/core/system/read-models/register.ts
 import { DatabasePool } from 'slonik';
-import { EventHandler } from '../../contracts';
+import { EventHandler, ReadModelUpdaterPort } from '../../contracts';
 import { createPgUpdaterFor } from '../../../infra/projections/pg-updater';
 import { createSystemStatusProjection, projectionMeta } from './system-status.projection';
 import { registerProjection } from '../../registry';
@@ -11,7 +11,8 @@ import { registerProjection } from '../../registry';
 export function register(): void {
   // Register the projection definition in the central registry
   registerProjection('systemStatus', {
-    meta: projectionMeta,
+    tables: [...projectionMeta.tables],
+    eventTypes: [...projectionMeta.eventTypes],
     factory: createSystemStatusProjection
   });
 }
@@ -22,8 +23,35 @@ export function register(): void {
  * @returns An array of event handlers
  */
 export function registerSystemProjections(pool: DatabasePool): EventHandler[] {
-  const updater = createPgUpdaterFor(projectionMeta.table, pool);
-  const projection = createSystemStatusProjection(updater);
+  // Create a cache of updaters for each table
+  const updaterCache: Record<string, ReadModelUpdaterPort<any>> = {};
+
+  // Create an updater for each table that has migration files
+  const tablesWithMigrations = ['system_status', 'system_metrics'];
+
+  for (const { name } of projectionMeta.tables) {
+    if (tablesWithMigrations.includes(name)) {
+      updaterCache[name] = createPgUpdaterFor(name, pool);
+    }
+  }
+
+  // Create a getUpdater function
+  const getUpdater = (tableName: string) => {
+    const updater = updaterCache[tableName];
+    if (!updater) {
+      console.warn(`No updater found for table ${tableName}, using no-op updater`);
+      // Return a no-op updater for tables that don't have migration files
+      return {
+        async upsert() { /* no-op */ },
+        async remove() { /* no-op */ }
+      };
+    }
+    return updater;
+  };
+
+  // Create the projection handler
+  const projection = createSystemStatusProjection(getUpdater);
+
   return [projection];
 }
 

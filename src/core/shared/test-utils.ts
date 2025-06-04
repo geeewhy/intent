@@ -14,3 +14,27 @@ export function createMockUpdater(): ReadModelUpdaterPort<any> & { store: Map<st
     store,
   };
 }
+
+/**
+ * Creates a mock updater function for testing multi-table projections
+ * @returns A function that returns a mock updater for each table
+ */
+export function createMockUpdaterFunction(): ((table: string) => ReadModelUpdaterPort<any>) & { stores: Map<string, Map<string, any>> } {
+  const stores = new Map<string, Map<string, any>>();
+
+  const getUpdater = (table: string): ReadModelUpdaterPort<any> => {
+    if (!stores.has(table)) {
+      stores.set(table, new Map<string, any>());
+    }
+
+    return {
+      async upsert(_, id, data) { stores.get(table)!.set(id, data); },
+      async remove(_, id) { stores.get(table)!.delete(id); },
+    };
+  };
+
+  // Attach the stores map to the function for assertions
+  (getUpdater as any).stores = stores;
+
+  return getUpdater as ((table: string) => ReadModelUpdaterPort<any>) & { stores: Map<string, Map<string, any>> };
+}

@@ -36,11 +36,16 @@ Flags:
 /* ---------- helpers (same compare logic as before, omitted-for-brevity) */
 
 
+// Interface for table metadata
+interface TableMetadata {
+    name: string;
+    columnTypes: Record<string, string>;
+}
+
 // Interface for projection metadata
 interface ProjectionMetadata {
     name: string;
-    table: string;
-    columnTypes: Record<string, string>;
+    tables: TableMetadata[];
     projectionFile: string;
 }
 
@@ -78,17 +83,32 @@ async function findProjectionMetadata(): Promise<ProjectionMetadata[]> {
                 // If the file exports metadata, use it
                 const projMeta = projectionModule[metaExportName];
 
-                metadata.push({
-                    name: fileName,
-                    table: projMeta.table,
-                    columnTypes: projMeta.columnTypes,
-                    projectionFile: projFile
-                });
-
-                console.log(`Found projection metadata for ${fileName}`);
+                // Check if the metadata uses the new multi-table format
+                if (projMeta.tables) {
+                    // New format with tables array
+                    metadata.push({
+                        name: fileName,
+                        tables: projMeta.tables,
+                        projectionFile: projFile
+                    });
+                    console.log(`Found multi-table projection metadata for ${fileName} with ${projMeta.tables.length} tables`);
+                } else if (projMeta.table && projMeta.columnTypes) {
+                    // Legacy format with single table
+                    metadata.push({
+                        name: fileName,
+                        tables: [{
+                            name: projMeta.table,
+                            columnTypes: projMeta.columnTypes
+                        }],
+                        projectionFile: projFile
+                    });
+                    console.log(`Found legacy projection metadata for ${fileName} (single table: ${projMeta.table})`);
+                } else {
+                    console.warn(`Invalid metadata format for ${fileName}, skipping. Metadata should have either 'tables' array or 'table' and 'columnTypes'.`);
+                }
             } else {
-                console.warn(`No metadata found for ${fileName}, skipping. Please add a ${metaExportName} export with table and columnTypes.`);
-                // We can't proceed without columnTypes
+                console.warn(`No metadata found for ${fileName}, skipping. Please add a ${metaExportName} export with tables and columnTypes.`);
+                // We can't proceed without metadata
             }
         } catch (error) {
             console.error(`Error processing projection file ${projFile}:`, error);
@@ -156,10 +176,15 @@ function isTypeCompatible(expectedType: string, actualType: string): boolean {
 }
 
 /* ---------- main ------------------------------------------------------ */
-interface DriftEntry {
+interface TableDriftEntry {
     projection: string;
     table: string;
     issues: string[];
+}
+
+interface DriftEntry {
+    projection: string;
+    tables: TableDriftEntry[];
 }
 
 // Helper function to normalize types
@@ -240,17 +265,38 @@ async function main() {
     let foundDrift = false;
 
     for (const meta of metas) {
-        const actual = await getTableColumns(meta.table, pool);
-        if (!actual.length) {
-            const msg = `Table '${meta.table}' does not exist in DB`;
-            report.push({projection: meta.name, table: meta.table, issues: [msg]});
-            console.warn('[DRIFT]', msg);
-            foundDrift = true;
-            continue;
+        const projectionEntry: DriftEntry = {
+            projection: meta.name,
+            tables: []
+        };
+
+        // Check each table in the projection
+        for (const table of meta.tables) {
+            const actual = await getTableColumns(table.name, pool);
+            if (!actual.length) {
+                const msg = `Table '${table.name}' does not exist in DB`;
+                projectionEntry.tables.push({
+                    projection: meta.name,
+                    table: table.name,
+                    issues: [msg]
+                });
+                console.warn('[DRIFT]', msg);
+                foundDrift = true;
+                continue;
+            }
+
+            // Compare the actual columns with the expected columns
+            const issues = compareColumns(actual, table);
+            if (issues.length) foundDrift = true;
+
+            projectionEntry.tables.push({
+                projection: meta.name,
+                table: table.name,
+                issues
+            });
         }
-        const issues = compareColumns(actual, meta);
-        if (issues.length) foundDrift = true;
-        report.push({projection: meta.name, table: meta.table, issues});
+
+        report.push(projectionEntry);
     }
     await pool.end();
 
@@ -260,12 +306,21 @@ async function main() {
         console.log(`Drift report written to ${outFile}`);
     } else {
         // pretty console output
-        for (const e of report) {
-            if (e.issues.length) {
-                console.log(`\n[DRIFT] ${e.projection} (${e.table})`);
-                e.issues.forEach(i => console.log('  ' + i));
-            } else {
-                console.log(`[OK] ${e.projection} matches`);
+        for (const projection of report) {
+            let hasIssues = false;
+
+            // Check if any table has issues
+            for (const tableEntry of projection.tables) {
+                if (tableEntry.issues.length > 0) {
+                    hasIssues = true;
+                    console.log(`\n[DRIFT] ${projection.projection} (${tableEntry.table})`);
+                    tableEntry.issues.forEach(i => console.log('  ' + i));
+                }
+            }
+
+            // If no issues, print OK message
+            if (!hasIssues) {
+                console.log(`[OK] ${projection.projection} matches (${projection.tables.length} tables)`);
             }
         }
     }

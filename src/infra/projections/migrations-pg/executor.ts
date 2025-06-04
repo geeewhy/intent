@@ -18,33 +18,39 @@ const tableToProjection = new Map<string, string>();
 scanProjections().forEach(p => p.tables.forEach(t => tableToProjection.set(t, p.name)));
 
 
-const pool = new Pool({
+// Create a default pool configuration
+const defaultPoolConfig = {
     host:     process.env.LOCAL_DB_HOST ?? 'localhost',
     port:     parseInt(process.env.LOCAL_DB_PORT ?? '5432', 10),
     user:     process.env.LOCAL_DB_USER ?? 'postgres',
     password: process.env.LOCAL_DB_PASSWORD ?? 'postgres',
     database: process.env.LOCAL_DB_NAME ?? 'postgres',
-});
+};
 
 const hashSql = (sql: string) =>
     crypto.createHash('sha256').update(sql).digest('hex').slice(0, 8);
 
-export async function runMigrations(argv: string[] = []) {
+export async function runMigrations(argv: string[] = [], existingPool?: Pool) {
     const allProjections = scanProjections();
     const plan = buildPlan(allProjections, argv);
 
+    const pool = existingPool || new Pool(defaultPoolConfig);
+    const shouldClosePool = !existingPool; // Only close the pool if we created it
+
     try {
-        await dropTables(plan);
-        await runSchema(plan);
-        await runRls(plan);
+        await dropTables(plan, pool);
+        await runSchema(plan, pool);
+        await runRls(plan, pool);
     } finally {
-        await pool.end();
+        if (shouldClosePool) {
+            await pool.end();
+        }
     }
 }
 
 /* ---------- helpers ---------------------------------------------------- */
 
-async function dropTables(plan: MigrationPlan) {
+async function dropTables(plan: MigrationPlan, pool: Pool) {
     const toDrop = new Set<string>(plan.rebuild.tables);
     plan.rebuild.projections.forEach(p => p.tables.forEach(t => toDrop.add(t)));
     for (const t of toDrop) {
@@ -53,7 +59,7 @@ async function dropTables(plan: MigrationPlan) {
     }
 }
 
-async function runSchema(plan: MigrationPlan) {
+async function runSchema(plan: MigrationPlan, pool: Pool) {
     for (const p of plan.projections) {
         const forced =
             plan.rebuild.projections.includes(p) ||
@@ -96,7 +102,7 @@ async function runSchema(plan: MigrationPlan) {
     }
 }
 
-async function runRls(plan: MigrationPlan) {
+async function runRls(plan: MigrationPlan, pool: Pool) {
     const policies = await generateRlsPolicies();
     const storage  = new UmzugPgStorage(pool, RLS_LOG);
 

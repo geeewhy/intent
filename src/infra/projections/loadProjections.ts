@@ -1,6 +1,6 @@
 //src/infra/projections/loadProjections.ts
 import { DatabasePool } from 'slonik';
-import { EventHandler } from '../../core/contracts';
+import { EventHandler, ReadModelUpdaterPort } from '../../core/contracts';
 import { initializeCore } from '../../core/initialize';
 
 void initializeCore();
@@ -24,7 +24,21 @@ export async function loadAllProjections(pool: DatabasePool): Promise<EventHandl
 
   // Materialize projections from definitions
   return defs.map(def => {
-    const updater = createPgUpdaterFor(def.meta.table, pool);
-    return def.factory(updater);
+    const cache: Record<string, ReadModelUpdaterPort<any>> = {};
+
+    // Create an updater for each table
+    for (const { name } of def.tables) {
+      cache[name] = createPgUpdaterFor(name, pool);
+    }
+
+    // Create a getUpdater function that returns the appropriate updater for a table
+    const getUpdater = (tbl: string) => {
+      const u = cache[tbl];
+      if (!u) throw new Error(`Table ${tbl} not declared in projection meta`);
+      return u;
+    };
+
+    // Call the factory with the getUpdater function
+    return def.factory(getUpdater);
   });
 }
