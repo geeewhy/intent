@@ -1,9 +1,8 @@
 //src/core/system/read-models/system-status.projection.ts
 import { Event, EventHandler, ReadModelUpdaterPort } from '../../contracts';
-import { SystemEventType } from '../contracts';
 import { TestExecutedPayload } from '../contracts';
 import { assertDataPropsMatchMapKeys } from '../../shared/type-guards';
-import { log, createLoggerForProjection } from '../../logger';
+import { createLoggerForProjection } from '../../logger';
 
 /**
  * Metadata for the system status projection

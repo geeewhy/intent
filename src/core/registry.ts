@@ -1,3 +1,4 @@
+//src/core/registry.ts
 import { CommandHandler, EventHandler, SagaDefinition, ReadModelUpdaterPort } from './contracts';
 import { AggregateClass } from './aggregates';
 
@@ -7,10 +8,9 @@ export interface TableMeta {
 }
 
 export interface ProjectionDefinition {
-  /** One projection can own several tables */
   tables: TableMeta[];
   eventTypes: string[];
-  /** Build the handler once infra passes a getUpdater function */
+  // Build the handler once infra passes a getUpdater function
   factory(
     getUpdater: (table: string) => ReadModelUpdaterPort<any>
   ): EventHandler;
@@ -38,7 +38,7 @@ const registry: Registry = {
   domains: [],
 };
 
-/* ——— Registration helpers ——— */
+// --- Registration helpers
 export function registerDomain(name: string): void {
   if (!registry.domains.includes(name)) registry.domains.push(name);
 }
