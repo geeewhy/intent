@@ -1,11 +1,11 @@
 import { createSystemStatusProjection } from '../read-models/system-status.projection';
-import { createMockUpdater } from '../../shared/test-utils';
+import { createMockUpdaterFunction } from '../../shared/test-utils';
 import { SystemEventType } from '../contracts';
 
 describe('System Status Projection', () => {
   test('creates a status row for TEST_EXECUTED', async () => {
-    const mock = createMockUpdater();
-    const handler = createSystemStatusProjection(mock);
+    const getUpdater = createMockUpdaterFunction();
+    const handler = createSystemStatusProjection(getUpdater);
     const event = {
       id: 'event-123',
       type: SystemEventType.TEST_EXECUTED,
@@ -28,7 +28,7 @@ describe('System Status Projection', () => {
     expect(handler.supportsEvent(event)).toBe(true);
     await handler.on(event);
 
-    expect(mock.store.get('system-123')).toMatchObject({
+    expect(getUpdater.stores.get('system_status')?.get('system-123')).toMatchObject({
       testName: 'health-check',
       result: 'success',
       tenant_id: 'tenant-1',
@@ -37,8 +37,8 @@ describe('System Status Projection', () => {
   });
 
   test('does not support other event types', async () => {
-    const mock = createMockUpdater();
-    const handler = createSystemStatusProjection(mock);
+    const getUpdater = createMockUpdaterFunction();
+    const handler = createSystemStatusProjection(getUpdater);
     const event = {
       id: 'event-456',
       type: SystemEventType.MESSAGE_LOGGED,

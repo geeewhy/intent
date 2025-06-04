@@ -6,6 +6,7 @@
 import { Command, Event, CommandHandler } from './contracts';
 import {log, createLoggerForCommandHandler} from './logger';
 import {BaseAggregate} from "./base/aggregate";
+import { getAllCommandHandlers } from './registry';
 
 /**
  * Command bus
@@ -13,6 +14,18 @@ import {BaseAggregate} from "./base/aggregate";
  */
 export class CommandBus {
   private handlers: CommandHandler[] = [];
+
+  /**
+   * Create a new command bus
+   * Automatically loads all registered command handlers from the registry
+   */
+  constructor() {
+    // Load handlers from registry
+    const registeredHandlers = getAllCommandHandlers();
+    Object.values(registeredHandlers).forEach(handler => {
+      this.register(handler);
+    });
+  }
 
   /**
    * Register a command handler

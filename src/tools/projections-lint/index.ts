@@ -34,13 +34,27 @@ function projTables(dir: string): Map<string, string> {
   if (cache.has(dir)) return cache.get(dir)!;
   const tbl = new Map<string, string>();
 
-  globSync(`${dir}/*.projection.ts`).forEach(f =>
-      (read(f).match(/CREATE TABLE (\w+)|table: ['"](\w+)['"]/g) || [])
-          .forEach(m => {
-            const t = /CREATE TABLE (\w+)/.exec(m)?.[1] ?? /table: ['"](\w+)['"]/.exec(m)?.[1];
-            if (t) tbl.set(path.basename(f, '.projection.ts'), t);
-          })
-  );
+  globSync(`${dir}/*.projection.ts`).forEach(f => {
+    // Try to extract table names from the new multi-table format
+    const content = read(f);
+
+    // Check for the new tables array format
+    const tablesMatch = content.match(/tables:\s*\[\s*{\s*name:\s*['"](\w+)['"]/g);
+    if (tablesMatch) {
+      // Extract table names from the tables array
+      tablesMatch.forEach(m => {
+        const t = /name:\s*['"](\w+)['"]/.exec(m)?.[1];
+        if (t) tbl.set(path.basename(f, '.projection.ts'), t);
+      });
+    } else {
+      // Fall back to the old format
+      (content.match(/CREATE TABLE (\w+)|table: ['"](\w+)['"]/g) || [])
+        .forEach(m => {
+          const t = /CREATE TABLE (\w+)/.exec(m)?.[1] ?? /table: ['"](\w+)['"]/.exec(m)?.[1];
+          if (t) tbl.set(path.basename(f, '.projection.ts'), t);
+        });
+    }
+  });
 
   const migDir = path.join(dir, 'migrations');
   if (fs.existsSync(migDir))

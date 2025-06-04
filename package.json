@@ -12,6 +12,7 @@
     "start:worker": "node dist/worker.js",
     "start:command-pump": "node dist/infra/pg/command-pump.js",
     "start:cmdline": "node dist/client/cmdline/index.js",
+    "api:admin": "ts-node-dev --respawn --transpile-only src/api/index.ts",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "dev:worker": "ts-node-dev --respawn --transpile-only src/worker.ts",
     "dev:command-pump": "ts-node-dev --respawn --transpile-only src/infra/pump/command-pump.ts",

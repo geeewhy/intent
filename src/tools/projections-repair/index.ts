@@ -185,15 +185,33 @@ function loadRegistry(pMeta: typeof scanned[number]) {
     if (!mod.projectionMeta) throw new Error(`projectionMeta export missing in ${registerFile}`);
 
     const metas = Array.isArray(mod.projectionMeta) ? mod.projectionMeta : [mod.projectionMeta];
-    const regFn = Object.values(mod).find(v => typeof v === 'function');
+    // Look for a function named registerXXXProjections or register
+    const regFn = mod.registerSystemProjections || 
+                 mod[`register${pMeta.name.charAt(0).toUpperCase() + pMeta.name.slice(1)}Projections`] ||
+                 Object.values(mod).find(v => typeof v === 'function' && v.name.includes('Projection'));
+
     if (typeof regFn !== 'function')
         throw new Error(`No register function found in ${registerFile}`);
 
-    return metas.map((m: any) => ({
-        meta: m,
-        registerHandlers: regFn as (pool: any) => any[],
-        projectionId: pMeta.name,
-    }));
+    return metas.map((m: any) => {
+        // Handle both old and new projection metadata formats
+        const meta = {
+            // For the new format with tables array, filter to only include tables that have migration files
+            tables: m.tables 
+                ? m.tables.map((t: any) => t.name).filter((t: string) => pMeta.tables.includes(t))
+                : (pMeta.tables.includes(m.table) ? [m.table] : []),
+            // For the new format with eventTypes array
+            eventTypes: m.eventTypes || (m.table ? [m.table] : []),
+            // Keep the original metadata for reference
+            original: m
+        };
+
+        return {
+            meta,
+            registerHandlers: regFn as (pool: any) => any[],
+            projectionId: pMeta.name,
+        };
+    });
 }
 
 // --- stream events to prevent memory hogs
@@ -227,12 +245,31 @@ export async function main() {
 
     if (argv['drift-report']) {
         const drift = JSON.parse(fs.readFileSync(argv['drift-report'], 'utf8'));
-        const tables: string[] = drift.filter((e: any) => e.issues?.length).map((e: any) => e.table);
-        tables.forEach(t => {
-            const p = metaByTable.get(t);
-            if (!p) console.error(`Table '${t}' not recognised`);
-            else targets.push(...loadRegistry(p));
-        });
+
+        // Handle both old and new drift report formats
+        if (drift[0] && drift[0].tables) {
+            // New format with tables array
+            const projections = drift.filter((e: any) => 
+                e.tables && e.tables.some((t: any) => t.issues && t.issues.length > 0)
+            );
+
+            for (const projection of projections) {
+                const p = metaById.get(projection.projection);
+                if (!p) {
+                    console.error(`Projection '${projection.projection}' not recognised`);
+                } else {
+                    targets.push(...loadRegistry(p));
+                }
+            }
+        } else {
+            // Old format with single table
+            const tables: string[] = drift.filter((e: any) => e.issues?.length).map((e: any) => e.table);
+            tables.forEach(t => {
+                const p = metaByTable.get(t);
+                if (!p) console.error(`Table '${t}' not recognised`);
+                else targets.push(...loadRegistry(p));
+            });
+        }
     } else if (argv.table) {
         const p = metaByTable.get(argv.table);
         if (!p) {
@@ -248,7 +285,8 @@ export async function main() {
         }
         targets = loadRegistry(p);
     } else if (argv.all) {
-        scanned.forEach(p => targets.push(...loadRegistry(p)));
+        // Only process projections with tables that have migration files
+        scanned.filter(p => p.tables.length > 0).forEach(p => targets.push(...loadRegistry(p)));
     } else {
         console.error('Must specify --table, --projection, --all, or --drift-report');
         process.exit(1);
@@ -259,46 +297,70 @@ export async function main() {
         process.exit(1);
     }
 
-    const pg     = new Pool(poolConnectionConfig);
-    const poolClient = await pg.connect();
     const mode = argv.resume ? 'RESUME' : 'REPAIR';
+
     for (const t of targets) {
+        const pg = new Pool(poolConnectionConfig);
+        const poolClient = await pg.connect();
+        let projectionPool = null;
 
-        if (argv.resume) {
-            console.info(`[INFO] Preparing checkpoints for ${mode} mode`);
-            const rows = await prepareCheckpoints(t.meta.table, poolClient);
-            console.info(`[INFO] Prepared ${rows} checkpoints in temp table`);
-        }
+        try {
+            // Process each table in the projection
+            for (const table of t.meta.tables) {
+                if (argv.resume) {
+                    console.info(`[INFO] Preparing checkpoints for ${mode} mode`);
+                    const rows = await prepareCheckpoints(table, poolClient);
+                    console.info(`[INFO] Prepared ${rows} checkpoints in temp table`);
+                }
 
-        console.log(`\n[${mode}] Working on ${t.meta.table}`);
+                console.log(`\n[${mode}] Working on ${table}`);
 
-        if (!argv.resume) {
-            await runMigrations(['--rebuild-from-table', t.meta.table]); // full rebuild
-        }
+                // Create a new pool for each table
+                projectionPool = createPool();
 
-        const pool = createPool();
-        const handlers = t.registerHandlers(pool);
+                if (!argv.resume) {
+                    // Don't pass the Slonik pool to runMigrations, let it create its own pg Pool
+                    await runMigrations(['--rebuild-from-table', table]); // full rebuild
+                }
+                const handlers = t.registerHandlers(projectionPool);
 
-        let count = 0;
+                let count = 0;
 
-        const streamer = argv.resume
-            ? streamDelta(t.meta.eventTypes, poolClient, replay)
-            : streamEvents(t.meta.eventTypes, replay);
+                const streamer = argv.resume
+                    ? streamDelta(t.meta.eventTypes, poolClient, replay)
+                    : streamEvents(t.meta.eventTypes, replay);
 
-        async function replay(ev: any) {
-            for (const h of handlers) if (h.supportsEvent(ev)) await h.on(ev);
-            count++;
-        }
+                async function replay(ev: any) {
+                    for (const h of handlers) if (h.supportsEvent(ev)) await h.on(ev);
+                    count++;
+                }
 
-        await streamer;
-        poolClient.release();
-        await pool.end();
-        await pg.end();
-        console.log(`[${mode}] Finished ${t.meta.table} (${count} events)`);
-        if (count > 0) {
-            console.log(`[OK] ${t.meta.table} processed ${count} events for ${t.meta.eventTypes.join(',')}`);
-        } else {
-            console.log(`[OK] Projection table ${t.meta.table} is not behind current events of ${t.meta.eventTypes.join(',')}`);
+                await streamer;
+
+                console.log(`[${mode}] Finished ${table} (${count} events)`);
+                if (count > 0) {
+                    console.log(`[OK] ${table} processed ${count} events for ${t.meta.eventTypes.join(',')}`);
+                } else {
+                    console.log(`[OK] Projection table ${table} is not behind current events of ${t.meta.eventTypes.join(',')}`);
+                }
+
+                // Close the pool for this table
+                if (projectionPool) {
+                    await projectionPool.end();
+                    projectionPool = null;
+                }
+            }
+        } finally {
+            // Release resources after processing all tables
+            if (poolClient) {
+                poolClient.release();
+            }
+            if (pg) {
+                await pg.end();
+            }
+            if (projectionPool) {
+                await projectionPool.end();
+            }
         }
     }
     console.log('\n✅ Projection repair finished');

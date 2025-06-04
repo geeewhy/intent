@@ -1,12 +1,15 @@
 // infra/temporal/workflow-router.ts
 import {Connection, WorkflowClient, WorkflowIdReusePolicy} from '@temporalio/client';
-import {SagaRegistry} from '../../core/domains';
+import {getAllSagas} from '../../core/registry';
 import {Command, Event, UUID} from '../../core/contracts';
 import {log} from '../../core/logger';
 import {CommandHandler} from '../../core/contracts';
 import {EventHandler} from '../../core/contracts';
 import {BaseAggregate} from "../../core/base/aggregate";
 import {CommandResult} from "../contracts";
+
+// Get the saga registry from the central registry
+const SagaRegistry = getAllSagas();
 
 /**
  * Unified workflow router for aggregates and sagas

@@ -1,49 +1,73 @@
 //src/core/system/read-models/system-status.projection.ts
 import { Event, EventHandler, ReadModelUpdaterPort } from '../../contracts';
-import { SystemEventType } from '../contracts';
 import { TestExecutedPayload } from '../contracts';
 import { assertDataPropsMatchMapKeys } from '../../shared/type-guards';
-import { log, createLoggerForProjection } from '../../logger';
+import { createLoggerForProjection } from '../../logger';
 
 /**
  * Metadata for the system status projection
- * This is used by the schema drift detection tool
+ * This is used by external code that checks projection struct
  */
 export const projectionMeta = {
-  table: 'system_status',
-  columnTypes: {
-    'id': 'uuid',
-    'tenant_id': 'uuid',
-    'testerId': 'uuid',
-    'testName': 'text',
-    'result': 'text', // enum: 'success' | 'failure'
-    'executedAt': 'timestamp',
-    'parameters': 'jsonb',
-    'numberExecutedTests': 'integer',
-    'updated_at': 'timestamp',
-    'last_event_id': 'uuid',
-    'last_event_version': 'integer',
-  },
-  eventTypes: ['testExecuted'],
+  eventTypes: ['testExecuted'] as const,
+  tables: [
+    {
+      name: 'system_status',
+      columnTypes: {
+        'id': 'uuid',
+        'tenant_id': 'uuid',
+        'testerId': 'uuid',
+        'testName': 'text',
+        'result': 'text', // enum: 'success' | 'failure'
+        'executedAt': 'timestamp',
+        'parameters': 'jsonb',
+        'numberExecutedTests': 'integer',
+        'updated_at': 'timestamp',
+        'last_event_id': 'uuid',
+        'last_event_version': 'integer',
+      } as const,
+    },
+    // Example of a second table (metrics)
+    {
+      name: 'system_metrics',
+      columnTypes: {
+        'id': 'uuid',
+        'tenant_id': 'uuid',
+        'testCount': 'integer',
+        'updated_at': 'timestamp',
+        'last_event_id': 'uuid',
+        'last_event_version': 'integer',
+      } as const,
+    },
+  ] as const,
 };
 
-//compile time guardrails
-type SystemStatusProjectionKeys = keyof typeof projectionMeta.columnTypes;
-type SystemStatusProjectionShape = {
-  [K in SystemStatusProjectionKeys]: any;
-};
+// Compile-time helpers
+type TableNames = typeof projectionMeta.tables[number]['name'];
+
+type Shape<T extends TableNames> =
+  keyof Extract<
+    typeof projectionMeta.tables[number],
+    { name: T }
+  >['columnTypes'] extends infer K
+    ? { [P in K & string]: any }
+    : never;
 
 /**
  * Creates a projection handler for the TEST_EXECUTED event
- * @param updater The read model updater to use
+ * @param getUpdater Function to get an updater for a specific table
  * @returns An event handler for the TEST_EXECUTED event
  */
 export function createSystemStatusProjection(
-  updater: ReadModelUpdaterPort<any>
+  getUpdater: (table: string) => ReadModelUpdaterPort<any>
 ): EventHandler {
+  // Get updaters for each table
+  const statusUpdater = getUpdater('system_status');
+  const metricsUpdater = getUpdater('system_metrics');
+
   return {
     supportsEvent(event): event is Event<TestExecutedPayload> {
-      return projectionMeta.eventTypes.includes(event.type);
+      return projectionMeta.eventTypes.includes(event.type as any);
     },
 
     async on(event) {
@@ -65,7 +89,8 @@ export function createSystemStatusProjection(
         throw err;
       }
 
-      const upsertData: SystemStatusProjectionShape = {
+      // Build data for the status table
+      const statusData: Shape<'system_status'> = {
         id: aggregateId,
         tenant_id,
         testerId: payload.testerId,
@@ -77,12 +102,29 @@ export function createSystemStatusProjection(
         updated_at: metadata?.timestamp,
         last_event_id: event.id,
         last_event_version: event.version,
-      }
+      };
 
-      //runtime type guard
-      assertDataPropsMatchMapKeys(upsertData, projectionMeta.columnTypes);
+      // Runtime type guard for the status table
+      assertDataPropsMatchMapKeys(statusData, projectionMeta.tables[0].columnTypes);
 
-      await updater.upsert(tenant_id, aggregateId, upsertData);
+      // Update the status table
+      await statusUpdater.upsert(tenant_id, aggregateId, statusData);
+
+      // Build data for the metrics table
+      const metricsData: Shape<'system_metrics'> = {
+        id: aggregateId,
+        tenant_id,
+        testCount: payload.numberExecutedTests || 1,
+        updated_at: metadata?.timestamp,
+        last_event_id: event.id,
+        last_event_version: event.version,
+      };
+
+      // Runtime type guard for the metrics table
+      assertDataPropsMatchMapKeys(metricsData, projectionMeta.tables[1].columnTypes);
+
+      // Update the metrics table
+      await metricsUpdater.upsert(tenant_id, aggregateId, metricsData);
     },
   };
 }
