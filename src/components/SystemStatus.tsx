@@ -10,13 +10,7 @@ export const SystemStatus = () => {
         <h1 className="text-2xl font-bold">System Status</h1>
       </div>
 
-      <Card className="bg-slate-900 border-slate-800">
-        <CardContent className="p-8 text-center">
-          <AlertTriangle className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-slate-300 mb-1">System Status Indicators</h3>
-          <p className="text-slate-500">Health monitoring dashboard coming soon...</p>
-        </CardContent>
-      </Card>
+      <div className="p-6 text-slate-300">System Status - Coming Soon...ish...</div>
     </div>
   );
 };
