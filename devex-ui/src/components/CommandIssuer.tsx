@@ -1,0 +1,464 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { commandRegistry, CommandSchema } from "@/data/commandRegistry";
+
+interface CommandIssuerProps {
+  currentTenant: string;
+}
+
+const recentCommands = [
+  {
+    id: '1',
+    type: 'logMessage',
+    aggregateId: 'system-123',
+    timestamp: '2024-01-15T10:30:00Z',
+    status: 'success',
+    payload: { message: "System started successfully", systemId: "sys-001" },
+    response: { success: true, messageId: "msg-456" }
+  },
+  {
+    id: '2',
+    type: 'executeTest',
+    aggregateId: 'test-456',
+    timestamp: '2024-01-15T10:25:00Z',
+    status: 'success',
+    payload: { testId: "test-001", testName: "Integration Test", parameters: { timeout: 5000 } },
+    response: { success: true, testResult: "passed", duration: 2340 }
+  },
+  {
+    id: '3',
+    type: 'simulateFailure',
+    aggregateId: 'system-789',
+    timestamp: '2024-01-15T10:20:00Z',
+    status: 'failed',
+    payload: { systemId: "sys-002" },
+    response: { success: false, error: "Simulation failed: Network timeout" }
+  }
+];
+
+const generateUUID4 = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
+  const [selectedCommand, setSelectedCommand] = useState("");
+  const [aggregateId, setAggregateId] = useState("");
+  const [payload, setPayload] = useState("");
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [payloadView, setPayloadView] = useState<"form" | "json">("form");
+  const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    console.log('Submitting command:', { 
+      type: selectedCommand, 
+      aggregateId, 
+      payload: payloadView === "form" ? formData : JSON.parse(payload || '{}'),
+      tenant: currentTenant 
+    });
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsSubmitting(false);
+    
+    // Reset form
+    setSelectedCommand("");
+    setAggregateId("");
+    setPayload("");
+    setFormData({});
+  };
+
+  const generateAggregateId = () => {
+    setAggregateId(generateUUID4());
+  };
+
+  const generateExamplePayload = (commandType: string): string => {
+    const commandSchema = commandRegistry.find(cmd => cmd.type === commandType);
+    if (!commandSchema) return '{}';
+
+    const example: Record<string, any> = {};
+    const properties = commandSchema.schema.properties;
+    const required = commandSchema.schema.required || [];
+
+    Object.entries(properties).forEach(([key, prop]: [string, any]) => {
+      if (required.includes(key) || Math.random() > 0.5) {
+        switch (prop.type) {
+          case 'string':
+            if (key.includes('Id')) {
+              example[key] = `${key.replace('Id', '')}-${Math.random().toString(36).substr(2, 6)}`;
+            } else if (key === 'message') {
+              example[key] = "Sample log message";
+            } else if (key === 'testName') {
+              example[key] = "Sample Test";
+            } else {
+              example[key] = `sample-${key}`;
+            }
+            break;
+          case 'number':
+            example[key] = key === 'count' ? 3 : 42;
+            break;
+          case 'object':
+            if (key === 'parameters') {
+              example[key] = { "param1": "value1", "param2": 123 };
+            } else {
+              example[key] = {};
+            }
+            break;
+          default:
+            example[key] = null;
+        }
+      }
+    });
+
+    return JSON.stringify(example, null, 2);
+  };
+
+  const handleFormDataChange = (key: string, value: any) => {
+    const newFormData = { ...formData, [key]: value };
+    setFormData(newFormData);
+    setPayload(JSON.stringify(newFormData, null, 2));
+  };
+
+  const handlePayloadChange = (value: string) => {
+    setPayload(value);
+    try {
+      const parsed = JSON.parse(value);
+      setFormData(parsed);
+    } catch (e) {
+      // Invalid JSON, keep form data as is
+    }
+  };
+
+  const generateFieldValue = (key: string, prop: any) => {
+    if (key.includes('Id')) {
+      return generateUUID4();
+    }
+    
+    switch (prop.type) {
+      case 'string':
+        return `sample-${key}`;
+      case 'number':
+        return 42;
+      default:
+        return '';
+    }
+  };
+
+  const renderFormField = (key: string, prop: any, required: boolean) => {
+    const value = formData[key] || '';
+    const isIdField = key.includes('Id');
+    
+    switch (prop.type) {
+      case 'string':
+        return (
+          <div key={key} className="flex items-center gap-3">
+            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
+              {key} {required && <span className="text-red-400">*</span>}
+            </Label>
+            <div className="flex gap-2 flex-1">
+              <Input
+                id={key}
+                value={value}
+                onChange={(e) => handleFormDataChange(key, e.target.value)}
+                placeholder={`Enter ${key}`}
+                className="bg-slate-800 border-slate-700 text-slate-100 h-8"
+              />
+              {isIdField && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleFormDataChange(key, generateFieldValue(key, prop))}
+                  className="bg-slate-800 border-slate-700 hover:bg-slate-700 h-8 w-8"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          </div>
+        );
+      case 'number':
+        return (
+          <div key={key} className="flex items-center gap-3">
+            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
+              {key} {required && <span className="text-red-400">*</span>}
+            </Label>
+            <Input
+              id={key}
+              type="number"
+              value={value}
+              onChange={(e) => handleFormDataChange(key, Number(e.target.value))}
+              placeholder={`Enter ${key}`}
+              className="bg-slate-800 border-slate-700 text-slate-100 h-8"
+            />
+          </div>
+        );
+      case 'object':
+        return (
+          <div key={key} className="space-y-2">
+            <Label htmlFor={key} className="text-slate-300 text-sm">
+              {key} {required && <span className="text-red-400">*</span>}
+            </Label>
+            <Textarea
+              id={key}
+              value={typeof value === 'object' ? JSON.stringify(value, null, 2) : value}
+              onChange={(e) => {
+                try {
+                  const parsed = JSON.parse(e.target.value);
+                  handleFormDataChange(key, parsed);
+                } catch {
+                  handleFormDataChange(key, e.target.value);
+                }
+              }}
+              placeholder={`Enter ${key} as JSON`}
+              className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm h-20"
+            />
+          </div>
+        );
+      default:
+        return (
+          <div key={key} className="flex items-center gap-3">
+            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
+              {key} {required && <span className="text-red-400">*</span>}
+            </Label>
+            <Input
+              id={key}
+              value={value}
+              onChange={(e) => handleFormDataChange(key, e.target.value)}
+              placeholder={`Enter ${key}`}
+              className="bg-slate-800 border-slate-700 text-slate-100 h-8"
+            />
+          </div>
+        );
+    }
+  };
+
+  const selectedCommandSchema = commandRegistry.find(cmd => cmd.type === selectedCommand);
+
+  const toggleCommandExpansion = (commandId: string) => {
+    setExpandedCommand(expandedCommand === commandId ? null : commandId);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Terminal className="h-6 w-6 text-blue-400" />
+        <h1 className="text-2xl font-bold">Command Issuer</h1>
+        <Badge variant="outline" className="border-slate-600 text-slate-300">
+          Tenant: {currentTenant}
+        </Badge>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Command Form */}
+        <Card className="lg:col-span-2 bg-slate-900 border-slate-800">
+          <CardHeader>
+            <CardTitle className="text-slate-100">Issue New Command</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="command-type" className="text-slate-300">Command Type</Label>
+                <Select value={selectedCommand} onValueChange={(value) => {
+                  setSelectedCommand(value);
+                  setFormData({});
+                  setPayload("");
+                }}>
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
+                    <SelectValue placeholder="Select command type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700">
+                    {commandRegistry.map((cmd) => (
+                      <SelectItem key={cmd.type} value={cmd.type} className="text-slate-100 hover:bg-slate-700">
+                        <div className="flex flex-col items-start">
+                          <span>{cmd.type}</span>
+                          <span className="text-xs text-slate-400">{cmd.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedCommandSchema && (
+                  <div className="text-xs text-slate-400">
+                    Domain: {selectedCommandSchema.domain}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="aggregate-id" className="text-slate-300">Aggregate ID</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="aggregate-id"
+                    value={aggregateId}
+                    onChange={(e) => setAggregateId(e.target.value)}
+                    placeholder="e.g., system-123"
+                    className="bg-slate-800 border-slate-700 text-slate-100"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon"
+                    onClick={generateAggregateId}
+                    className="bg-slate-800 border-slate-700 hover:bg-slate-700"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {selectedCommandSchema && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-100">Payload</h3>
+                
+                <Card className="bg-slate-800 border-slate-700">
+                  <CardContent className="p-4">
+                    <Tabs value={payloadView} onValueChange={(value: "form" | "json") => setPayloadView(value)}>
+                      <TabsList className="grid w-full grid-cols-2 bg-slate-700 mb-4">
+                        <TabsTrigger value="form" className="data-[state=active]:bg-slate-600 data-[state=active]:text-slate-100">
+                          Form
+                        </TabsTrigger>
+                        <TabsTrigger value="json" className="data-[state=active]:bg-slate-600 data-[state=active]:text-slate-100">
+                          JSON
+                        </TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="form" className="space-y-3 mt-0">
+                        {Object.entries(selectedCommandSchema.schema.properties).map(([key, prop]: [string, any]) => 
+                          renderFormField(key, prop, selectedCommandSchema.schema.required?.includes(key) || false)
+                        )}
+                      </TabsContent>
+                      
+                      <TabsContent value="json" className="mt-0">
+                        <Textarea
+                          value={payload}
+                          onChange={(e) => handlePayloadChange(e.target.value)}
+                          placeholder={generateExamplePayload(selectedCommand)}
+                          className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm min-h-32"
+                        />
+                      </TabsContent>
+                    </Tabs>
+                    
+                    <div className="text-xs text-slate-400 mt-3">
+                      Required fields: {selectedCommandSchema.schema.required?.join(', ') || 'None'}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button 
+                onClick={handleSubmit}
+                disabled={!selectedCommand || !aggregateId || isSubmitting}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Submit Command
+                  </>
+                )}
+              </Button>
+              
+              {selectedCommand && (
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    const example = generateExamplePayload(selectedCommand);
+                    setPayload(example);
+                    try {
+                      setFormData(JSON.parse(example));
+                    } catch (e) {
+                      // Handle parse error
+                    }
+                  }}
+                  className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                >
+                  Use Example
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Commands */}
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader>
+            <CardTitle className="text-slate-100 flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Recent Commands
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {recentCommands.map((cmd) => (
+                <div key={cmd.id} className="space-y-2">
+                  <div 
+                    className="flex items-center justify-between p-2 bg-slate-800 rounded cursor-pointer hover:bg-slate-750"
+                    onClick={() => toggleCommandExpansion(cmd.id)}
+                  >
+                    <div className="flex items-center gap-2 text-xs text-slate-300 flex-1 min-w-0">
+                      {expandedCommand === cmd.id ? (
+                        <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3 flex-shrink-0" />
+                      )}
+                      <span className="text-slate-500">
+                        {new Date(cmd.timestamp).toLocaleDateString()}
+                      </span>
+                      <span className="text-slate-400 font-mono truncate">{cmd.aggregateId}</span>
+                      <span className="text-slate-200 truncate">{cmd.type}</span>
+                    </div>
+                    <Badge 
+                      variant={cmd.status === 'success' ? 'default' : 'destructive'}
+                      className="text-xs flex-shrink-0"
+                    >
+                      {cmd.status}
+                    </Badge>
+                  </div>
+                  
+                  {expandedCommand === cmd.id && (
+                    <div className="ml-5 p-3 bg-slate-800/50 rounded text-xs space-y-2">
+                      <div>
+                        <div className="text-slate-400 font-medium mb-1">Payload:</div>
+                        <pre className="text-slate-300 bg-slate-900 p-2 rounded overflow-x-auto">
+                          {JSON.stringify(cmd.payload, null, 2)}
+                        </pre>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-medium mb-1">Response:</div>
+                        <pre className="text-slate-300 bg-slate-900 p-2 rounded overflow-x-auto">
+                          {JSON.stringify(cmd.response, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
