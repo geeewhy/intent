@@ -50,20 +50,3 @@ export type FailureSimulatedPayload = S.FailureSimulatedPayload;
 export type MultiEventEmittedPayload = S.MultiEventEmittedPayload;
 export type TestExecutedPayload = S.TestExecutedPayload;
 export type RetryableTestExecutedPayload = S.RetryableTestExecutedPayload;
-
-/**
- * Union types (optional if not needed elsewhere)
- */
-export type SystemCommandPayload =
-    | LogMessagePayload
-    | SimulateFailurePayload
-    | EmitMultipleEventsPayload
-    | ExecuteTestPayload
-    | ExecuteRetryableTestPayload;
-
-export type SystemEventPayload =
-    | MessageLoggedPayload
-    | FailureSimulatedPayload
-    | MultiEventEmittedPayload
-    | TestExecutedPayload
-    | RetryableTestExecutedPayload;
