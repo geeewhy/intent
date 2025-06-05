@@ -12,6 +12,8 @@ import { SystemStatus } from "@/components/SystemStatus";
 import { LogFooter } from "@/components/LogFooter";
 import { AICompanion } from "@/components/AICompanion";
 import { Settings } from "@/components/Settings";
+import { Card, CardContent } from "@/components/ui/card";
+import { RotateCcw } from "lucide-react";
 
 type ActiveView = 'dashboard' | 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status' | 'rewind' | 'ai' | 'settings';
 
@@ -65,7 +67,22 @@ const Index = () => {
         }
         return <Dashboard />; // Fallback to dashboard
       case 'rewind':
-        return <div className="p-6 text-slate-300">Projection Rewind Tool - Coming Soon...ish...</div>;
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <RotateCcw className="h-6 w-6 text-blue-400" />
+              <h1 className="text-2xl font-bold">Projection Rewind Tool</h1>
+            </div>
+
+            <Card className="bg-slate-900 border-slate-800">
+              <CardContent className="p-8 text-center">
+                <RotateCcw className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-slate-300 mb-1">Projection Rewind</h3>
+                <p className="text-slate-500">Time-travel functionality for projections coming soon...</p>
+              </CardContent>
+            </Card>
+          </div>
+        );
       case 'settings':
         return <Settings />;
       default:
