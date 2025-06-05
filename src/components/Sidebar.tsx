@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Terminal, 
   Activity, 
@@ -21,21 +21,47 @@ interface SidebarProps {
   onViewChange: (view: string) => void;
 }
 
-const navigationItems = [
+const allNavigationItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, hideTooltip: true }, // Dashboard with label but no tooltip
   { id: 'commands', label: 'Command Issuer', icon: Terminal },
   { id: 'events', label: 'Event Stream', icon: Activity },
-  { id: 'projections', label: 'Projections', icon: Database },
+  { id: 'projections', label: 'Projections', icon: Database, requiresFlag: 'projections' },
   { id: 'traces', label: 'Trace Viewer', icon: GitBranch },
-  { id: 'aggregates', label: 'Aggregates', icon: Package },
-  { id: 'rewind', label: 'Projection Rewind', icon: Rewind },
+  { id: 'aggregates', label: 'Aggregates', icon: Package, requiresFlag: 'aggregates' },
+  { id: 'rewind', label: 'Projection Rewind', icon: Rewind, requiresFlag: 'rewind' },
   { id: 'status', label: 'System Status', icon: AlertTriangle },
-  { id: 'ai', label: 'AI Companion', icon: Bot },
+  { id: 'ai', label: 'AI Companion', icon: Bot, requiresFlag: 'ai' },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const loadFeatureFlags = () => {
+      const saved = localStorage.getItem('feature_flags');
+      setFeatureFlags(saved ? JSON.parse(saved) : {});
+    };
+
+    loadFeatureFlags();
+
+    // Listen for storage changes to update flags in real-time
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'feature_flags') {
+        loadFeatureFlags();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Filter navigation items based on feature flags
+  const navigationItems = allNavigationItems.filter(item => {
+    if (!item.requiresFlag) return true;
+    return featureFlags[item.requiresFlag] === true;
+  });
 
   return (
     <aside className={cn(

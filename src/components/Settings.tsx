@@ -5,14 +5,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+
+const FEATURE_FLAGS = [
+  { id: 'ai', label: 'AI Companion' },
+  { id: 'projections', label: 'Projections' },
+  { id: 'rewind', label: 'Projection Rewind' },
+  { id: 'aggregates', label: 'Aggregates' },
+];
 
 export const Settings = () => {
   const [apiUri, setApiUri] = useState(localStorage.getItem('api_uri') || '');
   const [useBasicAuth, setUseBasicAuth] = useState(localStorage.getItem('use_basic_auth') === 'true');
   const [username, setUsername] = useState(localStorage.getItem('basic_auth_username') || '');
   const [password, setPassword] = useState(localStorage.getItem('basic_auth_password') || '');
+  
+  // Feature flags state
+  const [featureFlags, setFeatureFlags] = useState(() => {
+    const saved = localStorage.getItem('feature_flags');
+    return saved ? JSON.parse(saved) : {};
+  });
+  
   const { toast } = useToast();
+
+  const handleFeatureFlagChange = (flagId: string, checked: boolean) => {
+    const updatedFlags = { ...featureFlags, [flagId]: checked };
+    setFeatureFlags(updatedFlags);
+    localStorage.setItem('feature_flags', JSON.stringify(updatedFlags));
+  };
 
   const handleSave = () => {
     localStorage.setItem('api_uri', apiUri);
@@ -37,15 +58,17 @@ export const Settings = () => {
     setUseBasicAuth(false);
     setUsername('');
     setPassword('');
+    setFeatureFlags({});
     
     localStorage.removeItem('api_uri');
     localStorage.removeItem('use_basic_auth');
     localStorage.removeItem('basic_auth_username');
     localStorage.removeItem('basic_auth_password');
+    localStorage.removeItem('feature_flags');
 
     toast({
       title: "Settings reset",
-      description: "All API configuration has been cleared.",
+      description: "All settings have been cleared.",
     });
   };
 
@@ -53,9 +76,35 @@ export const Settings = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-slate-100">Settings</h1>
-        <p className="text-slate-400 mt-2">Configure your API connection and authentication settings</p>
+        <p className="text-slate-400 mt-2">Configure your API connection, authentication settings, and feature flags</p>
       </div>
 
+      {/* Feature Flags Section */}
+      <Card className="bg-slate-900 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-slate-100">Feature Flags</CardTitle>
+          <CardDescription className="text-slate-400">
+            Enable or disable specific features in the application
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {FEATURE_FLAGS.map((flag) => (
+            <div key={flag.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={flag.id}
+                checked={featureFlags[flag.id] || false}
+                onCheckedChange={(checked) => handleFeatureFlagChange(flag.id, checked as boolean)}
+                className="border-slate-600 data-[state=checked]:bg-blue-600"
+              />
+              <Label htmlFor={flag.id} className="text-slate-200">
+                {flag.label}
+              </Label>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* API Configuration Section */}
       <Card className="bg-slate-900 border-slate-700">
         <CardHeader>
           <CardTitle className="text-slate-100">API Configuration</CardTitle>
