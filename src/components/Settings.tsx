@@ -15,8 +15,12 @@ const FEATURE_FLAGS = [
   { id: 'aggregates', label: 'Aggregates' },
 ];
 
+const getDefaultApiUri = () => {
+  return import.meta.env.VITE_ADMIN_API_URL || 'http://localhost:3009/api';
+};
+
 export const Settings = () => {
-  const [apiUri, setApiUri] = useState(localStorage.getItem('api_uri') || '');
+  const [apiUri, setApiUri] = useState(localStorage.getItem('api_uri') || getDefaultApiUri());
   const [useBasicAuth, setUseBasicAuth] = useState(localStorage.getItem('use_basic_auth') === 'true');
   const [username, setUsername] = useState(localStorage.getItem('basic_auth_username') || '');
   const [password, setPassword] = useState(localStorage.getItem('basic_auth_password') || '');
@@ -57,7 +61,7 @@ export const Settings = () => {
   };
 
   const handleReset = () => {
-    setApiUri('');
+    setApiUri(getDefaultApiUri());
     setUseBasicAuth(false);
     setUsername('');
     setPassword('');
@@ -99,7 +103,7 @@ export const Settings = () => {
             <Input
               id="api-uri"
               type="url"
-              placeholder="https://api.example.com"
+              placeholder={getDefaultApiUri()}
               value={apiUri}
               onChange={(e) => setApiUri(e.target.value)}
               className="bg-slate-800 border-slate-600 text-slate-100"
