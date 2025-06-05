@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { 
   Terminal, 
   Activity, 
@@ -8,7 +9,9 @@ import {
   AlertTriangle,
   Bot,
   Settings,
-  Rewind
+  Rewind,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,9 +33,26 @@ const navigationItems = [
 ];
 
 export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 p-4">
-      <nav className="space-y-2">
+    <aside className={cn(
+      "bg-slate-900 border-r border-slate-800 transition-all duration-300 relative",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
+      {/* Collapse Toggle */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute -right-3 top-6 bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors z-10 p-1 rounded-full"
+      >
+        {isCollapsed ? (
+          <ChevronRight className="h-3 w-3 text-slate-400" />
+        ) : (
+          <ChevronLeft className="h-3 w-3 text-slate-400" />
+        )}
+      </button>
+
+      <nav className="space-y-2 p-4">
         {navigationItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -40,14 +60,24 @@ export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
               key={item.id}
               onClick={() => onViewChange(item.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors",
+                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors relative group",
                 activeView === item.id
                   ? "bg-blue-600 text-white"
                   : "text-slate-300 hover:text-white hover:bg-slate-800"
               )}
+              title={isCollapsed ? item.label : undefined}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-sm font-medium">{item.label}</span>
+              <Icon className="h-5 w-5 flex-shrink-0" />
+              {!isCollapsed && (
+                <span className="text-sm font-medium">{item.label}</span>
+              )}
+              
+              {/* Tooltip for collapsed state */}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-slate-100 text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                  {item.label}
+                </div>
+              )}
             </button>
           );
         })}

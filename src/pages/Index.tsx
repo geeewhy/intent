@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
@@ -7,13 +8,16 @@ import { ProjectionExplorer } from "@/components/ProjectionExplorer";
 import { TraceViewer } from "@/components/TraceViewer";
 import { AggregateIntrospect } from "@/components/AggregateIntrospect";
 import { SystemStatus } from "@/components/SystemStatus";
+import { LogFooter } from "@/components/LogFooter";
+import { AICompanion } from "@/components/AICompanion";
 
-type ActiveView = 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status';
+type ActiveView = 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status' | 'rewind' | 'ai' | 'settings';
 
 const Index = () => {
   const [activeView, setActiveView] = useState<ActiveView>('commands');
   const [currentTenant, setCurrentTenant] = useState('tenant-1');
   const [currentRole, setCurrentRole] = useState('admin');
+  const [isAICompanionOpen, setIsAICompanionOpen] = useState(false);
 
   const renderActiveView = () => {
     switch (activeView) {
@@ -29,12 +33,26 @@ const Index = () => {
         return <AggregateIntrospect />;
       case 'status':
         return <SystemStatus />;
+      case 'ai':
+        // When AI is selected from sidebar, open the companion panel
+        if (!isAICompanionOpen) {
+          setIsAICompanionOpen(true);
+        }
+        return <CommandIssuer currentTenant={currentTenant} />; // Fallback to commands
+      case 'rewind':
+        return <div className="p-6 text-slate-300">Projection Rewind Tool - Coming Soon</div>;
+      case 'settings':
+        return <div className="p-6 text-slate-300">Settings - Coming Soon</div>;
       default:
         return <CommandIssuer currentTenant={currentTenant} />;
     }
   };
 
   const handleViewChange = (view: string) => {
+    if (view === 'ai') {
+      setIsAICompanionOpen(true);
+      return;
+    }
     setActiveView(view as ActiveView);
   };
 
@@ -47,7 +65,7 @@ const Index = () => {
         onRoleChange={setCurrentRole}
       />
       
-      <div className="flex flex-1">
+      <div className="flex flex-1 pb-12"> {/* Add bottom padding for footer */}
         <Sidebar 
           activeView={activeView}
           onViewChange={handleViewChange}
@@ -57,6 +75,12 @@ const Index = () => {
           {renderActiveView()}
         </main>
       </div>
+
+      <LogFooter />
+      <AICompanion 
+        isOpen={isAICompanionOpen} 
+        onToggle={() => setIsAICompanionOpen(!isAICompanionOpen)} 
+      />
     </div>
   );
 };
