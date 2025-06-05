@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
@@ -35,6 +34,10 @@ const Index = () => {
     }
   };
 
+  const handleViewChange = (view: string) => {
+    setActiveView(view as ActiveView);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <Header 
@@ -47,7 +50,7 @@ const Index = () => {
       <div className="flex flex-1">
         <Sidebar 
           activeView={activeView}
-          onViewChange={setActiveView}
+          onViewChange={handleViewChange}
         />
         
         <main className="flex-1 p-6 overflow-auto">
