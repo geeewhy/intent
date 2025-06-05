@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { GitBranch, Search, ArrowRight, ArrowDown, Command, Database, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -228,48 +229,48 @@ export const TraceViewer = () => {
         <div>
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader>
-              <CardTitle className="text-lg">Node Details</CardTitle>
+              <CardTitle className="text-lg text-slate-100">Node Details</CardTitle>
             </CardHeader>
             <CardContent>
               {selectedNode ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     {getNodeIcon(selectedNode.type)}
-                    <span className="font-medium">{selectedNode.type}</span>
+                    <span className="font-medium text-slate-100">{selectedNode.type}</span>
                   </div>
                   
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="text-slate-400">ID:</span>
-                      <span className="ml-2 font-mono text-slate-200">{selectedNode.id}</span>
+                      <span className="ml-2 font-mono text-slate-100">{selectedNode.id}</span>
                     </div>
                     <div>
                       <span className="text-slate-400">Type:</span>
-                      <span className="ml-2 text-slate-200">{selectedNode.subtype}</span>
+                      <span className="ml-2 text-slate-100">{selectedNode.subtype}</span>
                     </div>
                     <div>
                       <span className="text-slate-400">Timestamp:</span>
-                      <span className="ml-2 text-slate-200">{selectedNode.timestamp}</span>
+                      <span className="ml-2 text-slate-100">{selectedNode.timestamp}</span>
                     </div>
                     <div>
                       <span className="text-slate-400">Correlation ID:</span>
-                      <span className="ml-2 font-mono text-slate-200">{selectedNode.correlationId}</span>
+                      <span className="ml-2 font-mono text-slate-100">{selectedNode.correlationId}</span>
                     </div>
                     {selectedNode.causationId && (
                       <div>
                         <span className="text-slate-400">Causation ID:</span>
-                        <span className="ml-2 font-mono text-slate-200">{selectedNode.causationId}</span>
+                        <span className="ml-2 font-mono text-slate-100">{selectedNode.causationId}</span>
                       </div>
                     )}
                     {selectedNode.aggregateId && (
                       <div>
                         <span className="text-slate-400">Aggregate ID:</span>
-                        <span className="ml-2 font-mono text-slate-200">{selectedNode.aggregateId}</span>
+                        <span className="ml-2 font-mono text-slate-100">{selectedNode.aggregateId}</span>
                       </div>
                     )}
                     <div>
                       <span className="text-slate-400">Tenant:</span>
-                      <span className="ml-2 text-slate-200">{selectedNode.tenantId}</span>
+                      <span className="ml-2 text-slate-100">{selectedNode.tenantId}</span>
                     </div>
                   </div>
                 </div>
@@ -285,27 +286,27 @@ export const TraceViewer = () => {
           {/* Legend */}
           <Card className="bg-slate-900 border-slate-800 mt-4">
             <CardHeader>
-              <CardTitle className="text-sm">Legend</CardTitle>
+              <CardTitle className="text-sm text-slate-100">Legend</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2 text-sm">
                 <div className="w-4 h-4 bg-blue-500 bg-opacity-20 border border-blue-500 rounded"></div>
-                <Command className="h-3 w-3" />
-                <span>Commands</span>
+                <Command className="h-3 w-3 text-slate-100" />
+                <span className="text-slate-100">Commands</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <div className="w-4 h-4 bg-green-500 bg-opacity-20 border border-green-500 rounded"></div>
-                <GitBranch className="h-3 w-3" />
-                <span>Events</span>
+                <GitBranch className="h-3 w-3 text-slate-100" />
+                <span className="text-slate-100">Events</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <div className="w-4 h-4 bg-purple-500 bg-opacity-20 border border-purple-500 rounded"></div>
-                <Database className="h-3 w-3" />
-                <span>Snapshots</span>
+                <Database className="h-3 w-3 text-slate-100" />
+                <span className="text-slate-100">Snapshots</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <ArrowRight className="h-3 w-3 text-slate-500" />
-                <span>Causation Flow</span>
+                <span className="text-slate-100">Causation Flow</span>
               </div>
             </CardContent>
           </Card>
