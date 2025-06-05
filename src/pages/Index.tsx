@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
+import { Dashboard } from "@/components/Dashboard";
 import { CommandIssuer } from "@/components/CommandIssuer";
 import { EventStreamViewer } from "@/components/EventStreamViewer";
 import { ProjectionExplorer } from "@/components/ProjectionExplorer";
@@ -12,16 +13,18 @@ import { LogFooter } from "@/components/LogFooter";
 import { AICompanion } from "@/components/AICompanion";
 import { Settings } from "@/components/Settings";
 
-type ActiveView = 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status' | 'rewind' | 'ai' | 'settings';
+type ActiveView = 'dashboard' | 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status' | 'rewind' | 'ai' | 'settings';
 
 const Index = () => {
-  const [activeView, setActiveView] = useState<ActiveView>('commands');
+  const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const [currentTenant, setCurrentTenant] = useState('tenant-1');
   const [currentRole, setCurrentRole] = useState('admin');
   const [isAICompanionOpen, setIsAICompanionOpen] = useState(false);
 
   const renderActiveView = () => {
     switch (activeView) {
+      case 'dashboard':
+        return <Dashboard />;
       case 'commands':
         return <CommandIssuer currentTenant={currentTenant} />;
       case 'events':
@@ -39,13 +42,13 @@ const Index = () => {
         if (!isAICompanionOpen) {
           setIsAICompanionOpen(true);
         }
-        return <CommandIssuer currentTenant={currentTenant} />; // Fallback to commands
+        return <Dashboard />; // Fallback to dashboard
       case 'rewind':
         return <div className="p-6 text-slate-300">Projection Rewind Tool - Coming Soon</div>;
       case 'settings':
         return <Settings />;
       default:
-        return <CommandIssuer currentTenant={currentTenant} />;
+        return <Dashboard />;
     }
   };
 
