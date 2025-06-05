@@ -2,6 +2,7 @@
 /**
  * Core system contracts for commands and events
  */
+import * as S from './payload-schemas';
 
 export type UUID = string;
 
@@ -33,72 +34,22 @@ export enum SystemEventType {
 export type SystemRole = 'tester' | 'system' | 'developer';
 
 /**
- * System command payloads
+ * System command payloads - derived from Zod schemas
  */
-export interface LogMessagePayload {
-  message: string;
-  systemId?: UUID;
-}
-
-export interface SimulateFailurePayload {
-  systemId?: UUID;
-}
-
-export interface EmitMultipleEventsPayload {
-  count: number;
-  systemId?: UUID;
-}
-
-export interface ExecuteTestPayload {
-  testId: UUID;
-  testName: string;
-  systemId?: UUID;
-  parameters?: Record<string, any>;
-}
-
-export interface ExecuteRetryableTestPayload {
-  testId: UUID;
-  testName: string;
-  systemId?: UUID;
-  parameters?: Record<string, any>;
-}
+export type LogMessagePayload = S.LogMessagePayload;
+export type SimulateFailurePayload = S.SimulateFailurePayload;
+export type EmitMultipleEventsPayload = S.EmitMultipleEventsPayload;
+export type ExecuteTestPayload = S.ExecuteTestPayload;
+export type ExecuteRetryableTestPayload = S.ExecuteRetryableTestPayload;
 
 /**
- * System event payloads
+ * System event payloads - derived from Zod schemas
  */
-export interface MessageLoggedPayload {
-  message: string;
-  systemId?: UUID;
-}
-
-export interface FailureSimulatedPayload {
-  systemId?: UUID;
-}
-
-export interface MultiEventEmittedPayload {
-  index: number;
-  systemId?: UUID;
-}
-
-export interface TestExecutedPayload {
-  testId: UUID;
-  testName: string;
-  testerId: UUID;
-  result: 'success' | 'failure';
-  executedAt: Date;
-  numberExecutedTests: number;
-  systemId?: UUID;
-  parameters?: Record<string, any>;
-}
-
-export interface RetryableTestExecutedPayload {
-  testId: UUID;
-  testName: string;
-  result: 'success';
-  executedAt: Date;
-  systemId?: UUID;
-  parameters?: Record<string, any>;
-}
+export type MessageLoggedPayload = S.MessageLoggedPayload;
+export type FailureSimulatedPayload = S.FailureSimulatedPayload;
+export type MultiEventEmittedPayload = S.MultiEventEmittedPayload;
+export type TestExecutedPayload = S.TestExecutedPayload;
+export type RetryableTestExecutedPayload = S.RetryableTestExecutedPayload;
 
 /**
  * Union types (optional if not needed elsewhere)

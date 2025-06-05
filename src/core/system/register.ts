@@ -12,6 +12,7 @@ import { SystemCommandHandler } from './command-handler';
 import { systemSagaRegistry } from './sagas/saga-registry';
 import { SystemCommandType, SystemEventType } from './contracts';
 import { register as registerSystemProjections } from './read-models/register';
+import { commandPayloadSchemas, eventPayloadSchemas } from './payload-schemas';
 
 /**
  * Self-registration function for the system domain
@@ -39,7 +40,8 @@ export function registerSystemDomain(): void {
   Object.values(SystemCommandType).forEach(type => {
     registerCommandType(type, {
       domain: 'system',
-      description: `System command: ${type}`
+      description: `System command: ${type}`,
+      payloadSchema: commandPayloadSchemas[type]
     });
   });
 
@@ -47,7 +49,8 @@ export function registerSystemDomain(): void {
   Object.values(SystemEventType).forEach(type => {
     registerEventType(type, {
       domain: 'system',
-      description: `System event: ${type}`
+      description: `System event: ${type}`,
+      payloadSchema: eventPayloadSchemas[type]
     });
   });
 }

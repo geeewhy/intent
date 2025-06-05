@@ -1,6 +1,21 @@
 //src/core/registry.ts
 import { CommandHandler, EventHandler, SagaDefinition, ReadModelUpdaterPort } from './contracts';
 import { AggregateClass } from './aggregates';
+import { z } from 'zod';
+
+export interface CommandTypeMeta {
+  type: string;
+  domain: string;
+  description: string;
+  payloadSchema?: z.ZodTypeAny;
+}
+
+export interface EventTypeMeta {
+  type: string;
+  domain: string;
+  description: string;
+  payloadSchema?: z.ZodTypeAny;
+}
 
 export interface TableMeta {
   name: string;
@@ -21,8 +36,8 @@ export interface Registry {
   commandHandlers: Record<string, CommandHandler>;
   eventHandlers: Record<string, EventHandler>;
   sagas: Record<string, SagaDefinition>;
-  commandTypes: Record<string, Record<string, any>>;
-  eventTypes: Record<string, Record<string, any>>;
+  commandTypes: Record<string, CommandTypeMeta>;
+  eventTypes: Record<string, EventTypeMeta>;
   projections: Record<string, ProjectionDefinition>;
   domains: string[];
 }
@@ -63,12 +78,18 @@ export function registerSaga(name: string, saga: SagaDefinition): void {
   registry.sagas[name] = saga;
 }
 
-export function registerCommandType(t: string, meta: Record<string, any>): void {
+export function registerCommandType(
+  t: string, 
+  meta: Omit<CommandTypeMeta, 'type'>
+): void {
   if (registry.commandTypes[t]) throw new Error(`Command type ${t} already registered`);
   registry.commandTypes[t] = { type: t, ...meta };
 }
 
-export function registerEventType(t: string, meta: Record<string, any>): void {
+export function registerEventType(
+  t: string, 
+  meta: Omit<EventTypeMeta, 'type'>
+): void {
   if (registry.eventTypes[t]) throw new Error(`Event type ${t} already registered`);
   registry.eventTypes[t] = { type: t, ...meta };
 }
@@ -95,11 +116,11 @@ export function getAllSagas(): Record<string, SagaDefinition> {
   return registry.sagas;
 }
 
-export function getAllCommandTypes(): Record<string, Record<string, any>> {
+export function getAllCommandTypes(): Record<string, CommandTypeMeta> {
   return registry.commandTypes;
 }
 
-export function getAllEventTypes(): Record<string, Record<string, any>> {
+export function getAllEventTypes(): Record<string, EventTypeMeta> {
   return registry.eventTypes;
 }
 

@@ -6,7 +6,7 @@
 import { Command, Event, CommandHandler } from './contracts';
 import {log, createLoggerForCommandHandler} from './logger';
 import {BaseAggregate} from "./base/aggregate";
-import { getAllCommandHandlers } from './registry';
+import { getAllCommandHandlers, DomainRegistry } from './registry';
 
 /**
  * Command bus
@@ -49,6 +49,24 @@ export class CommandBus {
       commandType: cmd.type,
       tenantId: cmd.tenant_id
     });
+
+    // Validate command payload against schema
+    const commandMeta = DomainRegistry.commandTypes()[cmd.type];
+    if (commandMeta?.payloadSchema) {
+      try {
+        logger?.debug('Validating command payload against schema');
+        commandMeta.payloadSchema.parse(cmd.payload);
+        logger?.debug('Command payload validation successful');
+      } catch (validationError: any) {
+        logger?.error('Command payload validation failed', { 
+          error: validationError,
+          issues: validationError.errors || validationError.issues
+        });
+        throw new Error(`Command payload validation failed: ${validationError.message}`);
+      }
+    } else {
+      logger?.warn('No schema found for command type', { commandType: cmd.type });
+    }
 
     const handler = this.handlers.find(h => h.supportsCommand(cmd));
     if (!handler) {

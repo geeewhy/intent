@@ -12,6 +12,7 @@ import {CommandResult} from '../../contracts';
 import {PgCommandStore} from '../../pg/pg-command-store';
 import { createPool } from '../../projections/pg-pool';
 import { initializeCore } from '../../../core/initialize';
+import { DomainRegistry } from '../../../core/registry';
 
 let router: WorkflowRouter;
 
@@ -67,6 +68,28 @@ export async function dispatchCommand(cmd: Command): Promise<void> {
     });
 
     try {
+        // Validate command payload against schema
+        const commandMeta = DomainRegistry.commandTypes()[cmd.type];
+        if (commandMeta?.payloadSchema) {
+            try {
+                logger?.debug('Validating command payload against schema');
+                commandMeta.payloadSchema.parse(cmd.payload);
+                logger?.debug('Command payload validation successful');
+            } catch (validationError: any) {
+                logger?.error('Command payload validation failed', { 
+                    error: validationError,
+                    issues: validationError.errors || validationError.issues
+                });
+                await pgCommandStore.markStatus(cmd.id, 'failed', {
+                    status: 'fail', 
+                    error: `Validation error: ${validationError.message}`
+                });
+                throw new Error(`Command payload validation failed: ${validationError.message}`);
+            }
+        } else {
+            logger?.warn('No schema found for command type', { commandType: cmd.type });
+        }
+
         logger?.debug('Upserting command into database');
         await pgCommandStore.upsert(cmd);
 

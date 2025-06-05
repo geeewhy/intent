@@ -1,3 +1,4 @@
+//src/api/index.ts
 import express from 'express';
 import { registerRegistryRoutes } from './registry';
 

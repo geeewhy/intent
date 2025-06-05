@@ -1,8 +1,7 @@
 // core/shared/type-guards.ts
-// Runtime type checks used across commands and events
-
 import { Command, Event } from '../contracts';
 
+// Runtime type checks used across commands and events
 export function isCommand(input: any): input is Command {
     return (
         input &&
