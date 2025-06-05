@@ -44,6 +44,14 @@ const recentCommands = [
   }
 ];
 
+const generateUUID4 = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
   const [selectedCommand, setSelectedCommand] = useState("");
   const [aggregateId, setAggregateId] = useState("");
@@ -74,9 +82,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
   };
 
   const generateAggregateId = () => {
-    const selectedCommandSchema = commandRegistry.find(cmd => cmd.type === selectedCommand);
-    const domain = selectedCommandSchema?.domain || 'aggregate';
-    setAggregateId(`${domain}-${Math.random().toString(36).substr(2, 9)}`);
+    setAggregateId(generateUUID4());
   };
 
   const generateExamplePayload = (commandType: string): string => {
@@ -138,8 +144,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
 
   const generateFieldValue = (key: string, prop: any) => {
     if (key.includes('Id')) {
-      const prefix = key.replace('Id', '').toLowerCase();
-      return `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
+      return generateUUID4();
     }
     
     switch (prop.type) {
