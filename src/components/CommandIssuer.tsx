@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,8 +143,8 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
     switch (prop.type) {
       case 'string':
         return (
-          <div key={key} className="space-y-2">
-            <Label htmlFor={key} className="text-slate-300">
+          <div key={key} className="flex items-center gap-3">
+            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
               {key} {required && <span className="text-red-400">*</span>}
             </Label>
             <Input
@@ -151,14 +152,14 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
               value={value}
               onChange={(e) => handleFormDataChange(key, e.target.value)}
               placeholder={`Enter ${key}`}
-              className="bg-slate-800 border-slate-700 text-slate-100"
+              className="bg-slate-800 border-slate-700 text-slate-100 h-8"
             />
           </div>
         );
       case 'number':
         return (
-          <div key={key} className="space-y-2">
-            <Label htmlFor={key} className="text-slate-300">
+          <div key={key} className="flex items-center gap-3">
+            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
               {key} {required && <span className="text-red-400">*</span>}
             </Label>
             <Input
@@ -167,14 +168,14 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
               value={value}
               onChange={(e) => handleFormDataChange(key, Number(e.target.value))}
               placeholder={`Enter ${key}`}
-              className="bg-slate-800 border-slate-700 text-slate-100"
+              className="bg-slate-800 border-slate-700 text-slate-100 h-8"
             />
           </div>
         );
       case 'object':
         return (
           <div key={key} className="space-y-2">
-            <Label htmlFor={key} className="text-slate-300">
+            <Label htmlFor={key} className="text-slate-300 text-sm">
               {key} {required && <span className="text-red-400">*</span>}
             </Label>
             <Textarea
@@ -189,14 +190,14 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                 }
               }}
               placeholder={`Enter ${key} as JSON`}
-              className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm"
+              className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm h-20"
             />
           </div>
         );
       default:
         return (
-          <div key={key} className="space-y-2">
-            <Label htmlFor={key} className="text-slate-300">
+          <div key={key} className="flex items-center gap-3">
+            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
               {key} {required && <span className="text-red-400">*</span>}
             </Label>
             <Input
@@ -204,7 +205,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
               value={value}
               onChange={(e) => handleFormDataChange(key, e.target.value)}
               placeholder={`Enter ${key}`}
-              className="bg-slate-800 border-slate-700 text-slate-100"
+              className="bg-slate-800 border-slate-700 text-slate-100 h-8"
             />
           </div>
         );
@@ -287,34 +288,38 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
             </div>
 
             {selectedCommandSchema && (
-              <div className="space-y-4">
-                <Label className="text-slate-300">Payload</Label>
-                <Tabs value={payloadView} onValueChange={(value: "form" | "json") => setPayloadView(value)}>
-                  <TabsList className="bg-slate-800 border-slate-700">
-                    <TabsTrigger value="form" className="data-[state=active]:bg-slate-700">Form</TabsTrigger>
-                    <TabsTrigger value="json" className="data-[state=active]:bg-slate-700">JSON</TabsTrigger>
-                  </TabsList>
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-slate-100 text-lg">Payload</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Tabs value={payloadView} onValueChange={(value: "form" | "json") => setPayloadView(value)}>
+                    <TabsList className="bg-slate-800 border-slate-700">
+                      <TabsTrigger value="form" className="data-[state=active]:bg-slate-700">Form</TabsTrigger>
+                      <TabsTrigger value="json" className="data-[state=active]:bg-slate-700">JSON</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="form" className="space-y-3 mt-4">
+                      {Object.entries(selectedCommandSchema.schema.properties).map(([key, prop]: [string, any]) => 
+                        renderFormField(key, prop, selectedCommandSchema.schema.required?.includes(key) || false)
+                      )}
+                    </TabsContent>
+                    
+                    <TabsContent value="json" className="mt-4">
+                      <Textarea
+                        value={payload}
+                        onChange={(e) => handlePayloadChange(e.target.value)}
+                        placeholder={generateExamplePayload(selectedCommand)}
+                        className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm min-h-32"
+                      />
+                    </TabsContent>
+                  </Tabs>
                   
-                  <TabsContent value="form" className="space-y-4 mt-4">
-                    {Object.entries(selectedCommandSchema.schema.properties).map(([key, prop]: [string, any]) => 
-                      renderFormField(key, prop, selectedCommandSchema.schema.required?.includes(key) || false)
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="json" className="mt-4">
-                    <Textarea
-                      value={payload}
-                      onChange={(e) => handlePayloadChange(e.target.value)}
-                      placeholder={generateExamplePayload(selectedCommand)}
-                      className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm min-h-32"
-                    />
-                  </TabsContent>
-                </Tabs>
-                
-                <div className="text-xs text-slate-400">
-                  Required fields: {selectedCommandSchema.schema.required?.join(', ') || 'None'}
-                </div>
-              </div>
+                  <div className="text-xs text-slate-400">
+                    Required fields: {selectedCommandSchema.schema.required?.join(', ') || 'None'}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             <div className="flex gap-3">
