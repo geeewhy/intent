@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,39 +8,31 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Send, RotateCcw, Terminal } from "lucide-react";
+import { commandRegistry, CommandSchema } from "@/data/commandRegistry";
 
 interface CommandIssuerProps {
   currentTenant: string;
 }
 
-const commandTypes = [
-  'CreateUser',
-  'UpdateProfile',
-  'PlaceOrder',
-  'CancelOrder',
-  'ProcessPayment',
-  'RefundPayment'
-];
-
 const recentCommands = [
   {
     id: '1',
-    type: 'CreateUser',
-    aggregateId: 'user-123',
+    type: 'logMessage',
+    aggregateId: 'system-123',
     timestamp: '2024-01-15T10:30:00Z',
     status: 'success'
   },
   {
     id: '2',
-    type: 'PlaceOrder',
-    aggregateId: 'order-456',
+    type: 'executeTest',
+    aggregateId: 'test-456',
     timestamp: '2024-01-15T10:25:00Z',
     status: 'success'
   },
   {
     id: '3',
-    type: 'ProcessPayment',
-    aggregateId: 'payment-789',
+    type: 'simulateFailure',
+    aggregateId: 'system-789',
     timestamp: '2024-01-15T10:20:00Z',
     status: 'failed'
   }
@@ -71,24 +64,53 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
   };
 
   const generateAggregateId = () => {
-    const prefix = selectedCommand.toLowerCase().includes('user') ? 'user' 
-      : selectedCommand.toLowerCase().includes('order') ? 'order' 
-      : selectedCommand.toLowerCase().includes('payment') ? 'payment' 
-      : 'aggregate';
-    setAggregateId(`${prefix}-${Math.random().toString(36).substr(2, 9)}`);
+    const selectedCommandSchema = commandRegistry.find(cmd => cmd.type === selectedCommand);
+    const domain = selectedCommandSchema?.domain || 'aggregate';
+    setAggregateId(`${domain}-${Math.random().toString(36).substr(2, 9)}`);
   };
 
-  const getExamplePayload = (commandType: string) => {
-    const examples = {
-      'CreateUser': '{\n  "email": "user@example.com",\n  "name": "John Doe",\n  "role": "customer"\n}',
-      'UpdateProfile': '{\n  "name": "Jane Doe",\n  "phoneNumber": "+1234567890"\n}',
-      'PlaceOrder': '{\n  "items": [{"productId": "prod-1", "quantity": 2}],\n  "total": 29.99\n}',
-      'CancelOrder': '{\n  "reason": "Customer requested cancellation"\n}',
-      'ProcessPayment': '{\n  "amount": 29.99,\n  "paymentMethod": "credit_card"\n}',
-      'RefundPayment': '{\n  "amount": 29.99,\n  "reason": "Product defective"\n}'
-    };
-    return examples[commandType as keyof typeof examples] || '{}';
+  const generateExamplePayload = (commandType: string): string => {
+    const commandSchema = commandRegistry.find(cmd => cmd.type === commandType);
+    if (!commandSchema) return '{}';
+
+    const example: Record<string, any> = {};
+    const properties = commandSchema.schema.properties;
+    const required = commandSchema.schema.required || [];
+
+    Object.entries(properties).forEach(([key, prop]: [string, any]) => {
+      if (required.includes(key) || Math.random() > 0.5) {
+        switch (prop.type) {
+          case 'string':
+            if (key.includes('Id')) {
+              example[key] = `${key.replace('Id', '')}-${Math.random().toString(36).substr(2, 6)}`;
+            } else if (key === 'message') {
+              example[key] = "Sample log message";
+            } else if (key === 'testName') {
+              example[key] = "Sample Test";
+            } else {
+              example[key] = `sample-${key}`;
+            }
+            break;
+          case 'number':
+            example[key] = key === 'count' ? 3 : 42;
+            break;
+          case 'object':
+            if (key === 'parameters') {
+              example[key] = { "param1": "value1", "param2": 123 };
+            } else {
+              example[key] = {};
+            }
+            break;
+          default:
+            example[key] = null;
+        }
+      }
+    });
+
+    return JSON.stringify(example, null, 2);
   };
+
+  const selectedCommandSchema = commandRegistry.find(cmd => cmd.type === selectedCommand);
 
   return (
     <div className="space-y-6">
@@ -115,13 +137,21 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                     <SelectValue placeholder="Select command type" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    {commandTypes.map((cmd) => (
-                      <SelectItem key={cmd} value={cmd} className="text-slate-100 hover:bg-slate-700">
-                        {cmd}
+                    {commandRegistry.map((cmd) => (
+                      <SelectItem key={cmd.type} value={cmd.type} className="text-slate-100 hover:bg-slate-700">
+                        <div className="flex flex-col items-start">
+                          <span>{cmd.type}</span>
+                          <span className="text-xs text-slate-400">{cmd.description}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedCommandSchema && (
+                  <div className="text-xs text-slate-400">
+                    Domain: {selectedCommandSchema.domain}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -131,7 +161,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                     id="aggregate-id"
                     value={aggregateId}
                     onChange={(e) => setAggregateId(e.target.value)}
-                    placeholder="e.g., user-123"
+                    placeholder="e.g., system-123"
                     className="bg-slate-800 border-slate-700 text-slate-100"
                   />
                   <Button 
@@ -153,9 +183,14 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                 id="payload"
                 value={payload}
                 onChange={(e) => setPayload(e.target.value)}
-                placeholder={selectedCommand ? getExamplePayload(selectedCommand) : "Enter JSON payload..."}
+                placeholder={selectedCommand ? generateExamplePayload(selectedCommand) : "Enter JSON payload..."}
                 className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm min-h-32"
               />
+              {selectedCommandSchema && (
+                <div className="text-xs text-slate-400">
+                  Required fields: {selectedCommandSchema.schema.required?.join(', ') || 'None'}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3">
@@ -180,7 +215,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
               {selectedCommand && (
                 <Button 
                   variant="outline"
-                  onClick={() => setPayload(getExamplePayload(selectedCommand))}
+                  onClick={() => setPayload(generateExamplePayload(selectedCommand))}
                   className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
                   Use Example
