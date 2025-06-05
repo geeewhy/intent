@@ -10,6 +10,7 @@ import { AggregateIntrospect } from "@/components/AggregateIntrospect";
 import { SystemStatus } from "@/components/SystemStatus";
 import { LogFooter } from "@/components/LogFooter";
 import { AICompanion } from "@/components/AICompanion";
+import { Settings } from "@/components/Settings";
 
 type ActiveView = 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status' | 'rewind' | 'ai' | 'settings';
 
@@ -42,7 +43,7 @@ const Index = () => {
       case 'rewind':
         return <div className="p-6 text-slate-300">Projection Rewind Tool - Coming Soon</div>;
       case 'settings':
-        return <div className="p-6 text-slate-300">Settings - Coming Soon</div>;
+        return <Settings />;
       default:
         return <CommandIssuer currentTenant={currentTenant} />;
     }
