@@ -9,3 +9,5 @@ misc
 codex.md
 node_modules
 .DS_Store
+/pull-devx.sh
+/push-devx.sh
