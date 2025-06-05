@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { GitBranch, Search, ArrowRight, ArrowDown, Command, Database, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,47 +44,132 @@ export const TraceViewer = () => {
   const [showDiagram, setShowDiagram] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Mock data for demonstration
+  // Enhanced mock data similar to EventStreamViewer
   const mockTraces: TraceNode[] = [
+    // User Creation Flow
     {
-      id: "cmd-001",
+      id: "cmd-user-001",
       type: "Command",
-      subtype: "CreateOrder",
+      subtype: "CreateUser",
       timestamp: "2024-01-15T10:30:00Z",
-      correlationId: "corr-123",
+      correlationId: "corr-user-123",
       tenantId: "tenant-1",
       level: 0
     },
     {
-      id: "evt-001",
+      id: "evt-user-001",
       type: "Event",
-      subtype: "OrderCreated",
+      subtype: "UserCreated",
       timestamp: "2024-01-15T10:30:01Z",
-      correlationId: "corr-123",
-      causationId: "cmd-001",
+      correlationId: "corr-user-123",
+      causationId: "cmd-user-001",
+      aggregateId: "user-123",
+      tenantId: "tenant-1",
+      level: 1
+    },
+    {
+      id: "evt-user-002",
+      type: "Event",
+      subtype: "WelcomeEmailSent",
+      timestamp: "2024-01-15T10:30:02Z",
+      correlationId: "corr-user-123",
+      causationId: "evt-user-001",
+      aggregateId: "email-456",
+      tenantId: "tenant-1",
+      level: 2
+    },
+    {
+      id: "snap-user-001",
+      type: "Snapshot",
+      subtype: "UserAggregate",
+      timestamp: "2024-01-15T10:30:03Z",
+      correlationId: "corr-user-123",
+      aggregateId: "user-123",
+      tenantId: "tenant-1",
+      level: 1
+    },
+    // Order Placement Flow
+    {
+      id: "cmd-order-001",
+      type: "Command",
+      subtype: "PlaceOrder",
+      timestamp: "2024-01-15T10:29:00Z",
+      correlationId: "corr-order-456",
+      tenantId: "tenant-1",
+      level: 0
+    },
+    {
+      id: "evt-order-001",
+      type: "Event",
+      subtype: "OrderPlaced",
+      timestamp: "2024-01-15T10:29:01Z",
+      correlationId: "corr-order-456",
+      causationId: "cmd-order-001",
       aggregateId: "order-456",
       tenantId: "tenant-1",
       level: 1
     },
     {
-      id: "evt-002",
+      id: "evt-order-002",
       type: "Event",
-      subtype: "PaymentRequested",
-      timestamp: "2024-01-15T10:30:02Z",
-      correlationId: "corr-123",
-      causationId: "evt-001",
-      aggregateId: "payment-789",
+      subtype: "InventoryReserved",
+      timestamp: "2024-01-15T10:29:02Z",
+      correlationId: "corr-order-456",
+      causationId: "evt-order-001",
+      aggregateId: "inventory-789",
       tenantId: "tenant-1",
       level: 2
     },
     {
-      id: "snap-001",
+      id: "cmd-payment-001",
+      type: "Command",
+      subtype: "ProcessPayment",
+      timestamp: "2024-01-15T10:29:03Z",
+      correlationId: "corr-order-456",
+      causationId: "evt-order-002",
+      tenantId: "tenant-1",
+      level: 3
+    },
+    {
+      id: "evt-payment-001",
+      type: "Event",
+      subtype: "PaymentProcessed",
+      timestamp: "2024-01-15T10:29:04Z",
+      correlationId: "corr-order-456",
+      causationId: "cmd-payment-001",
+      aggregateId: "payment-789",
+      tenantId: "tenant-1",
+      level: 4
+    },
+    {
+      id: "snap-order-001",
       type: "Snapshot",
       subtype: "OrderAggregate",
-      timestamp: "2024-01-15T10:30:03Z",
-      correlationId: "corr-123",
+      timestamp: "2024-01-15T10:29:05Z",
+      correlationId: "corr-order-456",
       aggregateId: "order-456",
       tenantId: "tenant-1",
+      level: 1
+    },
+    // Payment Refund Flow
+    {
+      id: "cmd-refund-001",
+      type: "Command",
+      subtype: "ProcessRefund",
+      timestamp: "2024-01-15T10:28:00Z",
+      correlationId: "corr-refund-789",
+      tenantId: "tenant-2",
+      level: 0
+    },
+    {
+      id: "evt-refund-001",
+      type: "Event",
+      subtype: "PaymentRefunded",
+      timestamp: "2024-01-15T10:28:01Z",
+      correlationId: "corr-refund-789",
+      causationId: "cmd-refund-001",
+      aggregateId: "payment-789",
+      tenantId: "tenant-2",
       level: 1
     }
   ];
@@ -99,13 +183,16 @@ export const TraceViewer = () => {
 
     console.log("Searching for:", searchQuery);
     
-    // Mock search results - filter based on query
+    // Enhanced search that matches partial strings and is case-insensitive
+    const searchTerm = searchQuery.toLowerCase();
     const results: SearchResult[] = mockTraces
       .filter(trace => 
-        trace.id.includes(searchQuery) ||
-        trace.correlationId.includes(searchQuery) ||
-        trace.causationId?.includes(searchQuery) ||
-        trace.aggregateId?.includes(searchQuery)
+        trace.id.toLowerCase().includes(searchTerm) ||
+        trace.correlationId.toLowerCase().includes(searchTerm) ||
+        trace.causationId?.toLowerCase().includes(searchTerm) ||
+        trace.aggregateId?.toLowerCase().includes(searchTerm) ||
+        trace.subtype.toLowerCase().includes(searchTerm) ||
+        trace.type.toLowerCase().includes(searchTerm)
       )
       .map(trace => ({
         id: trace.id,
@@ -192,7 +279,7 @@ export const TraceViewer = () => {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <GitBranch className="h-6 w-6 text-orange-400" />
-        <h1 className="text-2xl font-bold">Trace Viewer</h1>
+        <h1 className="text-2xl font-bold text-white">Trace Viewer</h1>
       </div>
 
       {/* Search Section */}
@@ -201,7 +288,7 @@ export const TraceViewer = () => {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="commandId, eventId, aggregateId, correlationId, causationId"
+              placeholder="commandId, eventId, aggregateId, correlationId, causationId, type..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-400"
@@ -241,9 +328,19 @@ export const TraceViewer = () => {
           <div className="text-center text-slate-400">
             <GitBranch className="h-16 w-16 mx-auto mb-4 text-slate-600" />
             <h2 className="text-xl font-medium mb-2 text-slate-300">Search for Traces</h2>
-            <p className="max-w-md">
-              Enter a commandId, eventId, aggregateId, correlationId, or causationId to visualize the trace flow
+            <p className="max-w-md mb-4">
+              Enter a commandId, eventId, aggregateId, correlationId, causationId, or event type to visualize the trace flow
             </p>
+            <div className="text-sm text-slate-500 space-y-1">
+              <p>Try searching for:</p>
+              <div className="flex flex-wrap gap-2 justify-center mt-2">
+                <code className="bg-slate-800 px-2 py-1 rounded text-xs">user-123</code>
+                <code className="bg-slate-800 px-2 py-1 rounded text-xs">order-456</code>
+                <code className="bg-slate-800 px-2 py-1 rounded text-xs">corr-order-456</code>
+                <code className="bg-slate-800 px-2 py-1 rounded text-xs">CreateUser</code>
+                <code className="bg-slate-800 px-2 py-1 rounded text-xs">PaymentProcessed</code>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
@@ -251,7 +348,7 @@ export const TraceViewer = () => {
           <div className="lg:col-span-2">
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader>
-                <CardTitle className="text-lg text-slate-100">Trace Diagram</CardTitle>
+                <CardTitle className="text-lg text-white">Trace Diagram</CardTitle>
               </CardHeader>
               <CardContent>
                 <div ref={canvasRef} className="relative min-h-96 bg-slate-950 rounded border border-slate-700 p-4 overflow-auto">
@@ -315,48 +412,48 @@ export const TraceViewer = () => {
           <div>
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader>
-                <CardTitle className="text-lg text-slate-100">Node Details</CardTitle>
+                <CardTitle className="text-lg text-white">Node Details</CardTitle>
               </CardHeader>
               <CardContent>
                 {selectedNode ? (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       {getNodeIcon(selectedNode.type)}
-                      <span className="font-medium text-slate-100">{selectedNode.type}</span>
+                      <span className="font-medium text-white">{selectedNode.type}</span>
                     </div>
                     
                     <div className="space-y-2 text-sm">
                       <div>
                         <span className="text-slate-400">ID:</span>
-                        <span className="ml-2 font-mono text-slate-100">{selectedNode.id}</span>
+                        <span className="ml-2 font-mono text-white">{selectedNode.id}</span>
                       </div>
                       <div>
                         <span className="text-slate-400">Type:</span>
-                        <span className="ml-2 text-slate-100">{selectedNode.subtype}</span>
+                        <span className="ml-2 text-white">{selectedNode.subtype}</span>
                       </div>
                       <div>
                         <span className="text-slate-400">Timestamp:</span>
-                        <span className="ml-2 text-slate-100">{selectedNode.timestamp}</span>
+                        <span className="ml-2 text-white">{selectedNode.timestamp}</span>
                       </div>
                       <div>
                         <span className="text-slate-400">Correlation ID:</span>
-                        <span className="ml-2 font-mono text-slate-100">{selectedNode.correlationId}</span>
+                        <span className="ml-2 font-mono text-white">{selectedNode.correlationId}</span>
                       </div>
                       {selectedNode.causationId && (
                         <div>
                           <span className="text-slate-400">Causation ID:</span>
-                          <span className="ml-2 font-mono text-slate-100">{selectedNode.causationId}</span>
+                          <span className="ml-2 font-mono text-white">{selectedNode.causationId}</span>
                         </div>
                       )}
                       {selectedNode.aggregateId && (
                         <div>
                           <span className="text-slate-400">Aggregate ID:</span>
-                          <span className="ml-2 font-mono text-slate-100">{selectedNode.aggregateId}</span>
+                          <span className="ml-2 font-mono text-white">{selectedNode.aggregateId}</span>
                         </div>
                       )}
                       <div>
                         <span className="text-slate-400">Tenant:</span>
-                        <span className="ml-2 text-slate-100">{selectedNode.tenantId}</span>
+                        <span className="ml-2 text-white">{selectedNode.tenantId}</span>
                       </div>
                     </div>
                   </div>
@@ -372,31 +469,31 @@ export const TraceViewer = () => {
             {/* Legend */}
             <Card className="bg-slate-900 border-slate-800 mt-4">
               <CardHeader>
-                <CardTitle className="text-sm text-slate-100">Legend</CardTitle>
+                <CardTitle className="text-sm text-white">Legend</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <div className="w-4 h-4 bg-blue-500 bg-opacity-20 border border-blue-500 rounded"></div>
-                  <Command className="h-3 w-3 text-slate-100" />
-                  <span className="text-slate-100">Commands</span>
+                  <Command className="h-3 w-3 text-white" />
+                  <span className="text-white">Commands</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <div className="w-4 h-4 bg-green-500 bg-opacity-20 border border-green-500 rounded"></div>
-                  <GitBranch className="h-3 w-3 text-slate-100" />
-                  <span className="text-slate-100">Events</span>
+                  <GitBranch className="h-3 w-3 text-white" />
+                  <span className="text-white">Events</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <div className="w-4 h-4 bg-purple-500 bg-opacity-20 border border-purple-500 rounded"></div>
-                  <Database className="h-3 w-3 text-slate-100" />
-                  <span className="text-slate-100">Snapshots</span>
+                  <Database className="h-3 w-3 text-white" />
+                  <span className="text-white">Snapshots</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <div className="w-4 h-4 bg-yellow-500 bg-opacity-30 border border-yellow-400 rounded"></div>
-                  <span className="text-slate-100">Selected Item</span>
+                  <span className="text-white">Selected Item</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <ArrowRight className="h-3 w-3 text-slate-500" />
-                  <span className="text-slate-100">Causation Flow</span>
+                  <span className="text-white">Causation Flow</span>
                 </div>
               </CardContent>
             </Card>
