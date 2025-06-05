@@ -30,6 +30,16 @@ Deep-dives: [Reflections](docs/reflections/index.md) · [ADRs](ADRs/) · [Curren
 
 ---
 
+### Use cases and Scale
+
+Todo. Address Scale capabilities in TPS.
+
+Current target scale: low thousands of TPS single-tenant backends. Path to scale mid-thousands as a separate doc. Include perf and load test paths.
+
+Current target use cases: high-fidelity, multi-tenant, event-sourced backends with complex business logic. Examples include financial systems, manufacturing industries, async-heavy workflows, SaaS platforms, and complex domain applications.
+
+---
+
 ## Prerequisites
 
 | Tool | Minimum Version | Notes                                                                                         |
