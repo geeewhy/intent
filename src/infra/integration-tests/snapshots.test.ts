@@ -9,11 +9,19 @@ import {PgEventStore} from '../pg/pg-event-store';
 const TEST_TIMEOUT = 30_000;
 const AGGREGATE_TYPE = 'system';
 
-const makeCmd = (tenant: string, aggId: string, userId: string, payload = {}): Command => ({
+const makeCmd = (tenant: string, aggId: string, userId: string, payload = {
+    testName: 'Snapshot Test',
+}): Command => ({
     id: uuidv4(),
     tenant_id: tenant,
     type: SystemCommandType.EXECUTE_TEST,
-    payload: {aggregateId: aggId, aggregateType: AGGREGATE_TYPE, ...payload},
+    payload: {
+        aggregateId: aggId,
+        aggregateType: AGGREGATE_TYPE,
+        testerId: userId,
+        testId: aggId,
+        ...payload
+    },
     metadata: {userId, timestamp: new Date(), role: 'tester'},
 });
 

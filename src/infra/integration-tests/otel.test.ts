@@ -27,6 +27,7 @@ describe('projection → OTEL span', () => {
                 aggregateType: 'system',
                 version: 1,
                 payload: {
+                    testId: randomUUID(),
                     testerId: randomUUID(),
                     testName: 'otel-projection-span',
                 }

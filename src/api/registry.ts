@@ -1,63 +1,71 @@
 import { DomainRegistry } from '../core/registry';
-import { initializeCore } from '../core/initialize';
+import initializeCore  from '../core/initialize';
+import { attachSchema } from '../core/shared/zod-schema-conversions';
 
-/**
- * Register routes for accessing the registry information
- * @param app The Express app or similar router
- */
 export function registerRegistryRoutes(app: any) {
-  // Initialize the registry
   initializeCore();
-  
-  // API endpoint to get all registry information
+
+  // -- init
+  const filterByDomain = (arr: any[], domain?: string) =>
+      domain ? arr.filter(i => i.domain === domain) : arr;
+
+  // -- registry routes
   app.get('/api/registry', (req: any, res: any) => {
+    const includeSchema = req.query.includeSchema === 'true';
+
+    const commands = attachSchema(
+        Object.values(DomainRegistry.commandTypes()),
+        includeSchema,
+    );
+
+    const events = attachSchema(
+        Object.values(DomainRegistry.eventTypes()),
+        includeSchema,
+    );
+
     res.json({
-      domains: DomainRegistry.domains(),
-      aggregates: Object.keys(DomainRegistry.aggregates()),
-      sagas: Object.keys(DomainRegistry.sagas()),
-      commandTypes: DomainRegistry.commandTypes(),
-      eventTypes: DomainRegistry.eventTypes(),
+      domains:     DomainRegistry.domains(),
+      aggregates:  Object.keys(DomainRegistry.aggregates()),
+      sagas:       Object.keys(DomainRegistry.sagas()),
+      commandTypes: commands,
+      eventTypes:   events,
     });
   });
-  
-  // API endpoint to get command types
+
+  // -- passthrough for registry metadata
   app.get('/api/registry/commands', (req: any, res: any) => {
-    const domain = req.query.domain;
-    if (domain) {
-      const commands = Object.values(DomainRegistry.commandTypes())
-        .filter(cmd => cmd.domain === domain);
-      res.json(commands);
-    } else {
-      res.json(DomainRegistry.commandTypes());
-    }
+    const includeSchema = req.query.includeSchema === 'true';
+    const domain        = req.query.domain as string | undefined;
+
+    const data = filterByDomain(
+        Object.values(DomainRegistry.commandTypes()),
+        domain,
+    );
+
+    res.json(attachSchema(data, includeSchema));
   });
-  
-  // API endpoint to get event types
+
   app.get('/api/registry/events', (req: any, res: any) => {
-    const domain = req.query.domain;
-    if (domain) {
-      const events = Object.values(DomainRegistry.eventTypes())
-        .filter(evt => evt.domain === domain);
-      res.json(events);
-    } else {
-      res.json(DomainRegistry.eventTypes());
-    }
+    const includeSchema = req.query.includeSchema === 'true';
+    const domain        = req.query.domain as string | undefined;
+
+    const data = filterByDomain(
+        Object.values(DomainRegistry.eventTypes()),
+        domain,
+    );
+
+    res.json(attachSchema(data, includeSchema));
   });
 
-  // API endpoint to get aggregates
-  app.get('/api/registry/aggregates', (req: any, res: any) => {
-    res.json(Object.keys(DomainRegistry.aggregates()));
-  });
-
-  // API endpoint to get sagas
-  app.get('/api/registry/sagas', (req: any, res: any) => {
-    res.json(Object.keys(DomainRegistry.sagas()));
-  });
-
-  // API endpoint to get domains
-  app.get('/api/registry/domains', (req: any, res: any) => {
-    res.json(DomainRegistry.domains());
-  });
+  app.get('/api/registry/aggregates', (_req: any, res: any) =>
+      res.json(Object.keys(DomainRegistry.aggregates())),
+  );
+  app.get('/api/registry/sagas', (_req: any, res: any) =>
+      res.json(Object.keys(DomainRegistry.sagas())),
+  );
+  app.get('/api/registry/domains', (_req: any, res: any) =>
+      res.json(DomainRegistry.domains()),
+  );
 }
 
 export default registerRegistryRoutes;
