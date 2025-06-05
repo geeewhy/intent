@@ -22,7 +22,7 @@ interface SidebarProps {
 }
 
 const allNavigationItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, hideTooltip: true }, // Dashboard with label but no tooltip
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, hideTooltip: true },
   { id: 'commands', label: 'Command Issuer', icon: Terminal },
   { id: 'events', label: 'Event Stream', icon: Activity },
   { id: 'projections', label: 'Projections', icon: Database, requiresFlag: 'projections' },
@@ -53,8 +53,18 @@ export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
       }
     };
 
+    // Listen for custom event dispatched when localStorage is updated in the same window
+    const handleFeatureFlagsUpdate = () => {
+      loadFeatureFlags();
+    };
+
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
+    };
   }, []);
 
   // Filter navigation items based on feature flags

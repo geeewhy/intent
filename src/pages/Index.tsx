@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -20,6 +20,27 @@ const Index = () => {
   const [currentTenant, setCurrentTenant] = useState('tenant-1');
   const [currentRole, setCurrentRole] = useState('admin');
   const [isAICompanionOpen, setIsAICompanionOpen] = useState(false);
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const loadFeatureFlags = () => {
+      const saved = localStorage.getItem('feature_flags');
+      setFeatureFlags(saved ? JSON.parse(saved) : {});
+    };
+
+    loadFeatureFlags();
+
+    // Listen for feature flag updates
+    const handleFeatureFlagsUpdate = () => {
+      loadFeatureFlags();
+    };
+
+    window.addEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
+    
+    return () => {
+      window.removeEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
+    };
+  }, []);
 
   const renderActiveView = () => {
     switch (activeView) {
@@ -60,6 +81,8 @@ const Index = () => {
     setActiveView(view as ActiveView);
   };
 
+  const shouldShowAICompanion = featureFlags.ai === true;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <Header 
@@ -81,10 +104,12 @@ const Index = () => {
       </div>
 
       <LogFooter />
-      <AICompanion 
-        isOpen={isAICompanionOpen} 
-        onToggle={() => setIsAICompanionOpen(!isAICompanionOpen)} 
-      />
+      {shouldShowAICompanion && (
+        <AICompanion 
+          isOpen={isAICompanionOpen} 
+          onToggle={() => setIsAICompanionOpen(!isAICompanionOpen)} 
+        />
+      )}
     </div>
   );
 };

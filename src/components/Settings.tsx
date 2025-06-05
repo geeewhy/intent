@@ -33,6 +33,9 @@ export const Settings = () => {
     const updatedFlags = { ...featureFlags, [flagId]: checked };
     setFeatureFlags(updatedFlags);
     localStorage.setItem('feature_flags', JSON.stringify(updatedFlags));
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('featureFlagsUpdated'));
   };
 
   const handleSave = () => {
@@ -65,6 +68,9 @@ export const Settings = () => {
     localStorage.removeItem('basic_auth_username');
     localStorage.removeItem('basic_auth_password');
     localStorage.removeItem('feature_flags');
+
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('featureFlagsUpdated'));
 
     toast({
       title: "Settings reset",
