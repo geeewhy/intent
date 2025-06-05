@@ -79,31 +79,6 @@ export const Settings = () => {
         <p className="text-slate-400 mt-2">Configure your API connection, authentication settings, and feature flags</p>
       </div>
 
-      {/* Feature Flags Section */}
-      <Card className="bg-slate-900 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-slate-100">Feature Flags</CardTitle>
-          <CardDescription className="text-slate-400">
-            Enable or disable specific features in the application
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {FEATURE_FLAGS.map((flag) => (
-            <div key={flag.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={flag.id}
-                checked={featureFlags[flag.id] || false}
-                onCheckedChange={(checked) => handleFeatureFlagChange(flag.id, checked as boolean)}
-                className="border-slate-600 data-[state=checked]:bg-blue-600"
-              />
-              <Label htmlFor={flag.id} className="text-slate-200">
-                {flag.label}
-              </Label>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
       {/* API Configuration Section */}
       <Card className="bg-slate-900 border-slate-700">
         <CardHeader>
@@ -177,6 +152,31 @@ export const Settings = () => {
               Reset
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Feature Flags Section */}
+      <Card className="bg-slate-900 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-slate-100">Feature Flags</CardTitle>
+          <CardDescription className="text-slate-400">
+            Enable or disable specific features in the application
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {FEATURE_FLAGS.map((flag) => (
+            <div key={flag.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={flag.id}
+                checked={featureFlags[flag.id] || false}
+                onCheckedChange={(checked) => handleFeatureFlagChange(flag.id, checked as boolean)}
+                className="border-slate-600 data-[state=checked]:bg-blue-600"
+              />
+              <Label htmlFor={flag.id} className="text-slate-200">
+                {flag.label}
+              </Label>
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>
