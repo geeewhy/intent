@@ -174,17 +174,17 @@ export const TraceViewer = () => {
     }
   ];
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
+  const performSearch = (query: string) => {
+    if (!query.trim()) {
       setSearchResults([]);
       setShowResults(false);
       return;
     }
 
-    console.log("Searching for:", searchQuery);
+    console.log("Searching for:", query);
     
     // Enhanced search that matches partial strings and is case-insensitive
-    const searchTerm = searchQuery.toLowerCase();
+    const searchTerm = query.toLowerCase();
     const results: SearchResult[] = mockTraces
       .filter(trace => 
         trace.id.toLowerCase().includes(searchTerm) ||
@@ -204,6 +204,19 @@ export const TraceViewer = () => {
 
     setSearchResults(results);
     setShowResults(results.length > 0);
+  };
+
+  // Auto-search as user types
+  useEffect(() => {
+    const delayedSearch = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(delayedSearch);
+  }, [searchQuery]);
+
+  const handleSearch = () => {
+    performSearch(searchQuery);
   };
 
   const handleResultSelect = (resultId: string) => {
