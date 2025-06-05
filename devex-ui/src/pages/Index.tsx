@@ -65,7 +65,7 @@ const Index = () => {
         }
         return <Dashboard />; // Fallback to dashboard
       case 'rewind':
-        return <div className="p-6 text-slate-300">Projection Rewind Tool - Coming Soon</div>;
+        return <div className="p-6 text-slate-300">Projection Rewind Tool - Coming Soon...ish...</div>;
       case 'settings':
         return <Settings />;
       default:
