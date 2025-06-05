@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight } from "lucide-react";
+import { Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import { commandRegistry, CommandSchema } from "@/data/commandRegistry";
 
 interface CommandIssuerProps {
@@ -136,8 +136,25 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
     }
   };
 
+  const generateFieldValue = (key: string, prop: any) => {
+    if (key.includes('Id')) {
+      const prefix = key.replace('Id', '').toLowerCase();
+      return `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+    
+    switch (prop.type) {
+      case 'string':
+        return `sample-${key}`;
+      case 'number':
+        return 42;
+      default:
+        return '';
+    }
+  };
+
   const renderFormField = (key: string, prop: any, required: boolean) => {
     const value = formData[key] || '';
+    const isIdField = key.includes('Id');
     
     switch (prop.type) {
       case 'string':
@@ -146,13 +163,26 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
             <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
               {key} {required && <span className="text-red-400">*</span>}
             </Label>
-            <Input
-              id={key}
-              value={value}
-              onChange={(e) => handleFormDataChange(key, e.target.value)}
-              placeholder={`Enter ${key}`}
-              className="bg-slate-800 border-slate-700 text-slate-100 h-8"
-            />
+            <div className="flex gap-2 flex-1">
+              <Input
+                id={key}
+                value={value}
+                onChange={(e) => handleFormDataChange(key, e.target.value)}
+                placeholder={`Enter ${key}`}
+                className="bg-slate-800 border-slate-700 text-slate-100 h-8"
+              />
+              {isIdField && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleFormDataChange(key, generateFieldValue(key, prop))}
+                  className="bg-slate-800 border-slate-700 hover:bg-slate-700 h-8 w-8"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
           </div>
         );
       case 'number':
