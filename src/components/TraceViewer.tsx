@@ -1,0 +1,22 @@
+
+import { Card, CardContent } from "@/components/ui/card";
+import { GitBranch } from "lucide-react";
+
+export const TraceViewer = () => {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <GitBranch className="h-6 w-6 text-orange-400" />
+        <h1 className="text-2xl font-bold">Trace Viewer</h1>
+      </div>
+
+      <Card className="bg-slate-900 border-slate-800">
+        <CardContent className="p-8 text-center">
+          <GitBranch className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+          <h3 className="text-lg font-medium text-slate-300 mb-1">Trace Viewer</h3>
+          <p className="text-slate-500">Visual causation graph coming soon...</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
