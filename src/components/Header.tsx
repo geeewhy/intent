@@ -1,8 +1,7 @@
 
 import { useState } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +20,6 @@ const tenants = ['tenant-1', 'tenant-2', 'tenant-3'];
 const roles = ['admin', 'user', 'viewer'];
 
 export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChange }: HeaderProps) => {
-  const [searchQuery, setSearchQuery] = useState("");
-
   return (
     <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center px-6 gap-6">
       {/* Logo */}
@@ -78,16 +75,8 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
         </DropdownMenu>
       </div>
 
-      {/* Global Search */}
-      <div className="flex-1 max-w-md relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <Input
-          placeholder="Search aggregates, events, commands..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-400"
-        />
-      </div>
+      {/* Spacer */}
+      <div className="flex-1" />
 
       {/* System Status Indicators */}
       <div className="flex items-center gap-2">
