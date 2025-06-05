@@ -22,7 +22,7 @@ interface SidebarProps {
 }
 
 const navigationItems = [
-  { id: 'dashboard', label: '', icon: LayoutDashboard }, // Dashboard with no label
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, hideTooltip: true }, // Dashboard with label but no tooltip
   { id: 'commands', label: 'Command Issuer', icon: Terminal },
   { id: 'events', label: 'Event Stream', icon: Activity },
   { id: 'projections', label: 'Projections', icon: Database },
@@ -67,17 +67,17 @@ export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
                   ? "bg-blue-600 text-white"
                   : "text-slate-300 hover:text-white hover:bg-slate-800"
               )}
-              title={isCollapsed ? (item.label || 'Dashboard') : undefined}
+              title={isCollapsed && !item.hideTooltip ? item.label : undefined}
             >
               <Icon className="h-5 w-5 flex-shrink-0" />
               {!isCollapsed && item.label && (
                 <span className="text-sm font-medium">{item.label}</span>
               )}
               
-              {/* Tooltip for collapsed state */}
-              {isCollapsed && (
+              {/* Tooltip for collapsed state (only for non-dashboard items) */}
+              {isCollapsed && !item.hideTooltip && (
                 <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-slate-100 text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                  {item.label || 'Dashboard'}
+                  {item.label}
                 </div>
               )}
             </button>
