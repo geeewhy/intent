@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { GitBranch, Search, ArrowRight, ArrowDown, Command, Database, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -147,36 +146,29 @@ export const TraceViewer = () => {
         <h1 className="text-2xl font-bold">Trace Viewer</h1>
       </div>
 
-      {/* Search Section */}
-      <Card className="bg-slate-900 border-slate-800">
-        <CardHeader>
-          <CardTitle className="text-lg">Trace Search</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="commandId, eventId, aggregateId, correlationId, causationId"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-400"
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-            <Button onClick={handleSearch} className="bg-orange-600 hover:bg-orange-700">
-              Search
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Search Section - No Card Wrapper */}
+      <div className="flex gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="commandId, eventId, aggregateId, correlationId, causationId"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-400"
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+          />
+        </div>
+        <Button onClick={handleSearch} className="bg-orange-600 hover:bg-orange-700">
+          Search
+        </Button>
+      </div>
 
       {/* Trace Visualization */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader>
-              <CardTitle className="text-lg">Trace Diagram</CardTitle>
+              <CardTitle className="text-lg text-slate-100">Trace Diagram</CardTitle>
             </CardHeader>
             <CardContent>
               <div ref={canvasRef} className="relative min-h-96 bg-slate-950 rounded border border-slate-700 p-4 overflow-auto">
