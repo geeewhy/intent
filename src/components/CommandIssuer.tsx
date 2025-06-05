@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -288,38 +287,43 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
             </div>
 
             {selectedCommandSchema && (
-              <Card className="bg-slate-800 border-slate-700">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-slate-100 text-lg">Payload</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Tabs value={payloadView} onValueChange={(value: "form" | "json") => setPayloadView(value)}>
-                    <TabsList className="bg-slate-800 border-slate-700">
-                      <TabsTrigger value="form" className="data-[state=active]:bg-slate-700">Form</TabsTrigger>
-                      <TabsTrigger value="json" className="data-[state=active]:bg-slate-700">JSON</TabsTrigger>
-                    </TabsList>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-100">Payload</h3>
+                
+                <Card className="bg-slate-800 border-slate-700">
+                  <CardContent className="p-4">
+                    <Tabs value={payloadView} onValueChange={(value: "form" | "json") => setPayloadView(value)}>
+                      <TabsList className="grid w-full grid-cols-2 bg-slate-700 mb-4">
+                        <TabsTrigger value="form" className="data-[state=active]:bg-slate-600 data-[state=active]:text-slate-100">
+                          Form
+                        </TabsTrigger>
+                        <TabsTrigger value="json" className="data-[state=active]:bg-slate-600 data-[state=active]:text-slate-100">
+                          JSON
+                        </TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="form" className="space-y-3 mt-0">
+                        {Object.entries(selectedCommandSchema.schema.properties).map(([key, prop]: [string, any]) => 
+                          renderFormField(key, prop, selectedCommandSchema.schema.required?.includes(key) || false)
+                        )}
+                      </TabsContent>
+                      
+                      <TabsContent value="json" className="mt-0">
+                        <Textarea
+                          value={payload}
+                          onChange={(e) => handlePayloadChange(e.target.value)}
+                          placeholder={generateExamplePayload(selectedCommand)}
+                          className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm min-h-32"
+                        />
+                      </TabsContent>
+                    </Tabs>
                     
-                    <TabsContent value="form" className="space-y-3 mt-4">
-                      {Object.entries(selectedCommandSchema.schema.properties).map(([key, prop]: [string, any]) => 
-                        renderFormField(key, prop, selectedCommandSchema.schema.required?.includes(key) || false)
-                      )}
-                    </TabsContent>
-                    
-                    <TabsContent value="json" className="mt-4">
-                      <Textarea
-                        value={payload}
-                        onChange={(e) => handlePayloadChange(e.target.value)}
-                        placeholder={generateExamplePayload(selectedCommand)}
-                        className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm min-h-32"
-                      />
-                    </TabsContent>
-                  </Tabs>
-                  
-                  <div className="text-xs text-slate-400">
-                    Required fields: {selectedCommandSchema.schema.required?.join(', ') || 'None'}
-                  </div>
-                </CardContent>
-              </Card>
+                    <div className="text-xs text-slate-400 mt-3">
+                      Required fields: {selectedCommandSchema.schema.required?.join(', ') || 'None'}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
 
             <div className="flex gap-3">
