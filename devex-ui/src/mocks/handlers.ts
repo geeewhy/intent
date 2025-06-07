@@ -1,3 +1,4 @@
+//devex-ui/src/mocks/handlers.ts
 import { http, HttpResponse, delay } from 'msw';
 import { v4 as uuid } from 'uuid';
 import { mockEvents } from '../data/mockEvents';

@@ -1,3 +1,4 @@
+//devex-ui/src/setupMocks.ts
 
 export async function setupMocks() {
   if (import.meta.env.VITE_API_MODE === 'mock') {

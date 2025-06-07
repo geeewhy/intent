@@ -1,3 +1,4 @@
+//devex-ui/src/data/mockLogs.ts
 import { faker } from '@faker-js/faker';
 
 export interface LogLine {

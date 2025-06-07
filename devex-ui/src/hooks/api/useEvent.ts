@@ -1,3 +1,4 @@
+//devex-ui/src/hooks/api/useEvent.ts
 import { useQuery } from '@tanstack/react-query';
 import { fetchEvent } from '@/data';
 import { eventsKeys } from './queryKeys';

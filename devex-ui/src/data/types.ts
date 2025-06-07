@@ -28,7 +28,8 @@ export interface Command<T = any> {
   status?: 'pending' | 'consumed' | 'processed' | 'failed';
   metadata?: Metadata;
   createdAt?: string;
-  updatedAt?: string;
+  updatedAt?: string
+  response?: any; // Optional response from API
 }
 
 /**

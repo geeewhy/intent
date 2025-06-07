@@ -1,3 +1,4 @@
+//devex-ui/src/hooks/api/queryKeys.ts
 
 export const eventsKeys = {
   all: ['events'] as const,

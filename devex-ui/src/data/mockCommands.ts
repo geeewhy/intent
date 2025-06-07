@@ -65,7 +65,7 @@ export const recentCommands = [
     id: '1',
     type: 'logMessage',
     aggregateId: 'system-123',
-    timestamp: '2024-01-15T10:30:00Z',
+    createdAt: '2024-01-15T10:30:00Z',
     status: 'success',
     payload: { message: "System started successfully", systemId: "sys-001" },
     response: { success: true, messageId: "msg-456" }
@@ -74,7 +74,7 @@ export const recentCommands = [
     id: '2',
     type: 'executeTest',
     aggregateId: 'test-456',
-    timestamp: '2024-01-15T10:25:00Z',
+    createdAt: '2024-01-15T10:25:00Z',
     status: 'success',
     payload: { testId: "test-001", testName: "Integration Test", parameters: { timeout: 5000 } },
     response: { success: true, testResult: "passed", duration: 2340 }

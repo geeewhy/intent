@@ -82,7 +82,6 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
       tenant_id: currentTenant,
       type: selectedCommand,
       payload: payloadData,
-      status: 'pending',
       metadata: {
         timestamp: new Date(),
         userId: crypto.randomUUID(),

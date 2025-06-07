@@ -1,3 +1,4 @@
+//devex-ui/src/hooks/api/useCommands.ts
 import { useQuery } from '@tanstack/react-query';
 import { fetchCommands } from '@/data';
 import { commandsKeys } from './queryKeys';
