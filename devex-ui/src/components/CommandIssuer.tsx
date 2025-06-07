@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,41 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
-import { commandRegistry, CommandSchema } from "@/data/commandRegistry";
+import { commandRegistry, submitCommand, fetchRecentCommands } from "@/data";
+import type { CommandSchema } from "@/data";
 
 interface CommandIssuerProps {
   currentTenant: string;
 }
-
-const recentCommands = [
-  {
-    id: '1',
-    type: 'logMessage',
-    aggregateId: 'system-123',
-    timestamp: '2024-01-15T10:30:00Z',
-    status: 'success',
-    payload: { message: "System started successfully", systemId: "sys-001" },
-    response: { success: true, messageId: "msg-456" }
-  },
-  {
-    id: '2',
-    type: 'executeTest',
-    aggregateId: 'test-456',
-    timestamp: '2024-01-15T10:25:00Z',
-    status: 'success',
-    payload: { testId: "test-001", testName: "Integration Test", parameters: { timeout: 5000 } },
-    response: { success: true, testResult: "passed", duration: 2340 }
-  },
-  {
-    id: '3',
-    type: 'simulateFailure',
-    aggregateId: 'system-789',
-    timestamp: '2024-01-15T10:20:00Z',
-    status: 'failed',
-    payload: { systemId: "sys-002" },
-    response: { success: false, error: "Simulation failed: Network timeout" }
-  }
-];
 
 const generateUUID4 = (): string => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -60,6 +31,20 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [payloadView, setPayloadView] = useState<"form" | "json">("form");
   const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
+  const [recentCommands, setRecentCommands] = useState<any[]>([]);
+
+  // Load recent commands on component mount
+  useEffect(() => {
+    const loadRecentCommands = async () => {
+      try {
+        const commands = await fetchRecentCommands();
+        setRecentCommands(commands);
+      } catch (error) {
+        console.error('Failed to load recent commands:', error);
+      }
+    };
+    loadRecentCommands();
+  }, []);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -70,8 +55,23 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
       tenant: currentTenant 
     });
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const result = await submitCommand({
+        tenant_id: currentTenant,
+        type: selectedCommand,
+        payload: payloadView === "form" ? formData : JSON.parse(payload || '{}'),
+        metadata: {
+          timestamp: new Date(),
+          source: 'command-issuer',
+          tags: { interface: 'web' }
+        }
+      });
+      
+      console.log('Command submission result:', result);
+    } catch (error) {
+      console.error('Command submission failed:', error);
+    }
+    
     setIsSubmitting(false);
     
     // Reset form

@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { GitBranch, Search, ArrowRight, ArrowDown, Command, Database, FileText } from "lucide-react";
+import { GitBranch, Search, ArrowRight, Command, Database, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { searchTraces, fetchTracesByCorrelation, fetchTraceById } from "@/data";
 
 interface TraceNode {
   id: string;
@@ -44,137 +44,7 @@ export const TraceViewer = () => {
   const [showDiagram, setShowDiagram] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Enhanced mock data similar to EventStreamViewer
-  const mockTraces: TraceNode[] = [
-    // User Creation Flow
-    {
-      id: "cmd-user-001",
-      type: "Command",
-      subtype: "CreateUser",
-      timestamp: "2024-01-15T10:30:00Z",
-      correlationId: "corr-user-123",
-      tenantId: "tenant-1",
-      level: 0
-    },
-    {
-      id: "evt-user-001",
-      type: "Event",
-      subtype: "UserCreated",
-      timestamp: "2024-01-15T10:30:01Z",
-      correlationId: "corr-user-123",
-      causationId: "cmd-user-001",
-      aggregateId: "user-123",
-      tenantId: "tenant-1",
-      level: 1
-    },
-    {
-      id: "evt-user-002",
-      type: "Event",
-      subtype: "WelcomeEmailSent",
-      timestamp: "2024-01-15T10:30:02Z",
-      correlationId: "corr-user-123",
-      causationId: "evt-user-001",
-      aggregateId: "email-456",
-      tenantId: "tenant-1",
-      level: 2
-    },
-    {
-      id: "snap-user-001",
-      type: "Snapshot",
-      subtype: "UserAggregate",
-      timestamp: "2024-01-15T10:30:03Z",
-      correlationId: "corr-user-123",
-      aggregateId: "user-123",
-      tenantId: "tenant-1",
-      level: 1
-    },
-    // Order Placement Flow
-    {
-      id: "cmd-order-001",
-      type: "Command",
-      subtype: "PlaceOrder",
-      timestamp: "2024-01-15T10:29:00Z",
-      correlationId: "corr-order-456",
-      tenantId: "tenant-1",
-      level: 0
-    },
-    {
-      id: "evt-order-001",
-      type: "Event",
-      subtype: "OrderPlaced",
-      timestamp: "2024-01-15T10:29:01Z",
-      correlationId: "corr-order-456",
-      causationId: "cmd-order-001",
-      aggregateId: "order-456",
-      tenantId: "tenant-1",
-      level: 1
-    },
-    {
-      id: "evt-order-002",
-      type: "Event",
-      subtype: "InventoryReserved",
-      timestamp: "2024-01-15T10:29:02Z",
-      correlationId: "corr-order-456",
-      causationId: "evt-order-001",
-      aggregateId: "inventory-789",
-      tenantId: "tenant-1",
-      level: 2
-    },
-    {
-      id: "cmd-payment-001",
-      type: "Command",
-      subtype: "ProcessPayment",
-      timestamp: "2024-01-15T10:29:03Z",
-      correlationId: "corr-order-456",
-      causationId: "evt-order-002",
-      tenantId: "tenant-1",
-      level: 3
-    },
-    {
-      id: "evt-payment-001",
-      type: "Event",
-      subtype: "PaymentProcessed",
-      timestamp: "2024-01-15T10:29:04Z",
-      correlationId: "corr-order-456",
-      causationId: "cmd-payment-001",
-      aggregateId: "payment-789",
-      tenantId: "tenant-1",
-      level: 4
-    },
-    {
-      id: "snap-order-001",
-      type: "Snapshot",
-      subtype: "OrderAggregate",
-      timestamp: "2024-01-15T10:29:05Z",
-      correlationId: "corr-order-456",
-      aggregateId: "order-456",
-      tenantId: "tenant-1",
-      level: 1
-    },
-    // Payment Refund Flow
-    {
-      id: "cmd-refund-001",
-      type: "Command",
-      subtype: "ProcessRefund",
-      timestamp: "2024-01-15T10:28:00Z",
-      correlationId: "corr-refund-789",
-      tenantId: "tenant-2",
-      level: 0
-    },
-    {
-      id: "evt-refund-001",
-      type: "Event",
-      subtype: "PaymentRefunded",
-      timestamp: "2024-01-15T10:28:01Z",
-      correlationId: "corr-refund-789",
-      causationId: "cmd-refund-001",
-      aggregateId: "payment-789",
-      tenantId: "tenant-2",
-      level: 1
-    }
-  ];
-
-  const performSearch = (query: string) => {
+  const performSearch = async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
       setShowResults(false);
@@ -183,18 +53,9 @@ export const TraceViewer = () => {
 
     console.log("Searching for:", query);
     
-    // Enhanced search that matches partial strings and is case-insensitive
-    const searchTerm = query.toLowerCase();
-    const results: SearchResult[] = mockTraces
-      .filter(trace => 
-        trace.id.toLowerCase().includes(searchTerm) ||
-        trace.correlationId.toLowerCase().includes(searchTerm) ||
-        trace.causationId?.toLowerCase().includes(searchTerm) ||
-        trace.aggregateId?.toLowerCase().includes(searchTerm) ||
-        trace.subtype.toLowerCase().includes(searchTerm) ||
-        trace.type.toLowerCase().includes(searchTerm)
-      )
-      .map(trace => ({
+    try {
+      const traces = await searchTraces(query);
+      const results: SearchResult[] = traces.map(trace => ({
         id: trace.id,
         type: trace.type,
         subtype: trace.subtype,
@@ -202,8 +63,11 @@ export const TraceViewer = () => {
         display: `${trace.type} - ${trace.subtype} (${trace.id})`
       }));
 
-    setSearchResults(results);
-    setShowResults(results.length > 0);
+      setSearchResults(results);
+      setShowResults(results.length > 0);
+    } catch (error) {
+      console.error('Search failed:', error);
+    }
   };
 
   // Auto-search as user types
@@ -219,7 +83,7 @@ export const TraceViewer = () => {
     performSearch(searchQuery);
   };
 
-  const handleResultSelect = (resultId: string) => {
+  const handleResultSelect = async (resultId: string) => {
     const selectedResult = searchResults.find(r => r.id === resultId);
     if (!selectedResult) return;
 
@@ -227,34 +91,21 @@ export const TraceViewer = () => {
     setShowResults(false);
     setShowDiagram(true);
 
-    // Load traces for the selected correlation ID
-    const correlationId = selectedResult.correlationId;
-    const filteredTraces = mockTraces.filter(trace => 
-      trace.correlationId === correlationId
-    );
-    
-    setTraces(filteredTraces);
-    
-    // Generate edges based on causation relationships
-    const newEdges: TraceEdge[] = [];
-    filteredTraces.forEach(trace => {
-      if (trace.causationId) {
-        const parent = filteredTraces.find(t => t.id === trace.causationId);
-        if (parent) {
-          newEdges.push({
-            from: parent.id,
-            to: trace.id,
-            type: 'causation'
-          });
-        }
-      }
-    });
-    setEdges(newEdges);
+    try {
+      // Load traces for the selected correlation ID
+      const correlationId = selectedResult.correlationId;
+      const { traces: filteredTraces, edges: newEdges } = await fetchTracesByCorrelation(correlationId);
+      
+      setTraces(filteredTraces);
+      setEdges(newEdges);
 
-    // Auto-select the clicked result
-    const selectedTrace = filteredTraces.find(t => t.id === resultId);
-    if (selectedTrace) {
-      setSelectedNode(selectedTrace);
+      // Auto-select the clicked result
+      const selectedTrace = filteredTraces.find(t => t.id === resultId);
+      if (selectedTrace) {
+        setSelectedNode(selectedTrace);
+      }
+    } catch (error) {
+      console.error('Failed to load trace details:', error);
     }
   };
 
