@@ -87,31 +87,5 @@ export const recentCommands = [
   }
 ];
 
-// Fake fetch function for commands
-export const fetchCommands = async (tenantId: string, limit = 50): Promise<Command[]> => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  return mockCommands
-    .filter(command => command.tenant_id === tenantId)
-    .slice(0, limit);
-};
-
-// Fake submit command function
-export const submitCommand = async (command: Omit<Command, 'id' | 'status'>): Promise<{ success: boolean; commandId: string; message?: string }> => {
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing time
-  
-  const commandId = `cmd-${Date.now()}`;
-  const success = Math.random() > 0.1; // 90% success rate
-  
-  if (success) {
-    return { success: true, commandId, message: 'Command submitted successfully' };
-  } else {
-    return { success: false, commandId, message: 'Command failed to process' };
-  }
-};
-
-// Fake fetch recent commands
-export const fetchRecentCommands = async (limit = 10) => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  return recentCommands.slice(0, limit);
-};
+// These functions are now handled by MSW
+// Keeping the mock data for reference

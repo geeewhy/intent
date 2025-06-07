@@ -147,48 +147,5 @@ export const mockTraces: TraceNode[] = [
   }
 ];
 
-// Fake search function
-export const searchTraces = async (query: string): Promise<TraceNode[]> => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  const searchTerm = query.toLowerCase();
-  return mockTraces.filter(trace => 
-    trace.id.toLowerCase().includes(searchTerm) ||
-    trace.correlationId.toLowerCase().includes(searchTerm) ||
-    trace.causationId?.toLowerCase().includes(searchTerm) ||
-    trace.aggregateId?.toLowerCase().includes(searchTerm) ||
-    trace.subtype.toLowerCase().includes(searchTerm) ||
-    trace.type.toLowerCase().includes(searchTerm)
-  );
-};
-
-// Fake fetch traces by correlation ID
-export const fetchTracesByCorrelation = async (correlationId: string): Promise<{ traces: TraceNode[], edges: TraceEdge[] }> => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  const traces = mockTraces.filter(trace => trace.correlationId === correlationId);
-  
-  // Generate edges based on causation relationships
-  const edges: TraceEdge[] = [];
-  traces.forEach(trace => {
-    if (trace.causationId) {
-      const parent = traces.find(t => t.id === trace.causationId);
-      if (parent) {
-        edges.push({
-          from: parent.id,
-          to: trace.id,
-          type: 'causation'
-        });
-      }
-    }
-  });
-
-  return { traces, edges };
-};
-
-// Fake fetch trace by ID
-export const fetchTraceById = async (traceId: string): Promise<TraceNode | null> => {
-  await new Promise(resolve => setTimeout(resolve, 150));
-  
-  return mockTraces.find(trace => trace.id === traceId) || null;
-};
+// These functions are now handled by MSW
+// Keeping the mock data for reference

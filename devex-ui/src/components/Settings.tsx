@@ -25,20 +25,21 @@ export const Settings = () => {
   const [useBasicAuth, setUseBasicAuth] = useState(localStorage.getItem('use_basic_auth') === 'true');
   const [username, setUsername] = useState(localStorage.getItem('basic_auth_username') || '');
   const [password, setPassword] = useState(localStorage.getItem('basic_auth_password') || '');
-  
+  const [useRealBackend, setUseRealBackend] = useState(localStorage.getItem('api_mode') === 'real');
+
   // Feature flags state
   const [featureFlags, setFeatureFlags] = useState(() => {
     const saved = localStorage.getItem('feature_flags');
     return saved ? JSON.parse(saved) : {};
   });
-  
+
   const { toast } = useToast();
 
   const handleFeatureFlagChange = (flagId: string, checked: boolean) => {
     const updatedFlags = { ...featureFlags, [flagId]: checked };
     setFeatureFlags(updatedFlags);
     localStorage.setItem('feature_flags', JSON.stringify(updatedFlags));
-    
+
     // Dispatch custom event to notify other components
     window.dispatchEvent(new CustomEvent('featureFlagsUpdated'));
   };
@@ -46,7 +47,8 @@ export const Settings = () => {
   const handleSave = () => {
     localStorage.setItem('api_uri', apiUri);
     localStorage.setItem('use_basic_auth', useBasicAuth.toString());
-    
+    localStorage.setItem('api_mode', useRealBackend ? 'real' : 'mock');
+
     if (useBasicAuth) {
       localStorage.setItem('basic_auth_username', username);
       localStorage.setItem('basic_auth_password', password);
@@ -57,8 +59,11 @@ export const Settings = () => {
 
     toast({
       title: "Settings saved",
-      description: "Your API configuration has been updated.",
+      description: "Your API configuration has been updated. Reload the page for changes to take effect.",
     });
+
+    // Reload the page to apply the API mode change
+    window.location.reload();
   };
 
   const handleReset = () => {
@@ -66,12 +71,14 @@ export const Settings = () => {
     setUseBasicAuth(false);
     setUsername('');
     setPassword('');
+    setUseRealBackend(false);
     setFeatureFlags({});
-    
+
     localStorage.removeItem('api_uri');
     localStorage.removeItem('use_basic_auth');
     localStorage.removeItem('basic_auth_username');
     localStorage.removeItem('basic_auth_password');
+    localStorage.removeItem('api_mode');
     localStorage.removeItem('feature_flags');
 
     // Dispatch custom event to notify other components
@@ -79,8 +86,11 @@ export const Settings = () => {
 
     toast({
       title: "Settings reset",
-      description: "All settings have been cleared.",
+      description: "All settings have been cleared. Reload the page for changes to take effect.",
     });
+
+    // Reload the page to apply the API mode change
+    window.location.reload();
   };
 
   return (
@@ -112,6 +122,17 @@ export const Settings = () => {
           </div>
 
           <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="real-backend"
+                checked={useRealBackend}
+                onCheckedChange={setUseRealBackend}
+              />
+              <Label htmlFor="real-backend" className="text-slate-200">
+                Use real backend
+              </Label>
+            </div>
+
             <div className="flex items-center space-x-2">
               <Switch
                 id="basic-auth"

@@ -152,18 +152,5 @@ export const createEventStream = (tenantId?: string) => {
   };
 };
 
-// Fake fetch function for events
-export const fetchEvents = async (tenantId: string, limit = 50): Promise<Event[]> => {
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-  
-  return mockEvents
-    .filter(event => event.tenant_id === tenantId)
-    .slice(0, limit);
-};
-
-// Fake fetch function for specific event
-export const fetchEvent = async (eventId: string): Promise<Event | null> => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  return mockEvents.find(event => event.id === eventId) || null;
-};
+// These functions are now handled by MSW
+// Keeping the mock data for reference

@@ -21,6 +21,8 @@ const tenants = ['tenant-1', 'tenant-2', 'tenant-3'];
 const roles = ['admin', 'user', 'viewer'];
 
 export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChange }: HeaderProps) => {
+  const apiMode = import.meta.env.VITE_API_MODE || 'mock';
+
   return (
     <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center px-6 gap-6">
       {/* Logo */}
@@ -31,6 +33,9 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
           className="h-8 w-8"
         />
         <span className="text-xl font-semibold text-slate-100">Intent DevX</span>
+        <span className={`badge ${apiMode === 'mock' ? 'bg-yellow-600' : 'bg-green-600'} text-white text-xs px-2 py-1 rounded`}>
+          API {apiMode.toUpperCase()}
+        </span>
       </div>
 
       {/* Tenant/Role Switchers */}

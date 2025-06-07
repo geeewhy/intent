@@ -1,80 +1,70 @@
-//devex-ui/src/data/api.ts
+// devex-ui/src/data/api.ts
+
 // WebSocket connection for live streaming
 export class EventStreamWebSocket {
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000;
+  private readonly maxReconnectAttempts = 5;
+  private readonly reconnectDelay = 1_000;
 
   constructor(private url: string, private tenantId: string) {}
 
-  connect(onEvent: (event: any) => void, onError?: (error: Event) => void) {
+  connect(onEvent: (e: any) => void, onError?: (err: Event) => void) {
     try {
       this.ws = new WebSocket(`${this.url}?tenant=${this.tenantId}`);
-      
+
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
         this.reconnectAttempts = 0;
+        console.log('[WS] connected');
       };
 
-      this.ws.onmessage = (message) => {
+      this.ws.onmessage = (m) => {
         try {
-          const event = JSON.parse(message.data);
-          onEvent(event);
-        } catch (error) {
-          console.error('Failed to parse event:', error);
+          onEvent(JSON.parse(m.data));
+        } catch (err) {
+          console.error('[WS] JSON parse error', err);
         }
       };
 
       this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        this.handleReconnect(onEvent, onError);
+        console.log('[WS] closed – reconnecting…');
+        this.reconnect(onEvent, onError);
       };
 
-      this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        onError?.(error as any);
-      };
-    } catch (error) {
-      console.error('Failed to connect WebSocket:', error);
-      onError?.(error as any);
+      this.ws.onerror = (e) => onError?.(e);
+    } catch (err) {
+      console.error('[WS] connection failed', err);
+      onError?.(err as any);
     }
   }
 
-  private handleReconnect(onEvent: (event: any) => void, onError?: (error: Event) => void) {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      this.reconnectAttempts++;
-      const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-      
-      console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
-      
-      setTimeout(() => {
-        this.connect(onEvent, onError);
-      }, delay);
-    } else {
-      console.error('Max reconnection attempts reached');
+  private reconnect(onEvent: (e: any) => void, onError?: (err: Event) => void) {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('[WS] max reconnect attempts reached');
+      return;
     }
+    this.reconnectAttempts += 1;
+    const delay = this.reconnectDelay * 2 ** (this.reconnectAttempts - 1);
+    setTimeout(() => this.connect(onEvent, onError), delay);
   }
 
   disconnect() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
+    this.ws?.close();
+    this.ws = null;
   }
 
-  send(data: any) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+  send(data: unknown) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(data));
     } else {
-      console.error('WebSocket is not connected');
+      console.error('[WS] not open');
     }
   }
 }
 
 // API client configuration
 export const API_CONFIG = {
-  baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:8080',
+  baseUrl: import.meta.env.VITE_API_URL || '',
   wsUrl: import.meta.env.VITE_WS_URL || 'ws://localhost:8080/events/stream',
   endpoints: {
     events: '/api/events',
@@ -84,44 +74,35 @@ export const API_CONFIG = {
   }
 };
 
-// Generic API fetch wrapper
+// --- URL builder
+function buildUrl(endpoint: string, params?: Record<string, string>): string {
+  const url = API_CONFIG.baseUrl
+      ? new URL(`${API_CONFIG.baseUrl}${endpoint}`)
+      : new URL(endpoint, window.location.origin);
+
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
+  }
+  return url.toString();
+}
+
+// --- Thin fetch wrapper (GET/POST)
 export const apiClient = {
   async get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
-    const url = new URL(`${API_CONFIG.baseUrl}${endpoint}`);
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.append(key, value);
-      });
-    }
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        'Content-Type': 'application/json',
-        // Add auth headers here
-      }
+    const res = await fetch(buildUrl(endpoint, params), {
+      headers: { 'Content-Type': 'application/json' }
     });
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
-
-    return response.json();
+    if (!res.ok) throw new Error(`GET ${endpoint} -> ${res.status}`);
+    return res.json();
   },
 
-  async post<T>(endpoint: string, data: any): Promise<T> {
-    const response = await fetch(`${API_CONFIG.baseUrl}${endpoint}`, {
+  async post<T>(endpoint: string, data: unknown): Promise<T> {
+    const res = await fetch(buildUrl(endpoint), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Add auth headers here
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
-
-    return response.json();
+    if (!res.ok) throw new Error(`POST ${endpoint} -> ${res.status}`);
+    return res.json();
   }
 };

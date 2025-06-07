@@ -19,4 +19,8 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    'process.env.VITE_API_MODE': JSON.stringify(process.env.VITE_API_MODE || 'mock'),
+    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || '')
+  },
 }));
