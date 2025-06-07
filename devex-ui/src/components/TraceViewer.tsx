@@ -53,7 +53,7 @@ export const TraceViewer = () => {
     }
 
     console.log("Searching for:", query);
-    
+
     try {
       const traces = await searchTraces(query);
       const results: SearchResult[] = traces.map(trace => ({
@@ -96,7 +96,7 @@ export const TraceViewer = () => {
       // Load traces for the selected correlation ID
       const correlationId = selectedResult.correlationId;
       const { traces: filteredTraces, edges: newEdges } = await fetchTracesByCorrelation(correlationId);
-      
+
       setTraces(filteredTraces);
       setEdges(newEdges);
 
@@ -157,7 +157,7 @@ export const TraceViewer = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-400"
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
           </div>
           <Button onClick={handleSearch} className="bg-orange-600 hover:bg-orange-700">
@@ -286,7 +286,7 @@ export const TraceViewer = () => {
                       {getNodeIcon(selectedNode.type)}
                       <span className="font-medium text-white">{selectedNode.type}</span>
                     </div>
-                    
+
                     <div className="space-y-2 text-sm">
                       <div>
                         <span className="text-slate-400">ID:</span>

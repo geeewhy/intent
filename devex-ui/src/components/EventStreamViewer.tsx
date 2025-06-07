@@ -1,51 +1,38 @@
 //devex-ui/src/components/EventStreamViewer.tsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Activity, Filter, Clock } from "lucide-react";
-import { createEventStream, fetchEvents } from "@/data";
 import type { Event } from "@/data";
+import { useEvents } from "@/hooks/api";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface EventStreamViewerProps {
   currentTenant: string;
 }
 
 export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => {
-  const [events, setEvents] = useState<Event[]>([]);
   const [filter, setFilter] = useState("");
   const [isLive, setIsLive] = useState(true);
+  const queryClient = useQueryClient();
 
-  // Load initial events
-  useEffect(() => {
-    const loadEvents = async () => {
-      try {
-        const initialEvents = await fetchEvents(currentTenant);
-        setEvents(initialEvents);
-      } catch (error) {
-        console.error('Failed to load events:', error);
-      }
-    };
+  // Use the events hook for data fetching and live updates
+  const { data: events = [], isFetching } = useEvents(currentTenant, 50, { enabled: isLive });
 
-    loadEvents();
-  }, [currentTenant]);
-
-  // Simulate live events
-  useEffect(() => {
-    if (!isLive) return;
-
-    const stream = createEventStream(currentTenant);
-    const unsubscribe = stream.subscribe((newEvent: Event) => {
-      setEvents(prev => [newEvent, ...prev].slice(0, 50)); // Keep only latest 50
-    });
-
-    return unsubscribe;
-  }, [isLive, currentTenant]);
+  // If live mode is paused, cancel the query
+  const toggleLiveMode = () => {
+    if (isLive) {
+      // Pause live mode
+      queryClient.cancelQueries({ queryKey: ['events', currentTenant] });
+    }
+    setIsLive(!isLive);
+  };
 
   const filteredEvents = events.filter(event => {
     if (!filter) return event.tenant_id === currentTenant;
-    
+
     const searchTerm = filter.toLowerCase();
     return event.tenant_id === currentTenant && (
       event.type.toLowerCase().includes(searchTerm) ||
@@ -84,13 +71,14 @@ export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => 
               className="pl-10 bg-slate-800 border-slate-700 text-slate-100 w-64"
             />
           </div>
-          
+
           <Button
             variant={isLive ? "default" : "outline"}
-            onClick={() => setIsLive(!isLive)}
+            onClick={toggleLiveMode}
             className={isLive ? "bg-green-600 hover:bg-green-700" : "border-slate-600 text-slate-300"}
           >
             {isLive ? "Pause" : "Resume"} Live
+            {isFetching && isLive && <span className="ml-2">•</span>}
           </Button>
         </div>
       </div>
@@ -112,7 +100,7 @@ export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => 
                     </Badge>
                   )}
                 </div>
-                
+
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <Clock className="h-3 w-3" />
                   {event.metadata?.timestamp && formatTimestamp(event.metadata.timestamp)}
@@ -124,7 +112,7 @@ export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => 
                   <div className="text-slate-400">Aggregate ID:</div>
                   <div className="text-slate-100 font-mono">{event.aggregateId}</div>
                 </div>
-                
+
                 <div>
                   <div className="text-slate-400">Correlation ID:</div>
                   <div className="text-slate-100 font-mono">{event.metadata?.correlationId || 'N/A'}</div>

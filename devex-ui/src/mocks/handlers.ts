@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from 'msw';
+import { v4 as uuid } from 'uuid';
 import { mockEvents } from '../data/mockEvents';
 import { mockCommands, recentCommands } from '../data/mockCommands';
 import { mockTraces } from '../data/mockTraces';
@@ -91,24 +92,39 @@ export const handlers = [
   }),
 
   http.post('/api/commands', async ({ request }) => {
-    const command = await request.json();
-    const commandId = `cmd-${Date.now()}`;
-    const success = Math.random() > 0.1; // 90% success rate
+    const cmd = await request.json();       // already validated on the client
 
-    await delay(1000);
+    // ensure we have an id – issuer now sends one, but just in case
+    const commandId = cmd.id ?? uuid();
 
-    if (success) {
-      return HttpResponse.json({ 
-        success: true, 
-        commandId, 
-        message: 'Command submitted successfully' 
-      });
-    } else {
-      return new HttpResponse(
-        JSON.stringify({ success: false, commandId, message: 'Command failed to process' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    // 💡  Fake "business logic"
+    const didSucceed = Math.random() > 0.1;
+
+    // Emit 1-n mock events when the command "succeeds"
+    const producedEvents = didSucceed
+      ? Array.from({ length: Math.ceil(Math.random() * 3) }).map((_, i) => {
+          const ev = {
+            ...mockEvents[0],             // clone any mock as a template
+            id: `evt-${Date.now()}-${i}`,
+            tenant_id : cmd.tenant_id,
+            type      : `${cmd.type}Executed`,
+            aggregateId: cmd.payload.aggregateId ?? 'agg-missing',
+            metadata  : { ...mockEvents[0].metadata, correlationId: commandId }
+          };
+          mockEvents.unshift(ev);         // append to in-memory list
+          return ev;
+        })
+      : undefined;
+
+    await delay(750);
+
+    const result = {
+      status : didSucceed ? 'success' : 'fail',
+      events : producedEvents,
+      error  : didSucceed ? undefined : 'Simulated failure'
+    };
+
+    return HttpResponse.json(result);
   }),
 
   http.get('/api/commands/recent', async ({ request }) => {
@@ -174,5 +190,18 @@ export const handlers = [
 
     await delay(150);
     return HttpResponse.json(trace);
+  }),
+
+  http.get('/api/metrics', () => {
+    const commands = mockCommands.length;
+    const events   = mockEvents.length;
+    return HttpResponse.json({
+      commands,
+      events,
+      projections : 89,
+      traces      : 23,
+      aggregates  : 67,
+      health      : 1 // a number between 0 and 1, 1 = ok, <1 = trouble
+    });
   })
 ];

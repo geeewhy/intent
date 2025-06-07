@@ -4,11 +4,11 @@ import { useState } from "react";
 import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useLogsStream } from "@/hooks/useLogsStream";
+import { useLogs } from "@/hooks/api";
 
 export const LogFooter = ({ tenant='tenant-1' }: { tenant?: string }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const logs = useLogsStream(tenant);
+  const { data: logs = [] } = useLogs(tenant, 100);
 
   const lastLog = logs[0] || { 
     id: '', 

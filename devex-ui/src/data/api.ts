@@ -1,4 +1,5 @@
 // devex-ui/src/data/api.ts
+import { toast } from "@/components/ui/sonner";
 
 // WebSocket connection for live streaming
 export class EventStreamWebSocket {
@@ -41,11 +42,23 @@ export class EventStreamWebSocket {
   private reconnect(onEvent: (e: any) => void, onError?: (err: Event) => void) {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error('[WS] max reconnect attempts reached');
+      toast.error('WebSocket connection failed', {
+        description: 'Could not reconnect after multiple attempts. Try reconnecting manually.'
+      });
       return;
     }
     this.reconnectAttempts += 1;
     const delay = this.reconnectDelay * 2 ** (this.reconnectAttempts - 1);
     setTimeout(() => this.connect(onEvent, onError), delay);
+  }
+
+  manualReconnect(onEvent: (e: any) => void, onError?: (err: Event) => void) {
+    this.reconnectAttempts = 0;
+    this.disconnect();
+    this.connect(onEvent, onError);
+    toast.info('Reconnecting to WebSocket', {
+      description: 'Attempting to establish a new connection...'
+    });
   }
 
   disconnect() {

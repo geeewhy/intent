@@ -1,5 +1,5 @@
 import { apiClient, API_CONFIG } from './api';
-import type { Event, Command } from './types';
+import type { Event, Command, CommandResult } from './types';
 import type { LogLine } from './mockLogs';
 
 // Events API
@@ -22,11 +22,7 @@ export const fetchCommands = async (tenantId: string, limit = 50): Promise<Comma
   });
 };
 
-export const submitCommand = async (command: Omit<Command, 'id' | 'status'>): Promise<{ 
-  success: boolean; 
-  commandId: string; 
-  message?: string 
-}> => {
+export const submitCommand = async (command: Command): Promise<CommandResult> => {
   return apiClient.post(API_CONFIG.endpoints.commands, command);
 };
 

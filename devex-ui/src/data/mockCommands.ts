@@ -8,7 +8,7 @@ export const mockCommands: Command[] = [
     tenant_id: 'tenant-1',
     type: 'CreateUser',
     payload: { email: 'user@example.com', name: 'John Doe', role: 'user' },
-    status: 'processed',
+    status: 'pending',
     metadata: {
       userId: 'admin-1',
       role: 'admin',
@@ -18,7 +18,8 @@ export const mockCommands: Command[] = [
       source: 'web-api',
       tags: { environment: 'production' },
       schemaVersion: 1
-    }
+    },
+    createdAt: '2024-01-15T10:30:00Z',
   },
   {
     id: 'cmd-002',
@@ -35,7 +36,8 @@ export const mockCommands: Command[] = [
       source: 'mobile-app',
       tags: { channel: 'mobile' },
       schemaVersion: 1
-    }
+    },
+    createdAt: '2024-01-15T10:29:00Z',
   },
   {
     id: 'cmd-003',
@@ -53,7 +55,8 @@ export const mockCommands: Command[] = [
       source: 'payment-service',
       tags: { processor: 'stripe' },
       schemaVersion: 1
-    }
+    },
+    createdAt: '2024-01-15T10:28:00Z',
   }
 ];
 

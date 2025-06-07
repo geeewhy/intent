@@ -27,6 +27,8 @@ export interface Command<T = any> {
   payload: T;
   status?: 'pending' | 'consumed' | 'processed' | 'failed';
   metadata?: Metadata;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /**
@@ -43,3 +45,12 @@ export interface Event<T = any> {
   status?: 'processed' | 'failed';
   metadata?: Metadata;
 }
+
+/**
+ * Command Result returned from the server
+ */
+export type CommandResult = {
+  status: 'success' | 'fail';
+  events?: Event[];
+  error?: string;
+};

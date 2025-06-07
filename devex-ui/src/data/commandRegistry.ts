@@ -86,9 +86,7 @@ export const commandRegistry: CommandSchema[] = [
         },
         "parameters": {
           "type": "object",
-          "additionalProperties": {
-            "type": "any"
-          }
+          "additionalProperties": true
         }
       },
       "required": [
@@ -116,9 +114,7 @@ export const commandRegistry: CommandSchema[] = [
         },
         "parameters": {
           "type": "object",
-          "additionalProperties": {
-            "type": "any"
-          }
+          "additionalProperties": true
         }
       },
       "required": [

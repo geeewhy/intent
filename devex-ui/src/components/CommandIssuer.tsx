@@ -1,5 +1,5 @@
 //devex-ui/src/components/CommandIssuer.tsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,20 +8,20 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
-import { commandRegistry, submitCommand, fetchRecentCommands } from "@/data";
+import { Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight, RefreshCw, AlertCircle } from "lucide-react";
+import { commandRegistry } from "@/data";
 import type { CommandSchema } from "@/data";
+import { useCommands, useSubmitCommand } from "@/hooks/api";
+import { validate } from "@/utils/schemaValidator";
+import { makeExample } from "@/utils/schemaFaker";
+import { toast } from "@/components/ui/sonner";
 
 interface CommandIssuerProps {
   currentTenant: string;
 }
 
 const generateUUID4 = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+  return crypto.randomUUID();
 };
 
 export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
@@ -29,103 +29,108 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
   const [aggregateId, setAggregateId] = useState("");
   const [payload, setPayload] = useState("");
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [payloadView, setPayloadView] = useState<"form" | "json">("form");
   const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
-  const [recentCommands, setRecentCommands] = useState<any[]>([]);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  // Load recent commands on component mount
-  useEffect(() => {
-    const loadRecentCommands = async () => {
+  // Use React Query hooks
+  const { data: recentCommands = [] } = useCommands(currentTenant, 10);
+  const { mutate: submitCommandMutation, isPending: isSubmitting } = useSubmitCommand();
+
+  const handleSubmit = () => {
+    // Clear previous validation errors
+    setValidationErrors([]);
+
+    // Get the payload based on the current view
+    const payloadData = payloadView === "form" ? formData : (() => {
       try {
-        const commands = await fetchRecentCommands();
-        setRecentCommands(commands);
-      } catch (error) {
-        console.error('Failed to load recent commands:', error);
+        return JSON.parse(payload || '{}');
+      } catch (e) {
+        setValidationErrors(['Invalid JSON format']);
+        toast.error('Invalid JSON format', {
+          description: 'Please check your JSON syntax and try again.'
+        });
+        return null;
+      }
+    })();
+
+    // If JSON parsing failed, don't proceed
+    if (payloadData === null) return;
+
+    // Validate the payload against the command schema
+    const { ok, errors } = validate(selectedCommand, payloadData);
+
+    if (!ok) {
+      setValidationErrors(errors);
+
+      // Show toast with validation errors
+      toast.error('Command validation failed', {
+        description: (
+          <ul className="list-disc pl-4 mt-2 space-y-1">
+            {errors.map((error, index) => (
+              <li key={index} className="text-sm">{error}</li>
+            ))}
+          </ul>
+        )
+      });
+
+      return;
+    }
+
+    const commandPayload = {
+      id: crypto.randomUUID(),
+      tenant_id: currentTenant,
+      type: selectedCommand,
+      payload: payloadData,
+      status: 'pending',
+      metadata: {
+        timestamp: new Date(),
+        userId: crypto.randomUUID(),
+        role: 'user',
+        source: 'command-issuer'
       }
     };
-    loadRecentCommands();
-  }, []);
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    console.log('Submitting command:', { 
-      type: selectedCommand, 
-      aggregateId, 
-      payload: payloadView === "form" ? formData : JSON.parse(payload || '{}'),
-      tenant: currentTenant 
+    console.log('Submitting command:', commandPayload);
+
+    submitCommandMutation(commandPayload, {
+      onSuccess: (result) => {
+        console.log('Command submission result:', result);
+
+        toast.success(
+          result.status === 'success'
+            ? 'Command executed 🎉'
+            : 'Command failed',
+          {
+            description:
+              result.status === 'success'
+                ? `${result.events?.length ?? 0} event(s) produced`
+                : result.error
+          }
+        );
+
+        // Reset form
+        setSelectedCommand("");
+        setAggregateId("");
+        setPayload("");
+        setFormData({});
+        setValidationErrors([]);
+      },
+      onError: (error) => {
+        console.error('Command submission failed:', error);
+
+        // Show error toast
+        toast.error('Command submission failed', {
+          description: error instanceof Error ? error.message : 'An unknown error occurred'
+        });
+      }
     });
-    
-    try {
-      const result = await submitCommand({
-        tenant_id: currentTenant,
-        type: selectedCommand,
-        payload: payloadView === "form" ? formData : JSON.parse(payload || '{}'),
-        metadata: {
-          timestamp: new Date(),
-          source: 'command-issuer',
-          tags: { interface: 'web' }
-        }
-      });
-      
-      console.log('Command submission result:', result);
-    } catch (error) {
-      console.error('Command submission failed:', error);
-    }
-    
-    setIsSubmitting(false);
-    
-    // Reset form
-    setSelectedCommand("");
-    setAggregateId("");
-    setPayload("");
-    setFormData({});
   };
 
   const generateAggregateId = () => {
     setAggregateId(generateUUID4());
   };
 
-  const generateExamplePayload = (commandType: string): string => {
-    const commandSchema = commandRegistry.find(cmd => cmd.type === commandType);
-    if (!commandSchema) return '{}';
-
-    const example: Record<string, any> = {};
-    const properties = commandSchema.schema.properties;
-    const required = commandSchema.schema.required || [];
-
-    Object.entries(properties).forEach(([key, prop]: [string, any]) => {
-      if (required.includes(key) || Math.random() > 0.5) {
-        switch (prop.type) {
-          case 'string':
-            if (key.includes('Id')) {
-              example[key] = `${key.replace('Id', '')}-${Math.random().toString(36).substr(2, 6)}`;
-            } else if (key === 'message') {
-              example[key] = "Sample log message";
-            } else if (key === 'testName') {
-              example[key] = "Sample Test";
-            } else {
-              example[key] = `sample-${key}`;
-            }
-            break;
-          case 'number':
-            example[key] = key === 'count' ? 3 : 42;
-            break;
-          case 'object':
-            if (key === 'parameters') {
-              example[key] = { "param1": "value1", "param2": 123 };
-            } else {
-              example[key] = {};
-            }
-            break;
-          default:
-            example[key] = null;
-        }
-      }
-    });
-
-    return JSON.stringify(example, null, 2);
-  };
 
   const handleFormDataChange = (key: string, value: any) => {
     const newFormData = { ...formData, [key]: value };
@@ -143,25 +148,11 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
     }
   };
 
-  const generateFieldValue = (key: string, prop: any) => {
-    if (key.includes('Id')) {
-      return generateUUID4();
-    }
-    
-    switch (prop.type) {
-      case 'string':
-        return `sample-${key}`;
-      case 'number':
-        return 42;
-      default:
-        return '';
-    }
-  };
 
   const renderFormField = (key: string, prop: any, required: boolean) => {
     const value = formData[key] || '';
     const isIdField = key.includes('Id');
-    
+
     switch (prop.type) {
       case 'string':
         return (
@@ -182,7 +173,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                   type="button"
                   variant="outline"
                   size="icon"
-                  onClick={() => handleFormDataChange(key, generateFieldValue(key, prop))}
+                  onClick={() => handleFormDataChange(key, isIdField ? crypto.randomUUID() : `sample-${key}`)}
                   className="bg-slate-800 border-slate-700 hover:bg-slate-700 h-8 w-8"
                 >
                   <RefreshCw className="h-3 w-3" />
@@ -325,7 +316,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
             {selectedCommandSchema && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-100">Payload</h3>
-                
+
                 <Card className="bg-slate-800 border-slate-700">
                   <CardContent className="p-4">
                     <Tabs value={payloadView} onValueChange={(value: "form" | "json") => setPayloadView(value)}>
@@ -337,23 +328,23 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                           JSON
                         </TabsTrigger>
                       </TabsList>
-                      
+
                       <TabsContent value="form" className="space-y-3 mt-0">
                         {Object.entries(selectedCommandSchema.schema.properties).map(([key, prop]: [string, any]) => 
                           renderFormField(key, prop, selectedCommandSchema.schema.required?.includes(key) || false)
                         )}
                       </TabsContent>
-                      
+
                       <TabsContent value="json" className="mt-0">
                         <Textarea
                           value={payload}
                           onChange={(e) => handlePayloadChange(e.target.value)}
-                          placeholder={generateExamplePayload(selectedCommand)}
+                          placeholder={selectedCommandSchema ? JSON.stringify(makeExample(selectedCommandSchema.schema), null, 2) : '{}'}
                           className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm min-h-32"
                         />
                       </TabsContent>
                     </Tabs>
-                    
+
                     <div className="text-xs text-slate-400 mt-3">
                       Required fields: {selectedCommandSchema.schema.required?.join(', ') || 'None'}
                     </div>
@@ -362,10 +353,24 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
               </div>
             )}
 
+            {validationErrors.length > 0 && (
+              <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-md">
+                <div className="flex items-center gap-2 mb-2 text-red-400">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="font-medium">Validation errors</span>
+                </div>
+                <ul className="list-disc pl-5 space-y-1">
+                  {validationErrors.map((error, index) => (
+                    <li key={index} className="text-sm text-red-300">{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <Button 
                 onClick={handleSubmit}
-                disabled={!selectedCommand || !aggregateId || isSubmitting}
+                disabled={!selectedCommand || isSubmitting}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {isSubmitting ? (
@@ -380,18 +385,17 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                   </>
                 )}
               </Button>
-              
+
               {selectedCommand && (
                 <Button 
                   variant="outline"
                   onClick={() => {
-                    const example = generateExamplePayload(selectedCommand);
+                    const schema = selectedCommandSchema?.schema;
+                    if (!schema) return;
+                    const example = JSON.stringify(makeExample(schema), null, 2);
                     setPayload(example);
-                    try {
-                      setFormData(JSON.parse(example));
-                    } catch (e) {
-                      // Handle parse error
-                    }
+                    setFormData(JSON.parse(example));
+                    setValidationErrors([]);
                   }}
                   className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
@@ -424,22 +428,46 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                       ) : (
                         <ChevronRight className="h-3 w-3 flex-shrink-0" />
                       )}
-                      <span className="text-slate-500">
-                        {new Date(cmd.timestamp).toLocaleDateString()}
-                      </span>
-                      <span className="text-slate-400 font-mono truncate">{cmd.aggregateId}</span>
+                      {
+                        cmd.createdAt && <span className="text-slate-500">
+                        {new Date(cmd.createdAt).toLocaleString(undefined, {
+                          hour:   '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
+                       </span>
+                      }
+                      <span className="text-slate-400 font-mono truncate">{cmd.id}</span>
                       <span className="text-slate-200 truncate">{cmd.type}</span>
                     </div>
+
                     <Badge 
-                      variant={cmd.status === 'success' ? 'default' : 'destructive'}
+                      variant={
+                        ({
+                          pending:   'secondary',
+                          processed: 'default',
+                          consumed:  'default',
+                          failed:    'destructive',
+                        } as const)[cmd.status]
+                      }
                       className="text-xs flex-shrink-0"
                     >
                       {cmd.status}
                     </Badge>
                   </div>
-                  
+
                   {expandedCommand === cmd.id && (
                     <div className="ml-5 p-3 bg-slate-800/50 rounded text-xs space-y-2">
+                      <span className="text-slate-400 font-medium">
+                        {new Date(cmd.createdAt).toLocaleString(undefined, {
+                          year:   '2-digit',
+                          month:   '2-digit',
+                          day:   '2-digit',
+                          hour:   '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
+                      </span>
                       <div>
                         <div className="text-slate-400 font-medium mb-1">Payload:</div>
                         <pre className="text-slate-300 bg-slate-900 p-2 rounded overflow-x-auto">
