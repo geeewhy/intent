@@ -1,0 +1,9 @@
+<!-- intent-logo.svg -->
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#2D3748" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Hexagon -->
+    <polygon points="60,6 108,34 108,86 60,114 12,86 12,34"/>
+    <!-- Play arrow -->
+    <polyline points="50,40 80,60 50,80" fill="#2D3748"/>
+    <!-- Event dot -->
+    <circle cx="38" cy="60" r="5" fill="#2D3748" stroke="none"/>
+</svg>

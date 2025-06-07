@@ -25,7 +25,7 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
       {/* Logo */}
       <div className="flex items-center gap-3">
         <img 
-          src="/lovable-uploads/b28afc6a-f1bf-4c1d-b306-a6152ab27bd4.png" 
+          src="/logo.svg"
           alt="Intent Logo" 
           className="h-8 w-8"
         />
