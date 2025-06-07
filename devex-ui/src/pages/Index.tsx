@@ -39,7 +39,7 @@ const Index = () => {
     };
 
     window.addEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
-    
+
     return () => {
       window.removeEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
     };
@@ -109,19 +109,19 @@ const Index = () => {
         onTenantChange={setCurrentTenant}
         onRoleChange={setCurrentRole}
       />
-      
+
       <div className="flex flex-1 pb-12"> {/* Add bottom padding for footer */}
         <Sidebar 
           activeView={activeView}
           onViewChange={handleViewChange}
         />
-        
+
         <main className="flex-1 p-6 overflow-auto">
           {renderActiveView()}
         </main>
       </div>
 
-      <LogFooter />
+      <LogFooter tenant={currentTenant} />
       {shouldShowAICompanion && (
         <AICompanion 
           isOpen={isAICompanionOpen} 

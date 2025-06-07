@@ -70,7 +70,8 @@ export const API_CONFIG = {
     events: '/api/events',
     commands: '/api/commands',
     traces: '/api/traces',
-    aggregates: '/api/aggregates'
+    aggregates: '/api/aggregates',
+    logs: '/api/logs'
   }
 };
 

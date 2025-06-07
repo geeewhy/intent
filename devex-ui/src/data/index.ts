@@ -5,6 +5,7 @@ export * from './types';
 export * from './mockEvents';
 export * from './mockCommands';
 export * from './mockTraces';
+export * from './mockLogs';
 export * from './commandRegistry';
 export * from './api';
 export * from './apiService';

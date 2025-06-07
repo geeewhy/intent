@@ -2,8 +2,37 @@ import { http, HttpResponse, delay } from 'msw';
 import { mockEvents } from '../data/mockEvents';
 import { mockCommands, recentCommands } from '../data/mockCommands';
 import { mockTraces } from '../data/mockTraces';
+import { logStore, makeLog, pushLog } from '../data/mockLogs';
 
 export const handlers = [
+  // Logs list
+  http.get('/api/logs', ({ request }) => {
+    const url = new URL(request.url);
+    const tenant = url.searchParams.get('tenant_id');
+    const limit  = Number(url.searchParams.get('limit') || '50');
+    const data   = (tenant ? logStore.filter(l=>l.tenant_id===tenant) : logStore)
+                    .slice(0, limit);
+    return HttpResponse.json(data);
+  }),
+
+  // Logs stream (SSE style)
+  http.get('/api/logs/stream', async ({ request }) => {
+    // naive: send 10 logs, 1 × sec
+    const url = new URL(request.url);
+    const tenant = url.searchParams.get('tenant_id') ?? 'tenant-1';
+
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
+    for (let i=0;i<10;i++) {
+      const l = makeLog(tenant);
+      pushLog(l);
+      await writer.write(encoder.encode(`data:${JSON.stringify(l)}\n\n`));
+      await delay(1000);
+    }
+    await writer.close();
+    return new HttpResponse(readable, { headers: { 'Content-Type': 'text/event-stream' }});
+  }),
   // Events handlers
   http.get('/api/events', async ({ request }) => {
     const url = new URL(request.url);

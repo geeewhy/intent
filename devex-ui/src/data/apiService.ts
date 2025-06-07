@@ -1,5 +1,6 @@
 import { apiClient, API_CONFIG } from './api';
 import type { Event, Command } from './types';
+import type { LogLine } from './mockLogs';
 
 // Events API
 export const fetchEvents = async (tenantId: string, limit = 50): Promise<Event[]> => {
@@ -47,3 +48,6 @@ export const fetchTracesByCorrelation = async (correlationId: string) => {
 export const fetchTraceById = async (traceId: string) => {
   return apiClient.get(`${API_CONFIG.endpoints.traces}/${traceId}`);
 };
+
+export const fetchLogs = (tenant: string, limit=50) =>
+  apiClient.get<LogLine[]>(API_CONFIG.endpoints.logs, { tenant_id: tenant, limit: limit+'' });
