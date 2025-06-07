@@ -33,9 +33,6 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
           className="h-8 w-8"
         />
         <span className="text-xl font-semibold text-slate-100">Intent DevX</span>
-        <span className={`badge ${apiMode === 'mock' ? 'bg-yellow-600' : 'bg-green-600'} text-white text-xs px-2 py-1 rounded`}>
-          API {apiMode.toUpperCase()}
-        </span>
       </div>
 
       {/* Tenant/Role Switchers */}
@@ -89,6 +86,9 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
         <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" title="System Healthy" />
         <div className="h-2 w-2 bg-yellow-500 rounded-full" title="2 Warnings" />
       </div>
+      <span className={`badge ${apiMode === 'mock' ? 'bg-yellow-600' : 'bg-green-600'} text-white text-xs px-2 py-1 rounded`}>
+          API MODE: {apiMode.toUpperCase()}
+      </span>
     </header>
   );
 };
