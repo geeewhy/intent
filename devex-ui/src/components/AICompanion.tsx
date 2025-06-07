@@ -1,3 +1,4 @@
+//devex-ui/src/components/AICompanion.tsx
 
 import { useState } from "react";
 import { Bot, X, Send, ChevronLeft, ChevronRight } from "lucide-react";

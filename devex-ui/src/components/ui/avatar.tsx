@@ -1,3 +1,4 @@
+//devex-ui/src/components/ui/avatar.tsx
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 

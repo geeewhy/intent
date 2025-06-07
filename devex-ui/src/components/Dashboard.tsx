@@ -1,3 +1,4 @@
+//devex-ui/src/components/Dashboard.tsx
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Database, Terminal, GitBranch, Package, AlertTriangle } from "lucide-react";

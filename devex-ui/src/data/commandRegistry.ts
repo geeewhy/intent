@@ -1,3 +1,4 @@
+//devex-ui/src/data/commandRegistry.ts
 
 export interface CommandSchema {
   type: string;

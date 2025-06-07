@@ -1,3 +1,4 @@
+//devex-ui/src/components/LogFooter.tsx
 
 import { useState } from "react";
 import { Terminal, ChevronUp, ChevronDown } from "lucide-react";

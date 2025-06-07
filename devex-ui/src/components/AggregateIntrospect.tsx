@@ -1,3 +1,4 @@
+//devex-ui/src/components/AggregateIntrospect.tsx
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Package } from "lucide-react";

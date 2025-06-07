@@ -1,3 +1,4 @@
+//devex-ui/src/components/TraceViewer.tsx
 import { useState, useRef, useEffect } from "react";
 import { GitBranch, Search, ArrowRight, Command, Database, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
