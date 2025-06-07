@@ -62,7 +62,6 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.3",
     "zod": "^3.23.8",
-    "@faker-js/faker": "^9.8.0",
     "ajv": "^8.17.1",
     "json-schema-faker": "^0.5.9"
   },
