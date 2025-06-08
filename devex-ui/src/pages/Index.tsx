@@ -20,7 +20,8 @@ import { useAppCtx } from '@/app/AppProvider';
 type ActiveView = 'dashboard' | 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status' | 'rewind' | 'ai' | 'settings';
 
 const Index = () => {
-  const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+  const initialView = window.location.pathname.replace(/^\//, '') as ActiveView || 'dashboard';
+  const [activeView, setActiveView] = useState<ActiveView>(initialView);
   const [isAICompanionOpen, setIsAICompanionOpen] = useState(false);
   const { tenant, role, flags } = useAppCtx();
 

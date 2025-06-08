@@ -1,5 +1,6 @@
 //devex-ui/src/components/TraceViewer.tsx
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   GitBranch,
   Search,
@@ -45,7 +46,8 @@ interface SearchResult {
 }
 
 export const TraceViewer = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [params, setParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(() => params.get('q') || "");
   const [traces, setTraces] = useState<TraceNode[]>([]);
   const [edges, setEdges] = useState<TraceEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<TraceNode | null>(null);
@@ -81,6 +83,12 @@ export const TraceViewer = () => {
     }
   };
 
+  // Watch URL param changes
+  useEffect(() => {
+    const q = params.get('q') || '';
+    setSearchQuery(q);
+  }, [params]);
+
   // Auto-search as user types
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
@@ -89,6 +97,16 @@ export const TraceViewer = () => {
 
     return () => clearTimeout(delayedSearch);
   }, [searchQuery]);
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (val) next.set('q', val);
+      else next.delete('q');
+      return next;
+    });
+  };
 
   const handleSearch = () => {
     performSearch(searchQuery);
@@ -165,7 +183,7 @@ export const TraceViewer = () => {
             <Input
               placeholder="commandId, eventId, aggregateId, correlationId, causationId, type..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-400"
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
