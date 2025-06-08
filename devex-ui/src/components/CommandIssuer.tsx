@@ -30,14 +30,33 @@ export const CommandIssuer = () => {
   const [payloadView, setPayloadView] = useState<"form" | "json">("form");
   const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
 
   // Use React Query hooks
   const { data: recentCommands = [] } = useCommands(tenant, 10);
   const { mutate: submitCommandMutation, isPending: isSubmitting } = useSubmitCommand();
 
+  // Extract field names from validation error messages
+  const extractFieldNames = (errors: string[]): Set<string> => {
+    const fieldNames = new Set<string>();
+    errors.forEach(error => {
+      // Common AJV error patterns like "must have required property 'fieldName'" or "should be string (fieldName)"
+      const requiredMatch = error.match(/must have required property '(\w+)'/);
+      const typeMatch = error.match(/should be \w+ \((\w+)\)/);
+
+      if (requiredMatch && requiredMatch[1]) {
+        fieldNames.add(requiredMatch[1]);
+      } else if (typeMatch && typeMatch[1]) {
+        fieldNames.add(typeMatch[1]);
+      }
+    });
+    return fieldNames;
+  };
+
   const handleSubmit = () => {
     // Clear previous validation errors
     setValidationErrors([]);
+    setInvalidFields(new Set());
 
     // Get the payload based on the current view
     const payloadData = payloadView === "form" ? formData : (() => {
@@ -60,6 +79,10 @@ export const CommandIssuer = () => {
 
     if (!ok) {
       setValidationErrors(errors);
+
+      // Extract field names from errors and set invalid fields
+      const fieldNames = extractFieldNames(errors);
+      setInvalidFields(fieldNames);
 
       // Show toast with validation errors
       toast.error('Command validation failed', {
@@ -112,6 +135,7 @@ export const CommandIssuer = () => {
         setPayload("");
         setFormData({});
         setValidationErrors([]);
+        setInvalidFields(new Set());
       },
       onError: (error) => {
         console.error('Command submission failed:', error);
@@ -149,13 +173,15 @@ export const CommandIssuer = () => {
   const renderFormField = (key: string, prop: Record<string, unknown>, required: boolean) => {
     const value = formData[key] || '';
     const isIdField = key.includes('Id');
+    const isInvalid = invalidFields.has(key);
 
     switch (prop.type) {
       case 'string':
         return (
           <div key={key} className="flex items-center gap-3">
-            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
+            <Label htmlFor={key} className={`${isInvalid ? 'text-red-400' : 'text-slate-300'} min-w-[100px] text-sm`}>
               {key} {required && <span className="text-red-400">*</span>}
+              {isInvalid && <span className="ml-1">⚠️</span>}
             </Label>
             <div className="flex gap-2 flex-1">
               <Input
@@ -163,7 +189,7 @@ export const CommandIssuer = () => {
                 value={value}
                 onChange={(e) => handleFormDataChange(key, e.target.value)}
                 placeholder={`Enter ${key}`}
-                className="bg-slate-800 border-slate-700 text-slate-100 h-8"
+                className={`bg-slate-800 ${isInvalid ? 'border-red-500' : 'border-slate-700'} text-slate-100 h-8 ${isInvalid ? 'focus-visible:ring-red-500' : ''}`}
               />
               {isIdField && (
                 <Button
@@ -182,8 +208,9 @@ export const CommandIssuer = () => {
       case 'number':
         return (
           <div key={key} className="flex items-center gap-3">
-            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
+            <Label htmlFor={key} className={`${isInvalid ? 'text-red-400' : 'text-slate-300'} min-w-[100px] text-sm`}>
               {key} {required && <span className="text-red-400">*</span>}
+              {isInvalid && <span className="ml-1">⚠️</span>}
             </Label>
             <Input
               id={key}
@@ -191,15 +218,16 @@ export const CommandIssuer = () => {
               value={value}
               onChange={(e) => handleFormDataChange(key, Number(e.target.value))}
               placeholder={`Enter ${key}`}
-              className="bg-slate-800 border-slate-700 text-slate-100 h-8"
+              className={`bg-slate-800 ${isInvalid ? 'border-red-500' : 'border-slate-700'} text-slate-100 h-8 ${isInvalid ? 'focus-visible:ring-red-500' : ''}`}
             />
           </div>
         );
       case 'object':
         return (
           <div key={key} className="space-y-2">
-            <Label htmlFor={key} className="text-slate-300 text-sm">
+            <Label htmlFor={key} className={`${isInvalid ? 'text-red-400' : 'text-slate-300'} text-sm`}>
               {key} {required && <span className="text-red-400">*</span>}
+              {isInvalid && <span className="ml-1">⚠️</span>}
             </Label>
             <Textarea
               id={key}
@@ -213,22 +241,23 @@ export const CommandIssuer = () => {
                 }
               }}
               placeholder={`Enter ${key} as JSON`}
-              className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm h-20"
+              className={`bg-slate-800 ${isInvalid ? 'border-red-500' : 'border-slate-700'} text-slate-100 font-mono text-sm h-20 ${isInvalid ? 'focus-visible:ring-red-500' : ''}`}
             />
           </div>
         );
       default:
         return (
           <div key={key} className="flex items-center gap-3">
-            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
+            <Label htmlFor={key} className={`${isInvalid ? 'text-red-400' : 'text-slate-300'} min-w-[100px] text-sm`}>
               {key} {required && <span className="text-red-400">*</span>}
+              {isInvalid && <span className="ml-1">⚠️</span>}
             </Label>
             <Input
               id={key}
               value={value}
               onChange={(e) => handleFormDataChange(key, e.target.value)}
               placeholder={`Enter ${key}`}
-              className="bg-slate-800 border-slate-700 text-slate-100 h-8"
+              className={`bg-slate-800 ${isInvalid ? 'border-red-500' : 'border-slate-700'} text-slate-100 h-8 ${isInvalid ? 'focus-visible:ring-red-500' : ''}`}
             />
           </div>
         );
@@ -265,6 +294,8 @@ export const CommandIssuer = () => {
                   setSelectedCommand(value);
                   setFormData({});
                   setPayload("");
+                  setValidationErrors([]);
+                  setInvalidFields(new Set());
                 }}>
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
                     <SelectValue placeholder="Select command type" />
@@ -393,6 +424,7 @@ export const CommandIssuer = () => {
                     setPayload(example);
                     setFormData(JSON.parse(example));
                     setValidationErrors([]);
+                    setInvalidFields(new Set());
                   }}
                   className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
