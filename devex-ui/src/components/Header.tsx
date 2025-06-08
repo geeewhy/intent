@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAppCtx } from '@/app/AppProvider';
 import { isMock, apiMode } from '@/config/apiMode';
+import { Logo } from './Logo';
 
 const tenants = ['tenant-1', 'tenant-2', 'tenant-3'];
 const roles = ['admin', 'user', 'viewer'];
@@ -22,11 +23,7 @@ export const Header = () => {
     <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center px-6 gap-6">
       {/* Logo */}
       <div className="flex items-center gap-3">
-        <img 
-          src="/logo.svg"
-          alt="Intent Logo" 
-          className="h-8 w-8"
-        />
+        <Logo />
         <span className="text-xl font-semibold text-slate-100">Intent DevX</span>
       </div>
 

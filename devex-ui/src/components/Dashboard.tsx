@@ -16,8 +16,8 @@ export const Dashboard = () => {
       color: "text-blue-500"
     },
     {
-      title: "Active Events",
-      value: data?.events ?? '—',
+      title: "Total Events",
+      value: data?.totalEvents ?? '—',
       description: "Events in stream",
       icon: Activity,
       color: "text-green-500"

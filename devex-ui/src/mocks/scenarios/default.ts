@@ -23,10 +23,10 @@ export function loadDefault() {
   const LOG_SEED_SIZE = Math.floor(SEED_SIZE * 1.25); // Logs are typically more numerous
 
   // Seed with random data
-  eventStore.seed(() => makeEvent(), 3);
-  commandStore.seed(() => makeCommand(), SEED_SIZE);
-  traceStore.seed(() => makeTrace(), SEED_SIZE);
-  logStore.seed(() => makeLog(), LOG_SEED_SIZE);
+  eventStore.seed(() => makeEvent(), 10 + Math.floor((Math.random() - 0.5) * 10));
+  commandStore.seed(() => makeCommand(), SEED_SIZE + Math.floor((Math.random() - 0.5) * 100));
+  traceStore.seed(() => makeTrace(), SEED_SIZE + Math.floor((Math.random() - 0.5) * 100));
+  logStore.seed(() => makeLog(), LOG_SEED_SIZE + Math.floor((Math.random() - 0.5) * 100));
 
   // Seed recent commands with specific data
   recentCommandsStore.push({

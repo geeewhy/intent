@@ -195,11 +195,13 @@ export const handlers = [
     // Get the count of items in each store by listing all items
     const commands = commandStore.list(1000).length;
     const events   = eventStore.list(1000).length;
+    const totalEvents = Math.floor(events * 10) + Math.floor(Math.random() * 20); // mock logic
     const traces   = traceStore.list(1000).length;
     return HttpResponse.json({
       commands,
       events,
       projections : 89,
+      totalEvents,
       traces,
       aggregates  : 67,
       health      : 1 // a number between 0 and 1, 1 = ok, <1 = trouble
