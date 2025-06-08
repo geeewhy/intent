@@ -8,7 +8,7 @@ export type UUID = string;
 export interface Metadata {
   userId?: UUID; //AUTH/RBAC/RLS
   role?: string; //RBAC/RLS
-  timestamp: Date;
+  timestamp: string;
   correlationId?: UUID; // ID for tracking the flow of actions
   causationId?: UUID; // ID of the action that caused this command
   requestId?: string; // Useful for cross-service tracing

@@ -81,7 +81,7 @@ export const CommandIssuer = () => {
       type: selectedCommand,
       payload: payloadData,
       metadata: {
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         userId: crypto.randomUUID(),
         role: 'user',
         source: 'command-issuer'
@@ -454,7 +454,7 @@ export const CommandIssuer = () => {
                   </div>
 
                   {expandedCommand === cmd.id && (
-                    <div className="ml-5 p-3 bg-slate-800/50 rounded text-xs space-y-2">
+                    <div key={`${cmd.id}-details`} className="ml-5 p-3 bg-slate-800/50 rounded text-xs space-y-2">
                       <span className="text-slate-400 font-medium">
                         {new Date(cmd.createdAt).toLocaleString(undefined, {
                           year:   '2-digit',

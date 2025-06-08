@@ -17,11 +17,15 @@ export function loadDefault() {
   traceStore.reset();
   logStore.reset();
 
+  // Get seed size from ENV var or use default
+  const SEED_SIZE = Number(import.meta.env.VITE_SEED_SIZE ?? 200);
+  const LOG_SEED_SIZE = Math.floor(SEED_SIZE * 1.25); // Logs are typically more numerous
+
   // Seed with random data
-  eventStore.seed(() => makeEvent(), 200);
-  commandStore.seed(() => makeCommand(), 200);
-  traceStore.seed(() => makeTrace(), 200);
-  logStore.seed(() => makeLog(), 250);
+  eventStore.seed(() => makeEvent(), SEED_SIZE);
+  commandStore.seed(() => makeCommand(), SEED_SIZE);
+  traceStore.seed(() => makeTrace(), SEED_SIZE);
+  logStore.seed(() => makeLog(), LOG_SEED_SIZE);
 
   // Seed recent commands with specific data
   recentCommandsStore.push({

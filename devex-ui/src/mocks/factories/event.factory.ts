@@ -9,7 +9,7 @@ export function makeEvent(overrides?: Partial<Event>): Event {
   const defaultMetadata: Metadata = {
     userId: `user-${uuid().substring(0, 8)}`,
     role: Math.random() > 0.7 ? 'admin' : 'user',
-    timestamp: new Date(),
+    timestamp: new Date().toISOString(),
     correlationId: `corr-${uuid().substring(0, 8)}`,
     causationId: `cmd-${uuid().substring(0, 8)}`,
     requestId: `req-${uuid().substring(0, 8)}`,
@@ -24,7 +24,7 @@ export function makeEvent(overrides?: Partial<Event>): Event {
     type: eventTypes[Math.floor(Math.random() * eventTypes.length)],
     payload: { 
       randomData: Math.random(), 
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
       value: Math.floor(Math.random() * 1000)
     },
     aggregateId: `aggregate-${uuid().substring(0, 8)}`,

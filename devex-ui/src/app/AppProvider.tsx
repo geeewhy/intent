@@ -27,6 +27,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { localStorage.setItem('tenant', tenant); }, [tenant]);
   useEffect(() => { localStorage.setItem('role', role);     }, [role]);
 
+  // Listen for storage events from other tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'feature_flags' && e.newValue) {
+        setFlags(JSON.parse(e.newValue));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const toggleFlag = (id: string, v: boolean = !flags[id]) => {
     const next = { ...flags, [id]: v };
     setFlags(next);

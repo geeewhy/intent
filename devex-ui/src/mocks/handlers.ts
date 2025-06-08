@@ -36,7 +36,7 @@ export const handlers = [
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
     for (let i=0;i<10;i++) {
-      const l = makeLog(tenant);
+      const l = makeLog({ tenant_id: tenant });
       pushLog(l);
       await writer.write(encoder.encode(`data:${JSON.stringify(l)}\n\n`));
       await delay(1000);

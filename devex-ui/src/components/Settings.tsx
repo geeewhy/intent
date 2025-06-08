@@ -9,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useFeatures } from '@/hooks/useFeatures';
+import { loadDefault } from '@/mocks/scenarios/default';
+import { isMock } from '@/config/apiMode';
 
 const FEATURE_FLAGS = [
   { id: 'ai', label: 'AI Companion' },
@@ -32,6 +34,23 @@ export const Settings = () => {
   const { all: featureFlags, toggle } = useFeatures();
 
   const { toast } = useToast();
+
+  // Handler for resetting demo data
+  const handleResetDemoData = () => {
+    if (isMock) {
+      loadDefault();
+      toast({
+        title: "Demo data reset",
+        description: "All mock data has been regenerated.",
+      });
+    } else {
+      toast({
+        title: "Cannot reset demo data",
+        description: "Demo data can only be reset in mock mode.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleFeatureFlagChange = (flagId: string, checked: boolean) => {
     toggle(flagId, checked);
@@ -202,6 +221,33 @@ export const Settings = () => {
           ))}
         </CardContent>
       </Card>
+
+      {/* Demo Data Section */}
+      {isMock && (
+        <Card className="bg-slate-900 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-slate-100">Demo Data</CardTitle>
+            <CardDescription className="text-slate-400">
+              Reset and manage mock data for demonstrations
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col space-y-2">
+              <p className="text-slate-300 text-sm">
+                Reset all mock data to regenerate events, commands, traces, and logs with fresh random data.
+              </p>
+              <div>
+                <Button 
+                  onClick={handleResetDemoData}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Reset Demo Data
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
