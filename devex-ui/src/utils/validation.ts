@@ -14,7 +14,7 @@ import { CommandSchema } from '@/data';
  */
 export function validateCommandPayload(
   commandType: string,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
   commandRegistry: CommandSchema[]
 ): { isValid: boolean; errors: string[] } {
   // Find the command schema

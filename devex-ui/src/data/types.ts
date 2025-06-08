@@ -20,7 +20,7 @@ export interface Metadata {
 /**
  * Base Command interface with lifecycle hints
  */
-export interface Command<T = any> {
+export interface Command<T = unknown> {
   id: UUID;
   tenant_id: UUID;
   type: string;
@@ -29,13 +29,13 @@ export interface Command<T = any> {
   metadata?: Metadata;
   createdAt?: string;
   updatedAt?: string
-  response?: any; // Optional response from API
+  response?: unknown; // Optional response from API
 }
 
 /**
  * Base Event interface with versioning and full trace metadata
  */
-export interface Event<T = any> {
+export interface Event<T = unknown> {
   id: UUID;
   tenant_id: UUID;
   type: string;

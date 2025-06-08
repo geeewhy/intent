@@ -26,7 +26,7 @@ export const CommandIssuer = () => {
   const [selectedCommand, setSelectedCommand] = useState("");
   const [aggregateId, setAggregateId] = useState("");
   const [payload, setPayload] = useState("");
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [payloadView, setPayloadView] = useState<"form" | "json">("form");
   const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -129,7 +129,7 @@ export const CommandIssuer = () => {
   };
 
 
-  const handleFormDataChange = (key: string, value: any) => {
+  const handleFormDataChange = (key: string, value: unknown) => {
     const newFormData = { ...formData, [key]: value };
     setFormData(newFormData);
     setPayload(JSON.stringify(newFormData, null, 2));
@@ -146,7 +146,7 @@ export const CommandIssuer = () => {
   };
 
 
-  const renderFormField = (key: string, prop: any, required: boolean) => {
+  const renderFormField = (key: string, prop: Record<string, unknown>, required: boolean) => {
     const value = formData[key] || '';
     const isIdField = key.includes('Id');
 
@@ -327,7 +327,7 @@ export const CommandIssuer = () => {
                       </TabsList>
 
                       <TabsContent value="form" className="space-y-3 mt-0">
-                        {Object.entries(selectedCommandSchema.schema.properties).map(([key, prop]: [string, any]) => 
+                        {Object.entries(selectedCommandSchema.schema.properties).map(([key, prop]: [string, Record<string, unknown>]) => 
                           renderFormField(key, prop, selectedCommandSchema.schema.required?.includes(key) || false)
                         )}
                       </TabsContent>

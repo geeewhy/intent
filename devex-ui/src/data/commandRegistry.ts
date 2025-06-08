@@ -7,7 +7,7 @@ export interface CommandSchema {
   schema: {
     type: string;
     title: string;
-    properties: Record<string, any>;
+    properties: Record<string, unknown>;
     required?: string[];
   };
 }

@@ -5,12 +5,12 @@ import { faker } from '@faker-js/faker';
 jsf.extend('faker', () => faker);
 jsf.option({ alwaysFakeOptionals: true });
 
-function tweakSchema(schema: any) {
+function tweakSchema(schema: Record<string, unknown>) {
   const clone = structuredClone(schema);
 
   if (!clone.properties) return clone;
 
-  Object.entries(clone.properties).forEach(([key, prop]: [string, any]) => {
+  Object.entries(clone.properties).forEach(([key, prop]: [string, Record<string, unknown>]) => {
     if (/id$/i.test(key) && prop.type === 'string') {
       prop.format = 'uuid';
     }
