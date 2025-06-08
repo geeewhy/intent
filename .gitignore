@@ -6,8 +6,8 @@ coverage/
 _obsolete
 .idea
 misc
-codex.md
 node_modules
 .DS_Store
 /*.sh
 /*.sql
+/*.md
