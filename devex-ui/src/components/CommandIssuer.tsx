@@ -102,7 +102,10 @@ export const CommandIssuer = () => {
       id: crypto.randomUUID(),
       tenant_id: tenant,
       type: selectedCommand,
-      payload: payloadData,
+      payload: {
+        ...payloadData,
+        ...(aggregateId ? { aggregateId } : {})
+      },
       metadata: {
         timestamp: new Date().toISOString(),
         userId: crypto.randomUUID(),
@@ -416,7 +419,7 @@ export const CommandIssuer = () => {
 
               {selectedCommand && (
                 <Button 
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     const schema = selectedCommandSchema?.schema;
                     if (!schema) return;
@@ -426,9 +429,8 @@ export const CommandIssuer = () => {
                     setValidationErrors([]);
                     setInvalidFields(new Set());
                   }}
-                  className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
-                  Use Example
+                  Generate Payload
                 </Button>
               )}
             </div>
