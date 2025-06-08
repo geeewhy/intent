@@ -38,3 +38,32 @@ Open `http://localhost:8080` in your browser.
 * `src/data/` — Types, API client, command registry
 * `src/hooks/` — Query and stream hooks
 * `src/app/` — Global context and providers
+
+## Modifications
+
+* Initial iteration with made with lovable;
+  * Kept component structure same
+  * Still uses lovable-tagger to easily modify interface through AI
+  * Further iterations not tested if it's still compatible
+    Add this section to your README to help others understand how to work with or change the mock data:
+* Modifying Mock Data
+  * `src/mocks/factories/`
+    Factories for creating mock data (`makeEvent`, `makeCommand`, etc.)
+  * `src/mocks/stores/`
+    In-memory stores (`eventStore`, `commandStore`, etc.) seeded with mock data on startup
+  * `src/mocks/handlers.ts`
+    MSW API handlers that simulate backend responses for `/api/commands`, `/api/events`, `/api/metrics`, etc.
+  * `src/mocks/scenarios/default.ts`
+    Default seeding logic for commands, events, traces, logs
+  * `src/data/commandRegistry.ts`
+    Defines available command types and their JSON schema for validation and form rendering
+  * `src/utils/schemaFaker.ts`
+    Generates example payloads from command schemas (used in "Use Example" in CommandIssuer)
+
+To change what’s returned or generated, edit the corresponding factory or the seed logic in `default.ts`. To control shape or validation of command input, update the `commandRegistry` schema.
+
+### Support for AI
+
+AI / MCP server planned. Contrib welcome.
+
+<3
