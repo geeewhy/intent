@@ -90,7 +90,7 @@ export const LogFooter = () => {
         <Button
           variant="outline"
           size="sm"
-          className="ml-auto border-slate-600 text-slate-300 hover:bg-slate-800"
+          className="bg-slate-800 ml-auto border-slate-600 text-slate-600 hover:bg-slate-800"
           onClick={() => setIsPaused(p => !p)}
         >
           {isPaused ? "Resume" : "Pause"}
