@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:real": "VITE_API_MODE=real vite dev",
+    "dev:mock": "vite --mode mock",
+    "dev:real": "vite --mode real",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@faker-js/faker": "^9.8.0",

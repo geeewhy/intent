@@ -1,8 +1,8 @@
 //devex-ui/src/hooks/api/useLogs.ts
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchLogs } from '@/data';
-import { createLogStream } from '@/data';
-import type { LogLine } from '@/data';
+import { createLogStream } from '@/mocks/stores/log.store';
+import type { LogLine } from '@/mocks/factories/log.factory';
 import React from 'react';
 import { logsKeys } from './queryKeys';
 

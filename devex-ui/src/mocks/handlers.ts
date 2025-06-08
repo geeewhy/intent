@@ -1,10 +1,18 @@
 //devex-ui/src/mocks/handlers.ts
 import { http, HttpResponse, delay } from 'msw';
 import { v4 as uuid } from 'uuid';
-import { mockEvents } from '../data/mockEvents';
-import { mockCommands, recentCommands } from '../data/mockCommands';
-import { mockTraces } from '../data/mockTraces';
-import { logStore, makeLog, pushLog } from '../data/mockLogs';
+import { 
+  eventStore, 
+  commandStore, 
+  recentCommandsStore, 
+  traceStore, 
+  findTracesByCorrelationId, 
+  generateEdges, 
+  logStore, 
+  pushLog 
+} from './stores';
+import { makeEvent } from './factories/event.factory';
+import { makeLog } from './factories/log.factory';
 
 export const handlers = [
   // Logs list
@@ -12,8 +20,9 @@ export const handlers = [
     const url = new URL(request.url);
     const tenant = url.searchParams.get('tenant_id');
     const limit  = Number(url.searchParams.get('limit') || '50');
-    const data   = (tenant ? logStore.filter(l=>l.tenant_id===tenant) : logStore)
-                    .slice(0, limit);
+    const data   = tenant 
+                    ? logStore.list(limit, l => l.tenant_id === tenant)
+                    : logStore.list(limit);
     return HttpResponse.json(data);
   }),
 
@@ -48,9 +57,7 @@ export const handlers = [
       );
     }
 
-    const filteredEvents = mockEvents
-      .filter(event => event.tenant_id === tenantId)
-      .slice(0, limit);
+    const filteredEvents = eventStore.list(limit, event => event.tenant_id === tenantId);
 
     await delay(500);
     return HttpResponse.json(filteredEvents);
@@ -58,7 +65,7 @@ export const handlers = [
 
   http.get('/api/events/:eventId', async ({ params }) => {
     const { eventId } = params;
-    const event = mockEvents.find(event => event.id === eventId);
+    const event = eventStore.find(eventId);
 
     if (!event) {
       return new HttpResponse(
@@ -84,9 +91,7 @@ export const handlers = [
       );
     }
 
-    const filteredCommands = mockCommands
-      .filter(command => command.tenant_id === tenantId)
-      .slice(0, limit);
+    const filteredCommands = commandStore.list(limit, command => command.tenant_id === tenantId);
 
     await delay(300);
     return HttpResponse.json(filteredCommands);
@@ -98,21 +103,26 @@ export const handlers = [
     // ensure we have an id – issuer now sends one, but just in case
     const commandId = cmd.id ?? uuid();
 
+    // Add command to store
+    commandStore.push(cmd);
+
     // 💡  Fake "business logic"
     const didSucceed = Math.random() > 0.1;
 
     // Emit 1-n mock events when the command "succeeds"
     const producedEvents = didSucceed
       ? Array.from({ length: Math.ceil(Math.random() * 3) }).map((_, i) => {
-          const ev = {
-            ...mockEvents[0],             // clone any mock as a template
+          const ev = makeEvent({
             id: `evt-${Date.now()}-${i}`,
-            tenant_id : cmd.tenant_id,
-            type      : `${cmd.type}`,
+            tenant_id: cmd.tenant_id,
+            type: `${cmd.type}`,
             aggregateId: cmd.payload.aggregateId ?? 'agg-missing',
-            metadata  : { ...mockEvents[0].metadata, correlationId: commandId }
-          };
-          mockEvents.unshift(ev);         // append to in-memory list
+            metadata: { 
+              correlationId: commandId,
+              causationId: commandId
+            }
+          });
+          eventStore.push(ev);         // append to store
           return ev;
         })
       : undefined;
@@ -133,7 +143,7 @@ export const handlers = [
     const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 10;
 
     await delay(200);
-    return HttpResponse.json(recentCommands.slice(0, limit));
+    return HttpResponse.json(recentCommandsStore.list(limit));
   }),
 
   // Traces handlers
@@ -142,7 +152,7 @@ export const handlers = [
     const query = url.searchParams.get('query') || '';
     const searchTerm = query.toLowerCase();
 
-    const filteredTraces = mockTraces.filter(trace => 
+    const filteredTraces = traceStore.list(1000, trace => 
       trace.id.toLowerCase().includes(searchTerm) ||
       trace.correlationId.toLowerCase().includes(searchTerm) ||
       trace.causationId?.toLowerCase().includes(searchTerm) ||
@@ -157,22 +167,8 @@ export const handlers = [
 
   http.get('/api/traces/correlation/:correlationId', async ({ params }) => {
     const { correlationId } = params;
-    const traces = mockTraces.filter(trace => trace.correlationId === correlationId);
-
-    // Generate edges based on causation relationships
-    const edges = [];
-    traces.forEach(trace => {
-      if (trace.causationId) {
-        const parent = traces.find(t => t.id === trace.causationId);
-        if (parent) {
-          edges.push({
-            from: parent.id,
-            to: trace.id,
-            type: 'causation'
-          });
-        }
-      }
-    });
+    const traces = findTracesByCorrelationId(correlationId);
+    const edges = generateEdges(traces);
 
     await delay(300);
     return HttpResponse.json({ traces, edges });
@@ -180,7 +176,7 @@ export const handlers = [
 
   http.get('/api/traces/:traceId', async ({ params }) => {
     const { traceId } = params;
-    const trace = mockTraces.find(trace => trace.id === traceId);
+    const trace = traceStore.find(traceId);
 
     if (!trace) {
       return new HttpResponse(
@@ -194,13 +190,15 @@ export const handlers = [
   }),
 
   http.get('/api/metrics', () => {
-    const commands = mockCommands.length;
-    const events   = mockEvents.length;
+    // Get the count of items in each store by listing all items
+    const commands = commandStore.list(1000).length;
+    const events   = eventStore.list(1000).length;
+    const traces   = traceStore.list(1000).length;
     return HttpResponse.json({
       commands,
       events,
       projections : 89,
-      traces      : 23,
+      traces,
       aggregates  : 67,
       health      : 1 // a number between 0 and 1, 1 = ok, <1 = trouble
     });

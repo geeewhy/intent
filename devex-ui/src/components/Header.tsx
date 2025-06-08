@@ -10,13 +10,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAppCtx } from '@/app/AppProvider';
+import { isMock, apiMode } from '@/config/apiMode';
 
 const tenants = ['tenant-1', 'tenant-2', 'tenant-3'];
 const roles = ['admin', 'user', 'viewer'];
 
 export const Header = () => {
   const { tenant, role, setTenant, setRole } = useAppCtx();
-  const apiMode = import.meta.env.VITE_API_MODE || 'mock';
 
   return (
     <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center px-6 gap-6">
@@ -81,8 +81,8 @@ export const Header = () => {
         <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" title="System Healthy" />
         <div className="h-2 w-2 bg-yellow-500 rounded-full" title="2 Warnings" />
       </div>
-      <span className={`badge ${apiMode === 'mock' ? 'bg-yellow-600' : 'bg-green-600'} text-white text-xs px-2 py-1 rounded`}>
-          API MODE: {apiMode.toUpperCase()}
+      <span className={`badge ${isMock ? 'bg-yellow-600' : 'bg-green-600'} text-white text-xs px-2 py-1 rounded`}>
+          {apiMode.toUpperCase()} API
       </span>
     </header>
   );
