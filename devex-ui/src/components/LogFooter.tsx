@@ -5,8 +5,10 @@ import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLogs } from "@/hooks/api";
+import { useAppCtx } from '@/app/AppProvider';
 
-export const LogFooter = ({ tenant='tenant-1' }: { tenant?: string }) => {
+export const LogFooter = () => {
+  const { tenant } = useAppCtx();
   const [isExpanded, setIsExpanded] = useState(false);
   const { data: logs = [] } = useLogs(tenant, 100);
 

@@ -108,7 +108,7 @@ export const handlers = [
             ...mockEvents[0],             // clone any mock as a template
             id: `evt-${Date.now()}-${i}`,
             tenant_id : cmd.tenant_id,
-            type      : `${cmd.type}Executed`,
+            type      : `${cmd.type}`,
             aggregateId: cmd.payload.aggregateId ?? 'agg-missing',
             metadata  : { ...mockEvents[0].metadata, correlationId: commandId }
           };

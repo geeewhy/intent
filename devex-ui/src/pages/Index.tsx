@@ -1,6 +1,6 @@
 //devex-ui/src/pages/Index.tsx
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -15,46 +15,25 @@ import { AICompanion } from "@/components/AICompanion";
 import { Settings } from "@/components/Settings";
 import { Card, CardContent } from "@/components/ui/card";
 import { RotateCcw } from "lucide-react";
+import { useAppCtx } from '@/app/AppProvider';
 
 type ActiveView = 'dashboard' | 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status' | 'rewind' | 'ai' | 'settings';
 
 const Index = () => {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
-  const [currentTenant, setCurrentTenant] = useState('tenant-1');
-  const [currentRole, setCurrentRole] = useState('admin');
   const [isAICompanionOpen, setIsAICompanionOpen] = useState(false);
-  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    const loadFeatureFlags = () => {
-      const saved = localStorage.getItem('feature_flags');
-      setFeatureFlags(saved ? JSON.parse(saved) : {});
-    };
-
-    loadFeatureFlags();
-
-    // Listen for feature flag updates
-    const handleFeatureFlagsUpdate = () => {
-      loadFeatureFlags();
-    };
-
-    window.addEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
-
-    return () => {
-      window.removeEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
-    };
-  }, []);
+  const { tenant, role, flags } = useAppCtx();
 
   const renderActiveView = () => {
     switch (activeView) {
       case 'dashboard':
         return <Dashboard />;
       case 'commands':
-        return <CommandIssuer currentTenant={currentTenant} />;
+        return <CommandIssuer />;
       case 'events':
-        return <EventStreamViewer currentTenant={currentTenant} />;
+        return <EventStreamViewer currentTenant={tenant} />;
       case 'projections':
-        return <ProjectionExplorer currentTenant={currentTenant} />;
+        return <ProjectionExplorer currentTenant={tenant} />;
       case 'traces':
         return <TraceViewer />;
       case 'aggregates':
@@ -99,16 +78,11 @@ const Index = () => {
     setActiveView(view as ActiveView);
   };
 
-  const shouldShowAICompanion = featureFlags.ai === true;
+  const shouldShowAICompanion = flags.ai === true;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <Header 
-        currentTenant={currentTenant}
-        currentRole={currentRole}
-        onTenantChange={setCurrentTenant}
-        onRoleChange={setCurrentRole}
-      />
+      <Header />
 
       <div className="flex flex-1 pb-12"> {/* Add bottom padding for footer */}
         <Sidebar 
@@ -121,7 +95,7 @@ const Index = () => {
         </main>
       </div>
 
-      <LogFooter tenant={currentTenant} />
+      <LogFooter />
       {shouldShowAICompanion && (
         <AICompanion 
           isOpen={isAICompanionOpen} 

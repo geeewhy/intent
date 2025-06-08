@@ -15,16 +15,14 @@ import { useCommands, useSubmitCommand } from "@/hooks/api";
 import { validate } from "@/utils/schemaValidator";
 import { makeExample } from "@/utils/schemaFaker";
 import { toast } from "@/components/ui/sonner";
-
-interface CommandIssuerProps {
-  currentTenant: string;
-}
+import { useAppCtx } from '@/app/AppProvider';
 
 const generateUUID4 = (): string => {
   return crypto.randomUUID();
 };
 
-export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
+export const CommandIssuer = () => {
+  const { tenant } = useAppCtx();
   const [selectedCommand, setSelectedCommand] = useState("");
   const [aggregateId, setAggregateId] = useState("");
   const [payload, setPayload] = useState("");
@@ -34,7 +32,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Use React Query hooks
-  const { data: recentCommands = [] } = useCommands(currentTenant, 10);
+  const { data: recentCommands = [] } = useCommands(tenant, 10);
   const { mutate: submitCommandMutation, isPending: isSubmitting } = useSubmitCommand();
 
   const handleSubmit = () => {
@@ -79,7 +77,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
 
     const commandPayload = {
       id: crypto.randomUUID(),
-      tenant_id: currentTenant,
+      tenant_id: tenant,
       type: selectedCommand,
       payload: payloadData,
       metadata: {
@@ -249,7 +247,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
         <Terminal className="h-6 w-6 text-blue-400" />
         <h1 className="text-2xl font-bold">Command Issuer</h1>
         <Badge variant="outline" className="border-slate-600 text-slate-300">
-          Tenant: {currentTenant}
+          Tenant: {tenant}
         </Badge>
       </div>
 

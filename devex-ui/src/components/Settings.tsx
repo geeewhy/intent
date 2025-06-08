@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { useFeatures } from '@/hooks/useFeatures';
 
 const FEATURE_FLAGS = [
   { id: 'ai', label: 'AI Companion' },
@@ -27,21 +28,13 @@ export const Settings = () => {
   const [password, setPassword] = useState(localStorage.getItem('basic_auth_password') || '');
   const [useRealBackend, setUseRealBackend] = useState(localStorage.getItem('api_mode') === 'real');
 
-  // Feature flags state
-  const [featureFlags, setFeatureFlags] = useState(() => {
-    const saved = localStorage.getItem('feature_flags');
-    return saved ? JSON.parse(saved) : {};
-  });
+  // Feature flags
+  const { all: featureFlags, toggle } = useFeatures();
 
   const { toast } = useToast();
 
   const handleFeatureFlagChange = (flagId: string, checked: boolean) => {
-    const updatedFlags = { ...featureFlags, [flagId]: checked };
-    setFeatureFlags(updatedFlags);
-    localStorage.setItem('feature_flags', JSON.stringify(updatedFlags));
-
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('featureFlagsUpdated'));
+    toggle(flagId, checked);
   };
 
   const handleSave = () => {
@@ -72,17 +65,15 @@ export const Settings = () => {
     setUsername('');
     setPassword('');
     setUseRealBackend(false);
-    setFeatureFlags({});
+    // Reset feature flags
+    FEATURE_FLAGS.forEach(flag => toggle(flag.id, false));
 
     localStorage.removeItem('api_uri');
     localStorage.removeItem('use_basic_auth');
     localStorage.removeItem('basic_auth_username');
     localStorage.removeItem('basic_auth_password');
     localStorage.removeItem('api_mode');
-    localStorage.removeItem('feature_flags');
 
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('featureFlagsUpdated'));
 
     toast({
       title: "Settings reset",

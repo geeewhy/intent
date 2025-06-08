@@ -1,9 +1,10 @@
 //devex-ui/src/hooks/api/useEvents.ts
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchEvents, createEventStream } from '@/data';
+import { fetchEvents } from '@/data';
 import type { Event } from '@/data';
 import React from 'react';
 import { eventsKeys } from './queryKeys';
+import { useEventStream } from '@/hooks/ws/useEventStream';
 
 export function useEvents(tenant: string, limit = 50, options = { enabled: true }) {
   const qc = useQueryClient();
@@ -27,28 +28,13 @@ export function useEvents(tenant: string, limit = 50, options = { enabled: true 
   });
 
   // live updates → merge into cache
-  React.useEffect(() => {
+  useEventStream<Event>(tenant, (evt) => {
     if (!enabled) return;
-
-    let isActive = true;
-    const currentTenant = stableTenant.current;
-    const currentQueryKey = eventsKeys.list(currentTenant, limit);
-
-    const unsub = createEventStream(currentTenant).subscribe((event: Event) => {
-      // Only update if the component is still mounted and tenant hasn't changed
-      if (isActive && currentTenant === stableTenant.current) {
-        qc.setQueryData<Event[]>(currentQueryKey, old => {
-          const next = old ? [event, ...old] : [event];
-          return next.slice(0, limit);
-        });
-      }
-    });
-
-    return () => {
-      isActive = false;
-      unsub?.();
-    };
-  }, [limit, qc, enabled]);
+    qc.setQueryData<Event[]>(
+      eventsKeys.list(tenant, limit),
+      (old) => [evt, ...(old || [])].slice(0, limit),
+    );
+  });
 
   return query;
 }

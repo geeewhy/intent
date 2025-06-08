@@ -1,6 +1,6 @@
 //devex-ui/src/components/Sidebar.tsx
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   Terminal, 
   Activity, 
@@ -16,6 +16,7 @@ import {
   LayoutDashboard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useFeatures } from '@/hooks/useFeatures';
 
 interface SidebarProps {
   activeView: string;
@@ -37,41 +38,12 @@ const allNavigationItems = [
 
 export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    const loadFeatureFlags = () => {
-      const saved = localStorage.getItem('feature_flags');
-      setFeatureFlags(saved ? JSON.parse(saved) : {});
-    };
-
-    loadFeatureFlags();
-
-    // Listen for storage changes to update flags in real-time
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'feature_flags') {
-        loadFeatureFlags();
-      }
-    };
-
-    // Listen for custom event dispatched when localStorage is updated in the same window
-    const handleFeatureFlagsUpdate = () => {
-      loadFeatureFlags();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
-    };
-  }, []);
+  const { enabled } = useFeatures();
 
   // Filter navigation items based on feature flags
   const navigationItems = allNavigationItems.filter(item => {
     if (!item.requiresFlag) return true;
-    return featureFlags[item.requiresFlag] === true;
+    return enabled(item.requiresFlag);
   });
 
   return (
@@ -110,7 +82,7 @@ export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
               {!isCollapsed && item.label && (
                 <span className="text-sm font-medium">{item.label}</span>
               )}
-              
+
               {/* Tooltip for collapsed state (only for non-dashboard items) */}
               {isCollapsed && !item.hideTooltip && (
                 <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-slate-100 text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">

@@ -9,18 +9,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-interface HeaderProps {
-  currentTenant: string;
-  currentRole: string;
-  onTenantChange: (tenant: string) => void;
-  onRoleChange: (role: string) => void;
-}
+import { useAppCtx } from '@/app/AppProvider';
 
 const tenants = ['tenant-1', 'tenant-2', 'tenant-3'];
 const roles = ['admin', 'user', 'viewer'];
 
-export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChange }: HeaderProps) => {
+export const Header = () => {
+  const { tenant, role, setTenant, setRole } = useAppCtx();
   const apiMode = import.meta.env.VITE_API_MODE || 'mock';
 
   return (
@@ -40,7 +35,7 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700">
-              Tenant: {currentTenant}
+              Tenant: {tenant}
               <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -48,7 +43,7 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
             {tenants.map((tenant) => (
               <DropdownMenuItem 
                 key={tenant}
-                onClick={() => onTenantChange(tenant)}
+                onClick={() => setTenant(tenant)}
                 className="text-slate-100 hover:bg-slate-700"
               >
                 {tenant}
@@ -60,7 +55,7 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700">
-              Role: {currentRole}
+              Role: {role}
               <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -68,7 +63,7 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
             {roles.map((role) => (
               <DropdownMenuItem 
                 key={role}
-                onClick={() => onRoleChange(role)}
+                onClick={() => setRole(role)}
                 className="text-slate-100 hover:bg-slate-700"
               >
                 {role}
