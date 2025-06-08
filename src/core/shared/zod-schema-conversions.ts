@@ -1,18 +1,11 @@
-import {z, ZodTypeAny} from 'zod';
+import { z, ZodTypeAny } from 'zod';
 
 /**
  * Converts a Zod schema to a JSON Schema representation
- * Note: This is a simplified version. For a complete implementation,
- * install zod-to-json-schema: npm install zod-to-json-schema
- * 
- * @param schema The Zod schema to convert
- * @param name Optional name for the schema
- * @returns A JSON Schema representation of the Zod schema
  */
 export function zodToJsonSchema(schema: z.ZodTypeAny, name?: string): any {
   if (!schema) return undefined;
 
-  // For objects, extract the shape
   if (schema instanceof z.ZodObject) {
     const shape = schema._def.shape();
     const properties: Record<string, any> = {};
@@ -20,8 +13,6 @@ export function zodToJsonSchema(schema: z.ZodTypeAny, name?: string): any {
 
     for (const [key, value] of Object.entries(shape)) {
       properties[key] = zodTypeToJsonType(value as z.ZodTypeAny);
-
-      // Check if the property is required
       if (!(value instanceof z.ZodOptional)) {
         required.push(key);
       }
@@ -39,13 +30,18 @@ export function zodToJsonSchema(schema: z.ZodTypeAny, name?: string): any {
 }
 
 /**
- * Helper function to convert a Zod type to a JSON Schema type
- * @param zodType The Zod type to convert
- * @returns A JSON Schema type representation
+ * Helper: Convert Zod type to JSON Schema type
  */
 function zodTypeToJsonType(zodType: z.ZodTypeAny): any {
   if (zodType instanceof z.ZodString) {
-    return { type: 'string' };
+    const checks = zodType._def.checks || [];
+    const formatCheck = checks.find((c: any) => c.kind === 'uuid' || c.kind === 'email');
+
+    return {
+      type: 'string',
+      ...(formatCheck?.kind === 'uuid' && { format: 'uuid' }),
+      ...(formatCheck?.kind === 'email' && { format: 'email' }),
+    };
   }
 
   if (zodType instanceof z.ZodNumber) {
@@ -88,14 +84,15 @@ function zodTypeToJsonType(zodType: z.ZodTypeAny): any {
     };
   }
 
-  // Default fallback
-  return { type: 'any' };
+  if (zodType instanceof z.ZodAny) {
+    return {};
+  }
+
+  return {};
 }
 
 /**
- * Helper function to convert a schema to a property array format
- * @param schema The Zod schema to convert
- * @returns An array of property definitions
+ * Convert schema to property list for UI rendering
  */
 export function schemaToProps(schema: z.ZodTypeAny): Array<{
   name: string;
@@ -103,9 +100,7 @@ export function schemaToProps(schema: z.ZodTypeAny): Array<{
   required: boolean;
   description?: string;
 }> {
-  if (!schema || !(schema instanceof z.ZodObject)) {
-    return [];
-  }
+  if (!schema || !(schema instanceof z.ZodObject)) return [];
 
   const jsonSchema = zodToJsonSchema(schema);
   const properties = jsonSchema.properties || {};
@@ -120,16 +115,13 @@ export function schemaToProps(schema: z.ZodTypeAny): Array<{
 }
 
 /**
- * Convert registry metadata items, optionally attaching JSON-Schema.
- *
- * @param items         Array of CommandTypeMeta | EventTypeMeta
- * @param includeSchema Whether to expose payload schemas
+ * Attach JSON Schema to registry metadata
  */
 export function attachSchema<
     T extends { type: string; payloadSchema?: ZodTypeAny }
 >(items: T[], includeSchema: boolean): unknown[] {
   return items.map(({ payloadSchema, ...rest }) => {
-    if (!includeSchema) return rest;                       // strip it
+    if (!includeSchema) return rest;
 
     const schema =
         payloadSchema && typeof payloadSchema === 'object'
