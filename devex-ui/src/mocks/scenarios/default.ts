@@ -7,7 +7,10 @@ import { makeEvent } from '../factories/event.factory';
 import { makeCommand } from '../factories/command.factory';
 import { makeTrace } from '../factories/trace.factory';
 import { makeLog } from '../factories/log.factory';
+import { makeCommandRegistry } from '../factories/registry.factory';
 import type { Command } from '@/data/types';
+
+export const mockCommandRegistry = makeCommandRegistry();
 
 // preserves current demo dataset
 export function loadDefault() {

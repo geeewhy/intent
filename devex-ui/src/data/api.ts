@@ -1,17 +1,17 @@
 //devex-ui/src/data/api.ts
 import { toast } from "@/components/ui/sonner";
 
-
 // API client configuration
 export const API_CONFIG = {
-  baseUrl: import.meta.env.VITE_API_URL || '',
+  baseUrl: localStorage.getItem('api_uri') || import.meta.env.VITE_API_URL || '',
   wsUrl: import.meta.env.VITE_WS_URL || 'ws://localhost:8080/events/stream',
   endpoints: {
     events: '/api/events',
     commands: '/api/commands',
     traces: '/api/traces',
     aggregates: '/api/aggregates',
-    logs: '/api/logs'
+    logs: '/api/logs',
+    registry: '/api/registry/commands'
   }
 };
 

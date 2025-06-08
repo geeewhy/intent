@@ -13,8 +13,19 @@ import {
 } from './stores';
 import { makeEvent } from './factories/event.factory';
 import { makeLog } from './factories/log.factory';
+import { makeCommandRegistry } from './factories/registry.factory';
 
 export const handlers = [
+  // Registry handler
+  http.get('/api/registry/commands', ({ request }) => {
+    const url = new URL(request.url);
+    const includeSchema = url.searchParams.get('includeSchema') === 'true';
+    const registry = makeCommandRegistry();
+
+    return HttpResponse.json(
+      includeSchema ? registry : registry.map(({ schema, ...rest }) => rest)
+    );
+  }),
   // Logs list
   http.get('/api/logs', ({ request }) => {
     const url = new URL(request.url);

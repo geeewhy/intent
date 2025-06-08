@@ -1,6 +1,6 @@
 //devex-ui/src/data/apiService.ts
 import { apiClient, API_CONFIG } from './api';
-import type { Event, Command, CommandResult } from './types';
+import type { Event, Command, CommandResult, CommandSchema } from './types';
 import type { LogLine } from './mockLogs';
 
 // Events API
@@ -48,3 +48,8 @@ export const fetchTraceById = async (traceId: string) => {
 
 export const fetchLogs = (tenant: string, limit=50) =>
   apiClient.get<LogLine[]>(API_CONFIG.endpoints.logs, { tenant_id: tenant, limit: limit+'' });
+
+// Registry API
+export const fetchCommandRegistry = async (): Promise<CommandSchema[]> => {
+  return apiClient.get<CommandSchema[]>(API_CONFIG.endpoints.registry, { includeSchema: 'true' });
+};

@@ -1,15 +1,18 @@
 //devex-ui/src/utils/schemaValidator.ts
 import Ajv, { ErrorObject } from 'ajv';
 import addFormats from 'ajv-formats';
-import { commandRegistry } from '@/data';
+import type { CommandSchema } from '@/data/types';
 
 const ajv = new Ajv({ strict: false, allErrors: true });
 addFormats(ajv);                       // uuid, email, date-time …
 
-export const validators: Record<string, ReturnType<Ajv['compile']>> =
-  Object.fromEntries(
-    commandRegistry.map(c => [c.type, ajv.compile(c.schema)])
-  );
+export const validators: Record<string, ReturnType<Ajv['compile']>> = {};
+
+export function registerSchemas(registry: CommandSchema[]) {
+  registry.forEach((cmd) => {
+    validators[cmd.type] = ajv.compile(cmd.schema);
+  });
+}
 
 export function validate(type: string, data: unknown) {
   const v = validators[type];

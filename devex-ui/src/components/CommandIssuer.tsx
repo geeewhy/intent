@@ -1,5 +1,5 @@
 //devex-ui/src/components/CommandIssuer.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight, RefreshCw, AlertCircle } from "lucide-react";
-import { commandRegistry } from "@/data";
-import type { CommandSchema } from "@/data";
+import type { CommandSchema } from "@/data/types";
 import { useCommands, useSubmitCommand } from "@/hooks/api";
-import { validate } from "@/utils/schemaValidator";
+import { validate, registerSchemas } from "@/utils/schemaValidator";
 import { makeExample } from "@/utils/schemaFaker";
 import { toast } from "@/components/ui/sonner";
 import { useAppCtx } from '@/app/AppProvider';
+import { useQuery } from "@tanstack/react-query";
+import { fetchCommandRegistry } from "@/data/apiService";
 
 const generateUUID4 = (): string => {
   return crypto.randomUUID();
@@ -35,6 +36,18 @@ export const CommandIssuer = () => {
   // Use React Query hooks
   const { data: recentCommands = [] } = useCommands(tenant, 10);
   const { mutate: submitCommandMutation, isPending: isSubmitting } = useSubmitCommand();
+  const { data: commandRegistry = [], isLoading: isLoadingRegistry } = useQuery({
+    queryKey: ['commandRegistry'],
+    queryFn: fetchCommandRegistry,
+    staleTime: Infinity
+  });
+
+  // Register schemas when registry is loaded
+  useEffect(() => {
+    if (commandRegistry.length > 0) {
+      registerSchemas(commandRegistry);
+    }
+  }, [commandRegistry]);
 
   // Extract field names from validation error messages
   const extractFieldNames = (errors: string[]): Set<string> => {
@@ -293,27 +306,34 @@ export const CommandIssuer = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="command-type" className="text-slate-300">Command Type</Label>
-                <Select value={selectedCommand} onValueChange={(value) => {
-                  setSelectedCommand(value);
-                  setFormData({});
-                  setPayload("");
-                  setValidationErrors([]);
-                  setInvalidFields(new Set());
-                }}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
-                    <SelectValue placeholder="Select command type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    {commandRegistry.map((cmd) => (
-                      <SelectItem key={cmd.type} value={cmd.type} className="text-slate-100 hover:bg-slate-700">
-                        <div className="flex flex-col items-start">
-                          <span>{cmd.type}</span>
-                          <span className="text-xs text-slate-400">{cmd.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isLoadingRegistry ? (
+                  <div className="flex items-center space-x-2 p-2 bg-slate-800 border border-slate-700 rounded">
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+                    <span className="text-slate-400">Loading command registry...</span>
+                  </div>
+                ) : (
+                  <Select value={selectedCommand} onValueChange={(value) => {
+                    setSelectedCommand(value);
+                    setFormData({});
+                    setPayload("");
+                    setValidationErrors([]);
+                    setInvalidFields(new Set());
+                  }}>
+                    <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
+                      <SelectValue placeholder="Select command type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {commandRegistry.map((cmd) => (
+                        <SelectItem key={cmd.type} value={cmd.type} className="text-slate-100 hover:bg-slate-700">
+                          <div className="flex flex-col items-start">
+                            <span>{cmd.type}</span>
+                            <span className="text-xs text-slate-400">{cmd.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 {selectedCommandSchema && (
                   <div className="text-xs text-slate-400">
                     Domain: {selectedCommandSchema.domain}
@@ -344,7 +364,7 @@ export const CommandIssuer = () => {
               </div>
             </div>
 
-            {selectedCommandSchema && (
+            {!isLoadingRegistry && selectedCommandSchema && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-100">Payload</h3>
 
@@ -383,6 +403,12 @@ export const CommandIssuer = () => {
                 </Card>
               </div>
             )}
+            {isLoadingRegistry && selectedCommand && (
+              <div className="flex items-center justify-center p-8 bg-slate-800 border border-slate-700 rounded">
+                <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full mr-3" />
+                <span className="text-slate-400">Loading schema...</span>
+              </div>
+            )}
 
             {validationErrors.length > 0 && (
               <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-md">
@@ -401,7 +427,7 @@ export const CommandIssuer = () => {
             <div className="flex gap-3">
               <Button 
                 onClick={handleSubmit}
-                disabled={!selectedCommand || isSubmitting}
+                disabled={!selectedCommand || isSubmitting || isLoadingRegistry}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {isSubmitting ? (
@@ -420,6 +446,7 @@ export const CommandIssuer = () => {
               {selectedCommand && (
                 <Button 
                   variant="secondary"
+                  disabled={isLoadingRegistry}
                   onClick={() => {
                     const schema = selectedCommandSchema?.schema;
                     if (!schema) return;
