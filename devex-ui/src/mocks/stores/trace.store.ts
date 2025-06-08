@@ -9,8 +9,8 @@ export const traceStore = createStore<TraceNode>();
 traceStore.seed(() => makeTrace(), 200);
 
 // Helper function to find traces by correlation ID
-export function findTracesByCorrelationId(correlationId: string) {
-  return traceStore.list(1000, trace => trace.correlationId === correlationId);
+export function findTracesByCorrelationId(correlationId: string | ReadonlyArray<string>) {
+  return traceStore.list(5000, trace => trace.correlationId === correlationId);
 }
 
 // re-export for backwards compatibility

@@ -103,6 +103,8 @@ export const handlers = [
     // ensure we have an id – issuer now sends one, but just in case
     const commandId = cmd.id ?? uuid();
 
+    cmd.status = 'mocked';
+
     // Add command to store
     commandStore.push(cmd);
 
@@ -152,7 +154,7 @@ export const handlers = [
     const query = url.searchParams.get('query') || '';
     const searchTerm = query.toLowerCase();
 
-    const filteredTraces = traceStore.list(1000, trace => 
+    const filteredTraces = traceStore.list(50, trace =>
       trace.id.toLowerCase().includes(searchTerm) ||
       trace.correlationId.toLowerCase().includes(searchTerm) ||
       trace.causationId?.toLowerCase().includes(searchTerm) ||

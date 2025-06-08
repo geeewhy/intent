@@ -1,6 +1,16 @@
 //devex-ui/src/components/TraceViewer.tsx
 import { useState, useRef, useEffect } from "react";
-import { GitBranch, Search, ArrowRight, Command, Database, FileText } from "lucide-react";
+import {
+  GitBranch,
+  Search,
+  ArrowRight,
+  Command,
+  Database,
+  FileText,
+  ArrowDown01,
+  ArrowBigDown,
+  ArrowDownCircle
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -252,7 +262,7 @@ export const TraceViewer = () => {
                                 </div>
                                 {/* Arrow to next level if there's a causation relationship */}
                                 {edges.some(e => e.from === node.id) && (
-                                  <ArrowRight className="h-4 w-4 text-slate-500" />
+                                  <ArrowDownCircle className="h-4 w-4 text-slate-500" />
                                 )}
                               </div>
                             ))}
