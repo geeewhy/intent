@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { API_CONFIG } from '@/data/api';
 import { isMock } from '@/config/apiMode';
 
+// Real backend might switch to SSE; this WS mock stays for dev-only.
+
 export function useEventStream<T>(tenant: string, onMsg: (evt: T) => void) {
   const tries = useRef(0);
   const wsRef = useRef<WebSocket>();

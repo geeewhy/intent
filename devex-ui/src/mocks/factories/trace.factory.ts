@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid';
 
-interface TraceNode {
+export interface TraceNode {
   id: string;
   type: 'Event' | 'Command' | 'Snapshot';
   subtype: string;
@@ -12,7 +12,36 @@ interface TraceNode {
   level?: number;
 }
 
-export function makeTrace(overrides?: Partial<TraceNode>): TraceNode {
+export function makeTrace(overrides:Partial<TraceNode> = {}):TraceNode {
+  if (overrides.correlationId) return single(overrides);
+
+  const correlationId = `corr-${uuid().slice(0,8)}`;
+  const root = single({ type:'Command', level:0, correlationId });
+
+  const events = Array.from({length:3+Math.floor(Math.random()*3)})
+    .map((_,i)=> single({
+      type:'Event',
+      causationId: root.id,
+      level: i+1,
+      correlationId
+    }));
+
+  const snap = single({
+    type:'Snapshot',
+    causationId: events.at(-1)!.id,
+    level: events.length+1,
+    correlationId
+  });
+
+  // return a random node from the cluster so seeding stays varied
+  return [root, ...events, snap][Math.floor(Math.random()* (events.length+2))];
+
+  function single(o:Partial<TraceNode>):TraceNode {
+    return { ...defaultTrace(), ...o };
+  }
+}
+
+function defaultTrace(): TraceNode {
   const types: Array<'Event' | 'Command' | 'Snapshot'> = ['Event', 'Command', 'Snapshot'];
   const subtypes = {
     Event: ['UserCreated', 'OrderPlaced', 'PaymentProcessed', 'UserUpdated', 'ProductCreated', 'OrderCancelled', 'PaymentRefunded', 'InventoryReserved', 'WelcomeEmailSent'],
@@ -20,11 +49,11 @@ export function makeTrace(overrides?: Partial<TraceNode>): TraceNode {
     Snapshot: ['UserAggregate', 'OrderAggregate', 'PaymentAggregate', 'ProductAggregate', 'InventoryAggregate']
   };
 
-  const type = overrides?.type || types[Math.floor(Math.random() * types.length)];
-  const subtype = overrides?.subtype || subtypes[type][Math.floor(Math.random() * subtypes[type].length)];
-  
+  const type = types[Math.floor(Math.random() * types.length)];
+  const subtype = subtypes[type][Math.floor(Math.random() * subtypes[type].length)];
+
   const now = new Date();
-  const defaultTrace: TraceNode = {
+  return {
     id: `${type.toLowerCase()}-${uuid().substring(0, 8)}`,
     type,
     subtype,
@@ -35,6 +64,4 @@ export function makeTrace(overrides?: Partial<TraceNode>): TraceNode {
     tenantId: Math.random() > 0.5 ? 'tenant-1' : 'tenant-2',
     level: Math.floor(Math.random() * 5)
   };
-
-  return { ...defaultTrace, ...overrides };
 }

@@ -474,6 +474,7 @@ export const CommandIssuer = () => {
                       variant={
                         ({
                           pending:   'secondary',
+                          mock:   'secondary',
                           processed: 'default',
                           consumed:  'default',
                           failed:    'destructive',

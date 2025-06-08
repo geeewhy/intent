@@ -1,5 +1,5 @@
 import {
-  createContext, useContext, useState, ReactNode, useEffect,
+  createContext, useContext, useState, ReactNode, useEffect, useSyncExternalStore
 } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/data/queryClient';
@@ -17,15 +17,38 @@ interface Ctx {
 const Ctx = createContext<Ctx | null>(null);
 export const useAppCtx = () => useContext(Ctx)!;
 
+const useLocalSetting = <T,>(key:string, fallback:T)=>{
+  return useSyncExternalStore(
+    cb => { window.addEventListener('storage',cb); return ()=>window.removeEventListener('storage',cb); },
+    () => {
+      const value = localStorage.getItem(key);
+      if (value === null) return fallback;
+      try {
+        return JSON.parse(value);
+      } catch (e) {
+        // If parsing fails, return the raw string value
+        return value as unknown as T;
+      }
+    },
+    () => fallback
+  );
+};
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [tenant, setTenant] = useState(localStorage.getItem('tenant') || 'tenant-1');
-  const [role,   setRole]   = useState(localStorage.getItem('role')   || 'admin');
+  const tenant = useLocalSetting('tenant','tenant-1');
+  const role   = useLocalSetting('role','admin');
   const [flags,  setFlags]  = useState<Flags>(
     JSON.parse(localStorage.getItem('feature_flags') || '{}'),
   );
 
-  useEffect(() => { localStorage.setItem('tenant', tenant); }, [tenant]);
-  useEffect(() => { localStorage.setItem('role', role);     }, [role]);
+  const setTenant = (t:string)=>{
+    localStorage.setItem('tenant',t);
+    window.dispatchEvent(new Event('storage'));               // force same-tab update
+  };
+  const setRole = (r:string)=>{
+    localStorage.setItem('role',r);
+    window.dispatchEvent(new Event('storage'));
+  };
 
   // Listen for storage events from other tabs
   useEffect(() => {
@@ -49,8 +72,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{ tenant, role, flags, setTenant, setRole, toggleFlag, toast }}>
       <QueryClientProvider client={queryClient}>
-        <Toaster />
-        {children}
+        <Toaster />{children}
       </QueryClientProvider>
     </Ctx.Provider>
   );

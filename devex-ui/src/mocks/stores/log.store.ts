@@ -1,7 +1,7 @@
 import { createStore } from './createStore';
 import { makeLog, type LogLine } from '../factories/log.factory';
 
-export const logStore = createStore<LogLine>(500);
+export const logStore = createStore<LogLine>(2_000);   // soft cap
 logStore.seed(() => makeLog(), 250);
 
 // Helper function to push a log and maintain the store size

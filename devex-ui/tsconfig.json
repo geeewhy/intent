@@ -7,7 +7,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/graph/*": ["src/graph/*"]
     },
     "noImplicitAny": false,
     "noUnusedParameters": false,
