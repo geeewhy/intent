@@ -4,13 +4,15 @@ import { useState } from "react";
 import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useLogs } from "@/hooks/api";
 import { useAppCtx } from '@/app/AppProvider';
 
 export const LogFooter = () => {
   const { tenant } = useAppCtx();
   const [isExpanded, setIsExpanded] = useState(false);
-  const { data: logs = [] } = useLogs(tenant, 100);
+  const [isPaused, setIsPaused] = useState(false);
+  const { data: logs = [] } = useLogs(tenant, 100, { enabled: true, paused: isPaused });
 
   const lastLog = logs[0] || { 
     id: '', 
@@ -85,9 +87,17 @@ export const LogFooter = () => {
           <span className="text-sm text-slate-300 truncate">{lastLog.message}</span>
         </div>
 
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto border-slate-600 text-slate-300 hover:bg-slate-800"
+          onClick={() => setIsPaused(p => !p)}
+        >
+          {isPaused ? "Resume" : "Pause"}
+        </Button>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="ml-auto p-1 hover:bg-slate-800 rounded transition-colors"
+          className="ml-2 p-1 hover:bg-slate-800 rounded transition-colors"
         >
           {isExpanded ? (
             <ChevronDown className="h-4 w-4 text-slate-400" />

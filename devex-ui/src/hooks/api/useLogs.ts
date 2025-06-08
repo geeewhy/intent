@@ -6,9 +6,9 @@ import type { LogLine } from '@/mocks/factories/log.factory';
 import React from 'react';
 import { logsKeys } from './queryKeys';
 
-export function useLogs(tenant: string, limit = 100, options = { enabled: true }) {
+export function useLogs(tenant: string, limit = 100, options = { enabled: true, paused: false }) {
   const qc = useQueryClient();
-  const { enabled = true } = options;
+  const { enabled = true, paused = false } = options;
 
   // Use useRef to store a stable reference to the tenant
   const stableTenant = React.useRef(tenant);
@@ -29,7 +29,7 @@ export function useLogs(tenant: string, limit = 100, options = { enabled: true }
 
   // live updates → merge into cache
   React.useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || paused) return;
 
     let isActive = true;
     const currentTenant = stableTenant.current;
@@ -49,7 +49,7 @@ export function useLogs(tenant: string, limit = 100, options = { enabled: true }
       isActive = false;
       unsub?.();
     };
-  }, [limit, qc, enabled]);
+  }, [limit, qc, enabled, paused]);
 
   return query;
 }
