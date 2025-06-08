@@ -10,3 +10,4 @@ codex.md
 node_modules
 .DS_Store
 /*.sh
+/*.sql
