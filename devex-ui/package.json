@@ -11,10 +11,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "type-check": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@faker-js/faker": "^9.8.0",
