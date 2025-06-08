@@ -1,3 +1,4 @@
+//src/devex-ui/src/mocks/scenarios/default.ts
 import { eventStore } from '../stores/event.store';
 import { commandStore, recentCommandsStore } from '../stores/command.store';
 import { traceStore } from '../stores/trace.store';
@@ -22,7 +23,7 @@ export function loadDefault() {
   const LOG_SEED_SIZE = Math.floor(SEED_SIZE * 1.25); // Logs are typically more numerous
 
   // Seed with random data
-  eventStore.seed(() => makeEvent(), SEED_SIZE);
+  eventStore.seed(() => makeEvent(), 3);
   commandStore.seed(() => makeCommand(), SEED_SIZE);
   traceStore.seed(() => makeTrace(), SEED_SIZE);
   logStore.seed(() => makeLog(), LOG_SEED_SIZE);
