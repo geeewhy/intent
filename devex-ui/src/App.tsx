@@ -1,27 +1,46 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+// devex-ui/src/App.tsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { AppProvider } from '@/app/AppProvider';
 
-const queryClient = new QueryClient();
+import Index from './pages/Index';
+import NotFound from './pages/NotFound';
+
+/** all sidebar slugs except the default “dashboard” */
+const VIEWS = [
+  'commands',
+  'events',
+  'projections',
+  'traces',
+  'aggregates',
+  'status',
+  'rewind',
+  'ai',
+  'settings',
+] as const;
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+    <AppProvider>
+      <TooltipProvider>
+        <ErrorBoundary>
+          <BrowserRouter>
+            <Routes>
+              {/* dashboard */}
+              <Route path="/" element={<Index />} />
+
+              {/* other sidebar views → same Index page for now */}
+              {VIEWS.map(view => (
+                  <Route key={view} path={`/${view}`} element={<Index />} />
+              ))}
+
+              {/* fallback */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </ErrorBoundary>
+      </TooltipProvider>
+    </AppProvider>
 );
 
 export default App;

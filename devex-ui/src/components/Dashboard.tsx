@@ -1,50 +1,54 @@
+//devex-ui/src/components/Dashboard.tsx
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Database, Terminal, GitBranch, Package, AlertTriangle } from "lucide-react";
+import { useMetrics } from "@/hooks/api";
 
 export const Dashboard = () => {
+  const { data } = useMetrics();
+
   const stats = [
     {
       title: "Commands Issued",
-      value: "1,234",
+      value: data?.commands ?? '—',
       description: "Total commands processed",
       icon: Terminal,
       color: "text-blue-500"
     },
     {
-      title: "Active Events",
-      value: "456",
+      title: "Total Events",
+      value: data?.totalEvents ?? '—',
       description: "Events in stream",
       icon: Activity,
       color: "text-green-500"
     },
     {
       title: "Projections",
-      value: "89",
+      value: data?.projections ?? '—',
       description: "Active projections",
       icon: Database,
       color: "text-purple-500"
     },
     {
       title: "Traces",
-      value: "23",
+      value: data?.traces ?? '—',
       description: "Active traces",
       icon: GitBranch,
       color: "text-orange-500"
     },
     {
       title: "Aggregates",
-      value: "67",
+      value: data?.aggregates ?? '—',
       description: "Total aggregates",
       icon: Package,
       color: "text-cyan-500"
     },
     {
       title: "System Health",
-      value: "100%",
-      description: "All systems operational",
+      value: data?.health === 1 ? "100%" : `${Math.round(data?.health * 100)}%`,
+      description: data?.health === 1 ? "All systems operational" : "Some systems degraded",
       icon: AlertTriangle,
-      color: "text-green-500"
+      color: data?.health === 1 ? "text-green-500" : "text-yellow-500"
     }
   ];
 
@@ -54,7 +58,7 @@ export const Dashboard = () => {
         <h1 className="text-3xl font-bold text-slate-100">Dashboard</h1>
         <p className="text-slate-400 mt-2">Event sourcing system overview</p>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -76,7 +80,7 @@ export const Dashboard = () => {
           );
         })}
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader>
@@ -105,7 +109,7 @@ export const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader>
             <CardTitle className="text-slate-100">System Status</CardTitle>

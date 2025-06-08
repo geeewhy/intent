@@ -1,3 +1,4 @@
+//devex-ui/src/components/Header.tsx
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
@@ -8,27 +9,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-interface HeaderProps {
-  currentTenant: string;
-  currentRole: string;
-  onTenantChange: (tenant: string) => void;
-  onRoleChange: (role: string) => void;
-}
+import { useAppCtx } from '@/app/AppProvider';
+import { isMock, apiMode } from '@/config/apiMode';
+import { Logo } from './Logo';
 
 const tenants = ['tenant-1', 'tenant-2', 'tenant-3'];
 const roles = ['admin', 'user', 'viewer'];
 
-export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChange }: HeaderProps) => {
+export const Header = () => {
+  const { tenant, role, setTenant, setRole } = useAppCtx();
+
   return (
     <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center px-6 gap-6">
       {/* Logo */}
       <div className="flex items-center gap-3">
-        <img 
-          src="/lovable-uploads/b28afc6a-f1bf-4c1d-b306-a6152ab27bd4.png" 
-          alt="Intent Logo" 
-          className="h-8 w-8"
-        />
+        <Logo />
         <span className="text-xl font-semibold text-slate-100">Intent DevX</span>
       </div>
 
@@ -37,7 +32,7 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700">
-              Tenant: {currentTenant}
+              Tenant: {tenant}
               <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -45,7 +40,7 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
             {tenants.map((tenant) => (
               <DropdownMenuItem 
                 key={tenant}
-                onClick={() => onTenantChange(tenant)}
+                onClick={() => setTenant(tenant)}
                 className="text-slate-100 hover:bg-slate-700"
               >
                 {tenant}
@@ -57,7 +52,7 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700">
-              Role: {currentRole}
+              Role: {role}
               <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -65,7 +60,7 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
             {roles.map((role) => (
               <DropdownMenuItem 
                 key={role}
-                onClick={() => onRoleChange(role)}
+                onClick={() => setRole(role)}
                 className="text-slate-100 hover:bg-slate-700"
               >
                 {role}
@@ -83,6 +78,9 @@ export const Header = ({ currentTenant, currentRole, onTenantChange, onRoleChang
         <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" title="System Healthy" />
         <div className="h-2 w-2 bg-yellow-500 rounded-full" title="2 Warnings" />
       </div>
+      <span className={`badge ${isMock ? 'bg-yellow-600' : 'bg-green-600'} text-white text-xs px-2 py-1 rounded`}>
+          {apiMode.toUpperCase()} API
+      </span>
     </header>
   );
 };

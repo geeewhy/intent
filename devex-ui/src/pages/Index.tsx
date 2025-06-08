@@ -1,5 +1,6 @@
+//devex-ui/src/pages/Index.tsx
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -12,46 +13,28 @@ import { SystemStatus } from "@/components/SystemStatus";
 import { LogFooter } from "@/components/LogFooter";
 import { AICompanion } from "@/components/AICompanion";
 import { Settings } from "@/components/Settings";
+import { Card, CardContent } from "@/components/ui/card";
+import { RotateCcw } from "lucide-react";
+import { useAppCtx } from '@/app/AppProvider';
 
 type ActiveView = 'dashboard' | 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status' | 'rewind' | 'ai' | 'settings';
 
 const Index = () => {
-  const [activeView, setActiveView] = useState<ActiveView>('dashboard');
-  const [currentTenant, setCurrentTenant] = useState('tenant-1');
-  const [currentRole, setCurrentRole] = useState('admin');
+  const initialView = window.location.pathname.replace(/^\//, '') as ActiveView || 'dashboard';
+  const [activeView, setActiveView] = useState<ActiveView>(initialView);
   const [isAICompanionOpen, setIsAICompanionOpen] = useState(false);
-  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    const loadFeatureFlags = () => {
-      const saved = localStorage.getItem('feature_flags');
-      setFeatureFlags(saved ? JSON.parse(saved) : {});
-    };
-
-    loadFeatureFlags();
-
-    // Listen for feature flag updates
-    const handleFeatureFlagsUpdate = () => {
-      loadFeatureFlags();
-    };
-
-    window.addEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
-    
-    return () => {
-      window.removeEventListener('featureFlagsUpdated', handleFeatureFlagsUpdate);
-    };
-  }, []);
+  const { tenant, role, flags } = useAppCtx();
 
   const renderActiveView = () => {
     switch (activeView) {
       case 'dashboard':
         return <Dashboard />;
       case 'commands':
-        return <CommandIssuer currentTenant={currentTenant} />;
+        return <CommandIssuer />;
       case 'events':
-        return <EventStreamViewer currentTenant={currentTenant} />;
+        return <EventStreamViewer currentTenant={tenant} />;
       case 'projections':
-        return <ProjectionExplorer currentTenant={currentTenant} />;
+        return <ProjectionExplorer currentTenant={tenant} />;
       case 'traces':
         return <TraceViewer />;
       case 'aggregates':
@@ -65,7 +48,22 @@ const Index = () => {
         }
         return <Dashboard />; // Fallback to dashboard
       case 'rewind':
-        return <div className="p-6 text-slate-300">Projection Rewind Tool - Coming Soon</div>;
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <RotateCcw className="h-6 w-6 text-blue-400" />
+              <h1 className="text-2xl font-bold">Projection Rewind Tool</h1>
+            </div>
+
+            <Card className="bg-slate-900 border-slate-800">
+              <CardContent className="p-8 text-center">
+                <RotateCcw className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-slate-300 mb-1">Projection Rewind</h3>
+                <p className="text-slate-500">Time-travel functionality for projections coming soon...</p>
+              </CardContent>
+            </Card>
+          </div>
+        );
       case 'settings':
         return <Settings />;
       default:
@@ -81,23 +79,18 @@ const Index = () => {
     setActiveView(view as ActiveView);
   };
 
-  const shouldShowAICompanion = featureFlags.ai === true;
+  const shouldShowAICompanion = flags.ai === true;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <Header 
-        currentTenant={currentTenant}
-        currentRole={currentRole}
-        onTenantChange={setCurrentTenant}
-        onRoleChange={setCurrentRole}
-      />
-      
+      <Header />
+
       <div className="flex flex-1 pb-12"> {/* Add bottom padding for footer */}
         <Sidebar 
           activeView={activeView}
           onViewChange={handleViewChange}
         />
-        
+
         <main className="flex-1 p-6 overflow-auto">
           {renderActiveView()}
         </main>

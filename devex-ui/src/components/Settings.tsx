@@ -1,3 +1,4 @@
+//devex-ui/src/components/Settings.tsx
 
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { useFeatures } from '@/hooks/useFeatures';
+import { loadDefault } from '@/mocks/scenarios/default';
+import { isMock } from '@/config/apiMode';
 
 const FEATURE_FLAGS = [
   { id: 'ai', label: 'AI Companion' },
@@ -24,28 +28,39 @@ export const Settings = () => {
   const [useBasicAuth, setUseBasicAuth] = useState(localStorage.getItem('use_basic_auth') === 'true');
   const [username, setUsername] = useState(localStorage.getItem('basic_auth_username') || '');
   const [password, setPassword] = useState(localStorage.getItem('basic_auth_password') || '');
-  
-  // Feature flags state
-  const [featureFlags, setFeatureFlags] = useState(() => {
-    const saved = localStorage.getItem('feature_flags');
-    return saved ? JSON.parse(saved) : {};
-  });
-  
+  const [useRealBackend, setUseRealBackend] = useState(localStorage.getItem('api_mode') === 'real');
+
+  // Feature flags
+  const { all: featureFlags, toggle } = useFeatures();
+
   const { toast } = useToast();
 
+  // Handler for resetting demo data
+  const handleResetDemoData = () => {
+    if (isMock) {
+      loadDefault();
+      toast({
+        title: "Demo data reset",
+        description: "All mock data has been regenerated.",
+      });
+    } else {
+      toast({
+        title: "Cannot reset demo data",
+        description: "Demo data can only be reset in mock mode.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleFeatureFlagChange = (flagId: string, checked: boolean) => {
-    const updatedFlags = { ...featureFlags, [flagId]: checked };
-    setFeatureFlags(updatedFlags);
-    localStorage.setItem('feature_flags', JSON.stringify(updatedFlags));
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('featureFlagsUpdated'));
+    toggle(flagId, checked);
   };
 
   const handleSave = () => {
     localStorage.setItem('api_uri', apiUri);
     localStorage.setItem('use_basic_auth', useBasicAuth.toString());
-    
+    localStorage.setItem('api_mode', useRealBackend ? 'real' : 'mock');
+
     if (useBasicAuth) {
       localStorage.setItem('basic_auth_username', username);
       localStorage.setItem('basic_auth_password', password);
@@ -56,8 +71,11 @@ export const Settings = () => {
 
     toast({
       title: "Settings saved",
-      description: "Your API configuration has been updated.",
+      description: "Your API configuration has been updated. Reload the page for changes to take effect.",
     });
+
+    // Reload the page to apply the API mode change
+    window.location.reload();
   };
 
   const handleReset = () => {
@@ -65,21 +83,24 @@ export const Settings = () => {
     setUseBasicAuth(false);
     setUsername('');
     setPassword('');
-    setFeatureFlags({});
-    
+    setUseRealBackend(false);
+    // Reset feature flags
+    FEATURE_FLAGS.forEach(flag => toggle(flag.id, false));
+
     localStorage.removeItem('api_uri');
     localStorage.removeItem('use_basic_auth');
     localStorage.removeItem('basic_auth_username');
     localStorage.removeItem('basic_auth_password');
-    localStorage.removeItem('feature_flags');
+    localStorage.removeItem('api_mode');
 
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('featureFlagsUpdated'));
 
     toast({
       title: "Settings reset",
-      description: "All settings have been cleared.",
+      description: "All settings have been cleared. Reload the page for changes to take effect.",
     });
+
+    // Reload the page to apply the API mode change
+    window.location.reload();
   };
 
   return (
@@ -111,6 +132,17 @@ export const Settings = () => {
           </div>
 
           <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="real-backend"
+                checked={useRealBackend}
+                onCheckedChange={setUseRealBackend}
+              />
+              <Label htmlFor="real-backend" className="text-slate-200">
+                Use real backend
+              </Label>
+            </div>
+
             <div className="flex items-center space-x-2">
               <Switch
                 id="basic-auth"
@@ -189,6 +221,33 @@ export const Settings = () => {
           ))}
         </CardContent>
       </Card>
+
+      {/* Demo Data Section */}
+      {isMock && (
+        <Card className="bg-slate-900 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-slate-100">Demo Data</CardTitle>
+            <CardDescription className="text-slate-400">
+              Reset and manage mock data for demonstrations
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col space-y-2">
+              <p className="text-slate-300 text-sm">
+                Reset all mock data to regenerate events, commands, traces, and logs with fresh random data.
+              </p>
+              <div>
+                <Button 
+                  onClick={handleResetDemoData}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Reset Demo Data
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

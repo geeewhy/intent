@@ -1,22 +1,28 @@
+//devex-ui/src/components/LogFooter.tsx
 
 import { useState } from "react";
 import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-const mockLogs = [
-  { id: 1, timestamp: '14:32:15', level: 'info', message: 'Event appended: UserCreated', category: 'event' },
-  { id: 2, timestamp: '14:32:16', level: 'success', message: 'Projection updated: UserProfile', category: 'projection' },
-  { id: 3, timestamp: '14:32:17', level: 'warning', message: 'Saga timeout detected: OrderProcessing', category: 'saga' },
-  { id: 4, timestamp: '14:32:18', level: 'error', message: 'Policy denied: InsufficientPermissions', category: 'policy' },
-  { id: 5, timestamp: '14:32:19', level: 'info', message: 'Snapshot applied: User-123', category: 'snapshot' },
-];
+import { Button } from "@/components/ui/button";
+import { useLogs } from "@/hooks/api";
+import { useAppCtx } from '@/app/AppProvider';
 
 export const LogFooter = () => {
+  const { tenant } = useAppCtx();
   const [isExpanded, setIsExpanded] = useState(false);
-  
-  const lastLog = mockLogs[mockLogs.length - 1];
-  
+  const [isPaused, setIsPaused] = useState(false);
+  const { data: logs = [] } = useLogs(tenant, 100, { enabled: true, paused: isPaused });
+
+  const lastLog = logs[0] || { 
+    id: '', 
+    timestamp: new Date().toISOString(), 
+    level: 'info', 
+    message: 'No logs available', 
+    category: 'event',
+    tenant_id: tenant
+  };
+
   const getLevelColor = (level: string) => {
     switch (level) {
       case 'error': return 'text-red-400';
@@ -45,9 +51,11 @@ export const LogFooter = () => {
           <Card className="bg-transparent border-0 rounded-none">
             <CardContent className="p-4">
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {mockLogs.map((log) => (
+                {logs.map((log) => (
                   <div key={log.id} className="flex items-center gap-3 text-sm">
-                    <span className="text-slate-500 font-mono text-xs">{log.timestamp}</span>
+                    <span className="text-slate-500 font-mono text-xs">
+                      {new Date(log.timestamp).toLocaleTimeString()}
+                    </span>
                     <Badge className={`text-xs ${getCategoryBadge(log.category)}`}>
                       {log.category}
                     </Badge>
@@ -67,7 +75,9 @@ export const LogFooter = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 h-12 flex items-center px-4 z-50">
         <div className="flex items-center gap-3 flex-1">
           <Terminal className="h-4 w-4 text-slate-400" />
-          <span className="text-xs text-slate-500 font-mono">{lastLog.timestamp}</span>
+          <span className="text-xs text-slate-500 font-mono">
+            {new Date(lastLog.timestamp).toLocaleTimeString()}
+          </span>
           <Badge className={`text-xs ${getCategoryBadge(lastLog.category)}`}>
             {lastLog.category}
           </Badge>
@@ -76,10 +86,18 @@ export const LogFooter = () => {
           </span>
           <span className="text-sm text-slate-300 truncate">{lastLog.message}</span>
         </div>
-        
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-slate-800 ml-auto border-slate-600 text-slate-600 hover:bg-slate-800"
+          onClick={() => setIsPaused(p => !p)}
+        >
+          {isPaused ? "Resume" : "Pause"}
+        </Button>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="ml-auto p-1 hover:bg-slate-800 rounded transition-colors"
+          className="ml-2 p-1 hover:bg-slate-800 rounded transition-colors"
         >
           {isExpanded ? (
             <ChevronDown className="h-4 w-4 text-slate-400" />

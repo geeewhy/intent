@@ -1,3 +1,4 @@
+//devex-ui/src/components/CommandIssuer.tsx
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,126 +8,155 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
-import { commandRegistry, CommandSchema } from "@/data/commandRegistry";
-
-interface CommandIssuerProps {
-  currentTenant: string;
-}
-
-const recentCommands = [
-  {
-    id: '1',
-    type: 'logMessage',
-    aggregateId: 'system-123',
-    timestamp: '2024-01-15T10:30:00Z',
-    status: 'success',
-    payload: { message: "System started successfully", systemId: "sys-001" },
-    response: { success: true, messageId: "msg-456" }
-  },
-  {
-    id: '2',
-    type: 'executeTest',
-    aggregateId: 'test-456',
-    timestamp: '2024-01-15T10:25:00Z',
-    status: 'success',
-    payload: { testId: "test-001", testName: "Integration Test", parameters: { timeout: 5000 } },
-    response: { success: true, testResult: "passed", duration: 2340 }
-  },
-  {
-    id: '3',
-    type: 'simulateFailure',
-    aggregateId: 'system-789',
-    timestamp: '2024-01-15T10:20:00Z',
-    status: 'failed',
-    payload: { systemId: "sys-002" },
-    response: { success: false, error: "Simulation failed: Network timeout" }
-  }
-];
+import { Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight, RefreshCw, AlertCircle } from "lucide-react";
+import { commandRegistry } from "@/data";
+import type { CommandSchema } from "@/data";
+import { useCommands, useSubmitCommand } from "@/hooks/api";
+import { validate } from "@/utils/schemaValidator";
+import { makeExample } from "@/utils/schemaFaker";
+import { toast } from "@/components/ui/sonner";
+import { useAppCtx } from '@/app/AppProvider';
 
 const generateUUID4 = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+  return crypto.randomUUID();
 };
 
-export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
+export const CommandIssuer = () => {
+  const { tenant } = useAppCtx();
   const [selectedCommand, setSelectedCommand] = useState("");
   const [aggregateId, setAggregateId] = useState("");
   const [payload, setPayload] = useState("");
-  const [formData, setFormData] = useState<Record<string, any>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [payloadView, setPayloadView] = useState<"form" | "json">("form");
   const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    console.log('Submitting command:', { 
-      type: selectedCommand, 
-      aggregateId, 
-      payload: payloadView === "form" ? formData : JSON.parse(payload || '{}'),
-      tenant: currentTenant 
+  // Use React Query hooks
+  const { data: recentCommands = [] } = useCommands(tenant, 10);
+  const { mutate: submitCommandMutation, isPending: isSubmitting } = useSubmitCommand();
+
+  // Extract field names from validation error messages
+  const extractFieldNames = (errors: string[]): Set<string> => {
+    const fieldNames = new Set<string>();
+    errors.forEach(error => {
+      // Common AJV error patterns like "must have required property 'fieldName'" or "should be string (fieldName)"
+      const requiredMatch = error.match(/must have required property '(\w+)'/);
+      const typeMatch = error.match(/should be \w+ \((\w+)\)/);
+
+      if (requiredMatch && requiredMatch[1]) {
+        fieldNames.add(requiredMatch[1]);
+      } else if (typeMatch && typeMatch[1]) {
+        fieldNames.add(typeMatch[1]);
+      }
     });
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSubmitting(false);
-    
-    // Reset form
-    setSelectedCommand("");
-    setAggregateId("");
-    setPayload("");
-    setFormData({});
+    return fieldNames;
+  };
+
+  const handleSubmit = () => {
+    // Clear previous validation errors
+    setValidationErrors([]);
+    setInvalidFields(new Set());
+
+    // Get the payload based on the current view
+    const payloadData = payloadView === "form" ? formData : (() => {
+      try {
+        return JSON.parse(payload || '{}');
+      } catch (e) {
+        setValidationErrors(['Invalid JSON format']);
+        toast.error('Invalid JSON format', {
+          description: 'Please check your JSON syntax and try again.'
+        });
+        return null;
+      }
+    })();
+
+    // If JSON parsing failed, don't proceed
+    if (payloadData === null) return;
+
+    // Validate the payload against the command schema
+    const { ok, errors } = validate(selectedCommand, payloadData);
+
+    if (!ok) {
+      setValidationErrors(errors);
+
+      // Extract field names from errors and set invalid fields
+      const fieldNames = extractFieldNames(errors);
+      setInvalidFields(fieldNames);
+
+      // Show toast with validation errors
+      toast.error('Command validation failed', {
+        description: (
+          <ul className="list-disc pl-4 mt-2 space-y-1">
+            {errors.map((error, index) => (
+              <li key={index} className="text-sm">{error}</li>
+            ))}
+          </ul>
+        )
+      });
+
+      return;
+    }
+
+    const commandPayload = {
+      id: crypto.randomUUID(),
+      tenant_id: tenant,
+      type: selectedCommand,
+      payload: {
+        ...payloadData,
+        ...(aggregateId ? { aggregateId } : {})
+      },
+      metadata: {
+        timestamp: new Date().toISOString(),
+        userId: crypto.randomUUID(),
+        role: 'user',
+        source: 'command-issuer'
+      }
+    };
+
+    console.log('Submitting command:', commandPayload);
+
+    submitCommandMutation(commandPayload, {
+      onSuccess: (result) => {
+        console.log('Command submission result:', result);
+
+        toast.success(
+          result.status === 'success'
+            ? 'Command executed 🎉'
+            : 'Command failed',
+          {
+            description:
+              result.status === 'success'
+                ? `${result.events?.length ?? 0} event(s) produced`
+                : result.error
+          }
+        );
+
+        // Reset form
+        setSelectedCommand("");
+        setAggregateId("");
+        setPayload("");
+        setFormData({});
+        setValidationErrors([]);
+        setInvalidFields(new Set());
+      },
+      onError: (error) => {
+        console.error('Command submission failed:', error);
+
+        // Show error toast
+        toast.error('Command submission failed', {
+          description: error instanceof Error ? error.message : 'An unknown error occurred'
+        });
+      }
+    });
   };
 
   const generateAggregateId = () => {
     setAggregateId(generateUUID4());
   };
 
-  const generateExamplePayload = (commandType: string): string => {
-    const commandSchema = commandRegistry.find(cmd => cmd.type === commandType);
-    if (!commandSchema) return '{}';
 
-    const example: Record<string, any> = {};
-    const properties = commandSchema.schema.properties;
-    const required = commandSchema.schema.required || [];
-
-    Object.entries(properties).forEach(([key, prop]: [string, any]) => {
-      if (required.includes(key) || Math.random() > 0.5) {
-        switch (prop.type) {
-          case 'string':
-            if (key.includes('Id')) {
-              example[key] = `${key.replace('Id', '')}-${Math.random().toString(36).substr(2, 6)}`;
-            } else if (key === 'message') {
-              example[key] = "Sample log message";
-            } else if (key === 'testName') {
-              example[key] = "Sample Test";
-            } else {
-              example[key] = `sample-${key}`;
-            }
-            break;
-          case 'number':
-            example[key] = key === 'count' ? 3 : 42;
-            break;
-          case 'object':
-            if (key === 'parameters') {
-              example[key] = { "param1": "value1", "param2": 123 };
-            } else {
-              example[key] = {};
-            }
-            break;
-          default:
-            example[key] = null;
-        }
-      }
-    });
-
-    return JSON.stringify(example, null, 2);
-  };
-
-  const handleFormDataChange = (key: string, value: any) => {
+  const handleFormDataChange = (key: string, value: unknown) => {
     const newFormData = { ...formData, [key]: value };
     setFormData(newFormData);
     setPayload(JSON.stringify(newFormData, null, 2));
@@ -142,31 +172,19 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
     }
   };
 
-  const generateFieldValue = (key: string, prop: any) => {
-    if (key.includes('Id')) {
-      return generateUUID4();
-    }
-    
-    switch (prop.type) {
-      case 'string':
-        return `sample-${key}`;
-      case 'number':
-        return 42;
-      default:
-        return '';
-    }
-  };
 
-  const renderFormField = (key: string, prop: any, required: boolean) => {
+  const renderFormField = (key: string, prop: Record<string, unknown>, required: boolean) => {
     const value = formData[key] || '';
     const isIdField = key.includes('Id');
-    
+    const isInvalid = invalidFields.has(key);
+
     switch (prop.type) {
       case 'string':
         return (
           <div key={key} className="flex items-center gap-3">
-            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
+            <Label htmlFor={key} className={`${isInvalid ? 'text-red-400' : 'text-slate-300'} min-w-[100px] text-sm`}>
               {key} {required && <span className="text-red-400">*</span>}
+              {isInvalid && <span className="ml-1">⚠️</span>}
             </Label>
             <div className="flex gap-2 flex-1">
               <Input
@@ -174,14 +192,14 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                 value={value}
                 onChange={(e) => handleFormDataChange(key, e.target.value)}
                 placeholder={`Enter ${key}`}
-                className="bg-slate-800 border-slate-700 text-slate-100 h-8"
+                className={`bg-slate-800 ${isInvalid ? 'border-red-500' : 'border-slate-700'} text-slate-100 h-8 ${isInvalid ? 'focus-visible:ring-red-500' : ''}`}
               />
               {isIdField && (
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
-                  onClick={() => handleFormDataChange(key, generateFieldValue(key, prop))}
+                  onClick={() => handleFormDataChange(key, isIdField ? crypto.randomUUID() : `sample-${key}`)}
                   className="bg-slate-800 border-slate-700 hover:bg-slate-700 h-8 w-8"
                 >
                   <RefreshCw className="h-3 w-3" />
@@ -193,8 +211,9 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
       case 'number':
         return (
           <div key={key} className="flex items-center gap-3">
-            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
+            <Label htmlFor={key} className={`${isInvalid ? 'text-red-400' : 'text-slate-300'} min-w-[100px] text-sm`}>
               {key} {required && <span className="text-red-400">*</span>}
+              {isInvalid && <span className="ml-1">⚠️</span>}
             </Label>
             <Input
               id={key}
@@ -202,15 +221,16 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
               value={value}
               onChange={(e) => handleFormDataChange(key, Number(e.target.value))}
               placeholder={`Enter ${key}`}
-              className="bg-slate-800 border-slate-700 text-slate-100 h-8"
+              className={`bg-slate-800 ${isInvalid ? 'border-red-500' : 'border-slate-700'} text-slate-100 h-8 ${isInvalid ? 'focus-visible:ring-red-500' : ''}`}
             />
           </div>
         );
       case 'object':
         return (
           <div key={key} className="space-y-2">
-            <Label htmlFor={key} className="text-slate-300 text-sm">
+            <Label htmlFor={key} className={`${isInvalid ? 'text-red-400' : 'text-slate-300'} text-sm`}>
               {key} {required && <span className="text-red-400">*</span>}
+              {isInvalid && <span className="ml-1">⚠️</span>}
             </Label>
             <Textarea
               id={key}
@@ -224,22 +244,23 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                 }
               }}
               placeholder={`Enter ${key} as JSON`}
-              className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm h-20"
+              className={`bg-slate-800 ${isInvalid ? 'border-red-500' : 'border-slate-700'} text-slate-100 font-mono text-sm h-20 ${isInvalid ? 'focus-visible:ring-red-500' : ''}`}
             />
           </div>
         );
       default:
         return (
           <div key={key} className="flex items-center gap-3">
-            <Label htmlFor={key} className="text-slate-300 min-w-[100px] text-sm">
+            <Label htmlFor={key} className={`${isInvalid ? 'text-red-400' : 'text-slate-300'} min-w-[100px] text-sm`}>
               {key} {required && <span className="text-red-400">*</span>}
+              {isInvalid && <span className="ml-1">⚠️</span>}
             </Label>
             <Input
               id={key}
               value={value}
               onChange={(e) => handleFormDataChange(key, e.target.value)}
               placeholder={`Enter ${key}`}
-              className="bg-slate-800 border-slate-700 text-slate-100 h-8"
+              className={`bg-slate-800 ${isInvalid ? 'border-red-500' : 'border-slate-700'} text-slate-100 h-8 ${isInvalid ? 'focus-visible:ring-red-500' : ''}`}
             />
           </div>
         );
@@ -258,7 +279,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
         <Terminal className="h-6 w-6 text-blue-400" />
         <h1 className="text-2xl font-bold">Command Issuer</h1>
         <Badge variant="outline" className="border-slate-600 text-slate-300">
-          Tenant: {currentTenant}
+          Tenant: {tenant}
         </Badge>
       </div>
 
@@ -276,6 +297,8 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                   setSelectedCommand(value);
                   setFormData({});
                   setPayload("");
+                  setValidationErrors([]);
+                  setInvalidFields(new Set());
                 }}>
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
                     <SelectValue placeholder="Select command type" />
@@ -324,7 +347,7 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
             {selectedCommandSchema && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-100">Payload</h3>
-                
+
                 <Card className="bg-slate-800 border-slate-700">
                   <CardContent className="p-4">
                     <Tabs value={payloadView} onValueChange={(value: "form" | "json") => setPayloadView(value)}>
@@ -336,23 +359,23 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                           JSON
                         </TabsTrigger>
                       </TabsList>
-                      
+
                       <TabsContent value="form" className="space-y-3 mt-0">
-                        {Object.entries(selectedCommandSchema.schema.properties).map(([key, prop]: [string, any]) => 
+                        {Object.entries(selectedCommandSchema.schema.properties).map(([key, prop]: [string, Record<string, unknown>]) => 
                           renderFormField(key, prop, selectedCommandSchema.schema.required?.includes(key) || false)
                         )}
                       </TabsContent>
-                      
+
                       <TabsContent value="json" className="mt-0">
                         <Textarea
                           value={payload}
                           onChange={(e) => handlePayloadChange(e.target.value)}
-                          placeholder={generateExamplePayload(selectedCommand)}
+                          placeholder={selectedCommandSchema ? JSON.stringify(makeExample(selectedCommandSchema.schema), null, 2) : '{}'}
                           className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm min-h-32"
                         />
                       </TabsContent>
                     </Tabs>
-                    
+
                     <div className="text-xs text-slate-400 mt-3">
                       Required fields: {selectedCommandSchema.schema.required?.join(', ') || 'None'}
                     </div>
@@ -361,10 +384,24 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
               </div>
             )}
 
+            {validationErrors.length > 0 && (
+              <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-md">
+                <div className="flex items-center gap-2 mb-2 text-red-400">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="font-medium">Validation errors</span>
+                </div>
+                <ul className="list-disc pl-5 space-y-1">
+                  {validationErrors.map((error, index) => (
+                    <li key={index} className="text-sm text-red-300">{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <Button 
                 onClick={handleSubmit}
-                disabled={!selectedCommand || !aggregateId || isSubmitting}
+                disabled={!selectedCommand || isSubmitting}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {isSubmitting ? (
@@ -379,22 +416,21 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                   </>
                 )}
               </Button>
-              
+
               {selectedCommand && (
                 <Button 
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
-                    const example = generateExamplePayload(selectedCommand);
+                    const schema = selectedCommandSchema?.schema;
+                    if (!schema) return;
+                    const example = JSON.stringify(makeExample(schema), null, 2);
                     setPayload(example);
-                    try {
-                      setFormData(JSON.parse(example));
-                    } catch (e) {
-                      // Handle parse error
-                    }
+                    setFormData(JSON.parse(example));
+                    setValidationErrors([]);
+                    setInvalidFields(new Set());
                   }}
-                  className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
-                  Use Example
+                  Generate Payload
                 </Button>
               )}
             </div>
@@ -423,22 +459,47 @@ export const CommandIssuer = ({ currentTenant }: CommandIssuerProps) => {
                       ) : (
                         <ChevronRight className="h-3 w-3 flex-shrink-0" />
                       )}
-                      <span className="text-slate-500">
-                        {new Date(cmd.timestamp).toLocaleDateString()}
-                      </span>
-                      <span className="text-slate-400 font-mono truncate">{cmd.aggregateId}</span>
+                      {
+                        cmd.createdAt && <span className="text-slate-500">
+                        {new Date(cmd.createdAt).toLocaleString(undefined, {
+                          hour:   '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
+                       </span>
+                      }
+                      <span className="text-slate-400 font-mono truncate">{cmd.id}</span>
                       <span className="text-slate-200 truncate">{cmd.type}</span>
                     </div>
+
                     <Badge 
-                      variant={cmd.status === 'success' ? 'default' : 'destructive'}
+                      variant={
+                        ({
+                          pending:   'secondary',
+                          mocked:   'secondary',
+                          processed: 'default',
+                          consumed:  'default',
+                          failed:    'destructive',
+                        } as const)[cmd.status]
+                      }
                       className="text-xs flex-shrink-0"
                     >
                       {cmd.status}
                     </Badge>
                   </div>
-                  
+
                   {expandedCommand === cmd.id && (
-                    <div className="ml-5 p-3 bg-slate-800/50 rounded text-xs space-y-2">
+                    <div key={`${cmd.id}-details`} className="ml-5 p-3 bg-slate-800/50 rounded text-xs space-y-2">
+                      <span className="text-slate-400 font-medium">
+                        {new Date(cmd.createdAt).toLocaleString(undefined, {
+                          year:   '2-digit',
+                          month:   '2-digit',
+                          day:   '2-digit',
+                          hour:   '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
+                      </span>
                       <div>
                         <div className="text-slate-400 font-medium mb-1">Payload:</div>
                         <pre className="text-slate-300 bg-slate-900 p-2 rounded overflow-x-auto">

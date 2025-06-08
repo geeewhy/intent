@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    historyApiFallback: true
   },
   plugins: [
     react(),
@@ -18,5 +19,9 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  define: {
+    'process.env.VITE_API_MODE': JSON.stringify(process.env.VITE_API_MODE || 'mock'),
+    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || '')
   },
 }));

@@ -1,113 +1,47 @@
-
-import { useState, useEffect } from "react";
+//devex-ui/src/components/EventStreamViewer.tsx
+import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Activity, Filter, Clock } from "lucide-react";
-
-interface Event {
-  id: string;
-  type: string;
-  aggregateId: string;
-  aggregateType: string;
-  version: number;
-  timestamp: string;
-  tenant: string;
-  causationId?: string;
-  correlationId: string;
-  payload: any;
-  metadata: any;
-}
+import type { Event } from "@/data";
+import { useEvents } from "@/hooks/api";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface EventStreamViewerProps {
   currentTenant: string;
 }
 
-const mockEvents: Event[] = [
-  {
-    id: 'evt-001',
-    type: 'UserCreated',
-    aggregateId: 'user-123',
-    aggregateType: 'User',
-    version: 1,
-    timestamp: '2024-01-15T10:30:15Z',
-    tenant: 'tenant-1',
-    correlationId: 'corr-001',
-    causationId: 'cmd-001',
-    payload: { email: 'user@example.com', name: 'John Doe' },
-    metadata: { source: 'web-api', userId: 'admin-1' }
-  },
-  {
-    id: 'evt-002',
-    type: 'OrderPlaced',
-    aggregateId: 'order-456',
-    aggregateType: 'Order',
-    version: 1,
-    timestamp: '2024-01-15T10:29:30Z',
-    tenant: 'tenant-1',
-    correlationId: 'corr-002',
-    causationId: 'cmd-002',
-    payload: { items: [{ productId: 'prod-1', quantity: 2 }], total: 29.99 },
-    metadata: { source: 'mobile-app', userId: 'user-123' }
-  },
-  {
-    id: 'evt-003',
-    type: 'PaymentProcessed',
-    aggregateId: 'payment-789',
-    aggregateType: 'Payment',
-    version: 1,
-    timestamp: '2024-01-15T10:28:45Z',
-    tenant: 'tenant-2',
-    correlationId: 'corr-003',
-    causationId: 'cmd-003',
-    payload: { amount: 29.99, method: 'credit_card', status: 'completed' },
-    metadata: { source: 'payment-service', processorId: 'stripe' }
-  }
-];
-
 export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => {
-  const [events, setEvents] = useState<Event[]>(mockEvents);
   const [filter, setFilter] = useState("");
   const [isLive, setIsLive] = useState(true);
+  const queryClient = useQueryClient();
 
-  // Simulate live events
-  useEffect(() => {
-    if (!isLive) return;
+  // Use the events hook for data fetching and live updates
+  const { data: events = [], isFetching } = useEvents(currentTenant, 50, { enabled: isLive });
 
-    const interval = setInterval(() => {
-      const newEvent: Event = {
-        id: `evt-${Date.now()}`,
-        type: ['UserUpdated', 'OrderCancelled', 'PaymentRefunded'][Math.floor(Math.random() * 3)],
-        aggregateId: `aggregate-${Math.random().toString(36).substr(2, 6)}`,
-        aggregateType: ['User', 'Order', 'Payment'][Math.floor(Math.random() * 3)],
-        version: Math.floor(Math.random() * 5) + 1,
-        timestamp: new Date().toISOString(),
-        tenant: Math.random() > 0.5 ? 'tenant-1' : 'tenant-2',
-        correlationId: `corr-${Math.random().toString(36).substr(2, 8)}`,
-        causationId: `cmd-${Math.random().toString(36).substr(2, 8)}`,
-        payload: { randomData: Math.random() },
-        metadata: { source: 'live-stream', automated: true }
-      };
-
-      setEvents(prev => [newEvent, ...prev].slice(0, 50)); // Keep only latest 50
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [isLive]);
+  // If live mode is paused, cancel the query
+  const toggleLiveMode = () => {
+    if (isLive) {
+      // Pause live mode
+      queryClient.cancelQueries({ queryKey: ['events', currentTenant] });
+    }
+    setIsLive(!isLive);
+  };
 
   const filteredEvents = events.filter(event => {
-    if (!filter) return event.tenant === currentTenant;
-    
+    if (!filter) return event.tenant_id === currentTenant;
+
     const searchTerm = filter.toLowerCase();
-    return event.tenant === currentTenant && (
+    return event.tenant_id === currentTenant && (
       event.type.toLowerCase().includes(searchTerm) ||
       event.aggregateId.toLowerCase().includes(searchTerm) ||
       event.aggregateType.toLowerCase().includes(searchTerm)
     );
   });
 
-  const formatTimestamp = (timestamp: string) => {
+  const formatTimestamp = (timestamp: Date) => {
     return new Date(timestamp).toLocaleString();
   };
 
@@ -137,13 +71,14 @@ export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => 
               className="pl-10 bg-slate-800 border-slate-700 text-slate-100 w-64"
             />
           </div>
-          
+
           <Button
             variant={isLive ? "default" : "outline"}
-            onClick={() => setIsLive(!isLive)}
+            onClick={toggleLiveMode}
             className={isLive ? "bg-green-600 hover:bg-green-700" : "border-slate-600 text-slate-300"}
           >
             {isLive ? "Pause" : "Resume"} Live
+            {isFetching && isLive && <span className="ml-2">•</span>}
           </Button>
         </div>
       </div>
@@ -159,11 +94,16 @@ export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => 
                     {event.aggregateType}
                   </Badge>
                   <span className="text-sm text-slate-400">v{event.version}</span>
+                  {event.status && (
+                    <Badge variant={event.status === 'processed' ? 'default' : 'destructive'} className="text-xs">
+                      {event.status}
+                    </Badge>
+                  )}
                 </div>
-                
+
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <Clock className="h-3 w-3" />
-                  {formatTimestamp(event.timestamp)}
+                  {event.metadata?.timestamp && formatTimestamp(event.metadata.timestamp)}
                 </div>
               </div>
 
@@ -172,23 +112,37 @@ export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => 
                   <div className="text-slate-400">Aggregate ID:</div>
                   <div className="text-slate-100 font-mono">{event.aggregateId}</div>
                 </div>
-                
+
                 <div>
                   <div className="text-slate-400">Correlation ID:</div>
-                  <div className="text-slate-100 font-mono">{event.correlationId}</div>
+                  <div className="text-slate-100 font-mono">{event.metadata?.correlationId || 'N/A'}</div>
                 </div>
 
-                {event.causationId && (
+                {event.metadata?.causationId && (
                   <div>
                     <div className="text-slate-400">Causation ID:</div>
-                    <div className="text-slate-100 font-mono">{event.causationId}</div>
+                    <div className="text-slate-100 font-mono">{event.metadata.causationId}</div>
                   </div>
                 )}
 
                 <div>
                   <div className="text-slate-400">Source:</div>
-                  <div className="text-slate-100">{event.metadata.source}</div>
+                  <div className="text-slate-100">{event.metadata?.source || 'Unknown'}</div>
                 </div>
+
+                {event.metadata?.userId && (
+                  <div>
+                    <div className="text-slate-400">User ID:</div>
+                    <div className="text-slate-100 font-mono">{event.metadata.userId}</div>
+                  </div>
+                )}
+
+                {event.metadata?.requestId && (
+                  <div>
+                    <div className="text-slate-400">Request ID:</div>
+                    <div className="text-slate-100 font-mono">{event.metadata.requestId}</div>
+                  </div>
+                )}
               </div>
 
               <details className="mt-3">

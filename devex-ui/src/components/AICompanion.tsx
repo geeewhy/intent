@@ -1,3 +1,4 @@
+//devex-ui/src/components/AICompanion.tsx
 
 import { useState } from "react";
 import { Bot, X, Send, ChevronLeft, ChevronRight } from "lucide-react";
@@ -103,7 +104,7 @@ export const AICompanion = ({ isOpen, onToggle }: AICompanionProps) => {
               </button>
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent className="flex-1 flex flex-col p-4">
             <ScrollArea className="flex-1 mb-4">
               <div className="space-y-4">
@@ -126,14 +127,14 @@ export const AICompanion = ({ isOpen, onToggle }: AICompanionProps) => {
                 ))}
               </div>
             </ScrollArea>
-            
+
             <div className="flex gap-2">
               <Input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Ask about domain state, scaffold types..."
                 className="bg-slate-800 border-slate-700 text-slate-100"
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               />
               <Button
                 onClick={handleSendMessage}

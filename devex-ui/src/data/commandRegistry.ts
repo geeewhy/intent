@@ -1,3 +1,4 @@
+//devex-ui/src/data/commandRegistry.ts
 
 export interface CommandSchema {
   type: string;
@@ -6,7 +7,7 @@ export interface CommandSchema {
   schema: {
     type: string;
     title: string;
-    properties: Record<string, any>;
+    properties: Record<string, unknown>;
     required?: string[];
   };
 }
@@ -85,9 +86,7 @@ export const commandRegistry: CommandSchema[] = [
         },
         "parameters": {
           "type": "object",
-          "additionalProperties": {
-            "type": "any"
-          }
+          "additionalProperties": true
         }
       },
       "required": [
@@ -115,9 +114,7 @@ export const commandRegistry: CommandSchema[] = [
         },
         "parameters": {
           "type": "object",
-          "additionalProperties": {
-            "type": "any"
-          }
+          "additionalProperties": true
         }
       },
       "required": [
