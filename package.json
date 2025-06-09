@@ -57,6 +57,7 @@
     "@opentelemetry/context-async-hooks": "^2.0.1",
     "@opentelemetry/sdk-trace-node": "^2.0.1",
     "@testcontainers/postgresql": "^10.28.0",
+    "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.10",
     "@types/js-yaml": "^4.0.9",
