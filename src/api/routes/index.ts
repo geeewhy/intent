@@ -2,6 +2,7 @@ import { Express } from 'express';
 import healthRoutes from './health';
 import registryRoutes from './registry';
 import metricsRoutes from './metrics';
+import commandsRoutes from './commands';
 import accessLogMiddleware from '../middlewares/accessLog';
 
 /**
@@ -20,6 +21,9 @@ export const registerRoutes = (app: Express): void => {
 
   // Register metrics routes
   app.use(metricsRoutes);
+
+  // Register commands routes
+  app.use(commandsRoutes);
 };
 
 export default registerRoutes;

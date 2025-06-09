@@ -13,7 +13,7 @@ import { useAppCtx } from '@/app/AppProvider';
 import { isMock, apiMode } from '@/config/apiMode';
 import { Logo } from './Logo';
 
-const tenants = ['tenant-1', 'tenant-2', 'tenant-3'];
+const tenants = ['tenant-1', 'tenant-2', 'tenant-3', '0af03580-98d5-4884-96e4-e75168d8b887'];
 const roles = ['admin', 'user', 'viewer'];
 
 export const Header = () => {
