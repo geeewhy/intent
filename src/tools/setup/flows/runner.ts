@@ -81,6 +81,7 @@ export async function runFlowWithErrorHandling(
     return 0;
   } catch (error) {
     console.error(`Error running flow ${flowName}: ${(error as Error).message}`);
+    console.error((error as Error).stack);
     return 1;
   }
 }

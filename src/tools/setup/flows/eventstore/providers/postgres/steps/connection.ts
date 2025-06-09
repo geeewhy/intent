@@ -3,10 +3,8 @@
  * Set up database connection
  */
 import { FlowCtx } from '../../../../../shared/types';
-import { promptText, promptYesNo } from '../../../../../shared/prompt';
+import { promptText } from '../../../../../shared/prompt';
 import { postgresConnectionSchema, PostgresConnection } from '../../../../../shared/validation';
-import fs from 'fs/promises';
-import path from 'node:path';
 import pg from 'pg';
 
 /**
@@ -41,9 +39,6 @@ export default async function step(ctx: FlowCtx): Promise<void> {
   // Store connection pool in context for use by other steps
   ctx.vars.pool = pool;
   ctx.vars.connection = connection;
-
-  // Generate environment file
-  await generateEnvFile(ctx, connection);
 
   ctx.logger.info('Database connection setup complete');
 }
@@ -106,58 +101,4 @@ async function getConnectionParameters(ctx: FlowCtx): Promise<PostgresConnection
 
   // Validate connection parameters
   return postgresConnectionSchema.parse(connection);
-}
-
-/**
- * Generate environment file from template
- * @param ctx Flow context
- * @param connection Connection parameters
- */
-async function generateEnvFile(ctx: FlowCtx, connection: PostgresConnection): Promise<void> {
-  const templatePath = path.join(ctx.artifactsDir, 'templates', 'postgres.env_template');
-  // Use a different file name for test environment
-  const envPath = process.env.NODE_ENV === 'test' 
-    ? path.join(process.cwd(), '.env_test_generated')
-    : path.join(process.cwd(), '.env.local');
-
-  // Read template
-  const template = await fs.readFile(templatePath, 'utf-8');
-
-  // Replace placeholders
-  const envContent = template
-    .replace('{{LOCAL_DB_HOST}}', connection.host)
-    .replace('{{LOCAL_DB_PORT}}', String(connection.port))
-    .replace('{{LOCAL_DB_USER}}', connection.user)
-    .replace('{{LOCAL_DB_PASSWORD}}', connection.password || '')
-    .replace('{{LOCAL_DB_NAME}}', connection.database);
-
-  // Check if .env.local already exists
-  try {
-    await fs.access(envPath);
-
-    // If --yes flag is set, automatically overwrite
-    // Check both ctx.vars.yes and process.argv for --yes or -Y
-    const hasYesFlag = ctx.vars.yes || process.argv.includes('--yes') || process.argv.includes('-Y');
-
-    if (hasYesFlag) {
-      ctx.logger.info('Automatically overwriting .env.local (--yes flag is set)');
-    } else {
-      // Ask if we should overwrite
-      const overwrite = await promptYesNo(
-        '.env.local already exists. Overwrite?',
-        false
-      );
-
-      if (!overwrite) {
-        ctx.logger.info('Skipping environment file generation');
-        return;
-      }
-    }
-  } catch (error) {
-    // File doesn't exist, continue
-  }
-
-  // Write an environment file
-  await fs.writeFile(envPath, envContent);
-  ctx.logger.info(`Environment file generated at ${envPath}`);
 }
