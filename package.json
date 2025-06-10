@@ -26,6 +26,7 @@
     "tool:projections-lint": "ts-node src/tools/projections-lint/index.ts",
     "tool:projection-check-drift": "ts-node src/tools/projections-drift-check/index.ts",
     "tool:projection-repair": "ts-node src/tools/projections-repair/index.ts",
+    "tool:core-lint": "ts-node src/tools/core-lint/index.ts",
     "setup": "ts-node src/tools/setup/setup.ts"
   },
   "dependencies": {

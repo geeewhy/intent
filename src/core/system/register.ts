@@ -14,6 +14,11 @@ import { SystemCommandType, SystemEventType } from './contracts';
 import { register as registerSystemProjections } from './read-models/register';
 import { commandPayloadSchemas, eventPayloadSchemas } from './payload-schemas';
 
+const aggregateRouting = {
+  aggregateType: 'system',
+  extractId: (payload: Partial<{ systemId: any; }>) => payload.systemId || 'system'
+}
+
 /**
  * Self-registration function for the system domain
  * Registers all system domain components with the central registry
@@ -41,7 +46,8 @@ export function registerSystemDomain(): void {
     registerCommandType(type, {
       domain: 'system',
       description: `System command: ${type}`,
-      payloadSchema: commandPayloadSchemas[type]
+      payloadSchema: commandPayloadSchemas[type],
+      aggregateRouting: aggregateRouting
     });
   });
 

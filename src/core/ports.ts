@@ -4,6 +4,7 @@
  */
 
 import { Command, Event, UUID } from './contracts';
+import {CommandResult} from "../infra/contracts";
 
 /**
  * Inbound port for handling commands
@@ -58,7 +59,7 @@ export interface EventStorePort {
  * Outbound port for scheduling jobs/workflows
  */
 export interface JobSchedulerPort {
-  schedule(cmd: Command): Promise<void>;
+  schedule(cmd: Command): Promise<CommandResult>;
 }
 
 /**

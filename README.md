@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/geeewhy/intent/actions/workflows/build.yml/badge.svg)](https://github.com/geeewhy/intent/actions/workflows/build.yml)
 [![CI](https://github.com/geeewhy/intent/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/geeewhy/intent/actions/workflows/unit-tests.yml)
+[![CI](https://github.com/geeewhy/intent/actions/workflows/core-linter.yml/badge.svg)](https://github.com/geeewhy/intent/actions/workflows/core-linter.yml)
 [![CI](https://github.com/geeewhy/intent/actions/workflows/projection-linter.yml/badge.svg)](https://github.com/geeewhy/intent/actions/workflows/projection-linter.yml)
 
 > **Intent** turns event-sourcing theory into a platform you can demo in five minutes. It’s a pragmatic, ports-first reference for multi-tenant, event-sourced CQRS back-ends powered by TypeScript and uses [Temporal](https://github.com/temporalio/temporal) for durable workflow execution.

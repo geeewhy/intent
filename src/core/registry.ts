@@ -1,5 +1,5 @@
 //src/core/registry.ts
-import { CommandHandler, EventHandler, SagaDefinition, ReadModelUpdaterPort } from './contracts';
+import { CommandHandler, EventHandler, SagaDefinition, ReadModelUpdaterPort, UUID } from './contracts';
 import { AggregateClass } from './aggregates';
 import { z } from 'zod';
 
@@ -8,6 +8,10 @@ export interface CommandTypeMeta {
   domain: string;
   description: string;
   payloadSchema?: z.ZodTypeAny;
+  aggregateRouting?: {
+    aggregateType: string;
+    extractId: (payload: any) => UUID;
+  };
 }
 
 export interface EventTypeMeta {

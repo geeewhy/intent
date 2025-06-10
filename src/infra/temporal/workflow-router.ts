@@ -1,6 +1,6 @@
 // infra/temporal/workflow-router.ts
 import {Connection, WorkflowClient, WorkflowIdReusePolicy} from '@temporalio/client';
-import {getAllSagas} from '../../core/registry';
+import {getAllSagas, DomainRegistry} from '../../core/registry';
 import {Command, Event, UUID} from '../../core/contracts';
 import {log} from '../../core/logger';
 import {CommandHandler} from '../../core/contracts';
@@ -28,10 +28,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
 
     /** Supports command routing (aggregate or saga) */
     supportsCommand(cmd: Command): boolean {
-        return (
-            (!!cmd.payload?.aggregateId && !!cmd.payload?.aggregateType) ||
-            Object.values(SagaRegistry).some((s) => s.idFor(cmd))
-        );
+        return this.isAggregateCommand(cmd) || this.isSagaCommand(cmd);
     }
 
     /** Supports event routing */
@@ -41,6 +38,14 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
 
     /** Handle a command (always route to aggregate's processCommand workflow) */
     async handle(cmd: Command): Promise<CommandResult> {
+        const meta = DomainRegistry.commandTypes()[cmd.type];
+        const routing = meta?.aggregateRouting;
+
+        if (routing) {
+            cmd.payload.aggregateType ??= routing.aggregateType;
+            cmd.payload.aggregateId ??= routing.extractId(cmd.payload);
+        }
+
         if (this.isAggregateCommand(cmd)) {
             const {tenant_id} = cmd;
             const aggregateType = cmd.payload?.aggregateType;
@@ -233,7 +238,8 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
 
     /** Check if a command is for an aggregate */
     private isAggregateCommand(cmd: Command): boolean {
-        return !!cmd.payload?.aggregateId && !!cmd.payload?.aggregateType;
+        const meta = DomainRegistry.commandTypes()[cmd.type];
+        return !!meta?.aggregateRouting || (!!cmd.payload?.aggregateId && !!cmd.payload?.aggregateType);
     }
 
     /** Get workflow ID for aggregates */

@@ -5,8 +5,6 @@ import { SystemCommandType, SystemEventType } from './contracts';
 // -- commands
 
 export const LogMessagePayloadSchema = z.object({
-  aggregateId: z.string(), // todo id column wiring (testId = aggregateId), shouldnt bleed into contracts
-  aggregateType: z.string(), // todo workflow router - cmd handler should be able to lookup via registry
   message: z.string(),
   systemId: z.string().uuid().optional(), // todo singleton ids = validation trouble. see aggregate code for the ='system' hack
 });
@@ -14,7 +12,6 @@ export type LogMessagePayload = z.infer<typeof LogMessagePayloadSchema>;
 
 export const SimulateFailurePayloadSchema = z.object({
   aggregateId: z.string(),
-  aggregateType: z.string(),
   systemId: z.string().uuid().optional(),
 });
 export type SimulateFailurePayload = z.infer<typeof SimulateFailurePayloadSchema>;
