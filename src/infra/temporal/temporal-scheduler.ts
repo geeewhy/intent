@@ -63,6 +63,7 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
                 logger?.error('Failed to schedule command', { error: e });
             }
         } else {
+            // @ts-ignore
             logger?.warn('No router supports command');
         }
     }

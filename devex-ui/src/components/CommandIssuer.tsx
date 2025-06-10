@@ -495,7 +495,6 @@ export const CommandIssuer = () => {
                         })}
                        </span>
                       }
-                      <span>x{cmd.createdAt}x</span>
                       <span className="text-slate-400 font-mono truncate">{cmd.id}</span>
                       <span className="text-slate-200 truncate">{cmd.type}</span>
                     </div>
