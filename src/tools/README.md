@@ -10,6 +10,7 @@ This directory contains various tools for managing and configuring the platform.
 | [Projection Drift Check Tool](projections-drift-check/README.md) | Checks for drift between projection definitions in code and actual database tables.         |
 | [Projection Repair Tool](projections-repair/README.md)           | Repairs drift between projection definitions in code and actual database tables.            |
 | [Projection RLS Policy Linter](projections-lint/README.md)       | Validates the structure, completeness, and correctness of all ReadAccessPolicy definitions. |
+| [Core Domain Linter](core-lint/README.md)                        | Validates that all commands declare routing, and all role-based policies register their required roles. |
 
 ## Usage
 
