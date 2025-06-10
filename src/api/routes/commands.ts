@@ -1,12 +1,7 @@
 import { Router } from 'express';
 import pool from '../db';
-import {setLoggerAccessor, log} from '../../core/logger';
-import {stdLogger} from '../../infra/logger/stdLogger';
 import { TemporalScheduler } from '../../infra/temporal/temporal-scheduler';
-
-
-setLoggerAccessor(() => stdLogger);
-const logger = log();
+import logger from '../logger';
 
 const router = Router();
 
@@ -40,7 +35,7 @@ router.get('/api/commands', async (req, res) => {
       client.release();
     }
   } catch (error) {
-    stdLogger.error('Commands endpoint error:', { error });
+    logger.error('Commands endpoint error:', { error });
     res.status(500).json({
       error: error instanceof Error ? error.message : String(error)
     });
@@ -104,7 +99,12 @@ router.post('/api/commands', async (req, res) => {
         tenantId: command.tenant_id
       });
 
-      // Return success response
+      if (schedulerResponse.status === 'fail') {
+        //res.status(422);
+      }
+      else {
+        res.status(200);
+      }
       res.json(schedulerResponse);
     } catch (error) {
       // Log error
