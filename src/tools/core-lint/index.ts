@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+
+//src/tools/core-lint/index.ts
 /**
  * Lint-core tool
  *

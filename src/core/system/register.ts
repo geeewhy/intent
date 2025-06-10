@@ -6,11 +6,12 @@ import {
   registerSaga,
   registerCommandType,
   registerEventType,
+  registerRoles,
 } from '../registry';
 import { SystemAggregate } from './aggregates/system.aggregate';
 import { SystemCommandHandler } from './command-handler';
 import { systemSagaRegistry } from './sagas/saga-registry';
-import { SystemCommandType, SystemEventType } from './contracts';
+import { SystemCommandType, SystemEventType, SystemRole } from './contracts';
 import { register as registerSystemProjections } from './read-models/register';
 import { commandPayloadSchemas, eventPayloadSchemas } from './payload-schemas';
 
@@ -59,6 +60,9 @@ export function registerSystemDomain(): void {
       payloadSchema: eventPayloadSchemas[type]
     });
   });
+
+  // Register roles
+  registerRoles('system', ['tester', 'system', 'developer']);
 }
 
 // Auto-register when imported

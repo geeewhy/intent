@@ -32,6 +32,7 @@ router.get('/api/registry', (req, res) => {
     sagas: Object.keys(DomainRegistry.sagas()),
     commandTypes: commands,
     eventTypes: events,
+    roles: DomainRegistry.roles(),
   });
 });
 
@@ -47,6 +48,12 @@ router.get('/api/registry/commands', (req, res) => {
 
   res.json(attachSchema(data, includeSchema));
 });
+
+// Roles endpoint
+router.get('/api/registry/roles', (req, res) => {
+  res.json(DomainRegistry.roles());
+});
+
 
 // Events endpoint
 router.get('/api/registry/events', (req, res) => {
@@ -75,5 +82,17 @@ router.get('/api/registry/sagas', (_req, res) =>
 router.get('/api/registry/domains', (_req, res) =>
   res.json(DomainRegistry.domains()),
 );
+
+// Roles endpoint
+router.get('/api/registry/roles', (req, res) => {
+  const domain = req.query.domain as string | undefined;
+
+  if (domain) {
+    const roles = DomainRegistry.roles()[domain] || [];
+    res.json(roles);
+  } else {
+    res.json(DomainRegistry.roles());
+  }
+});
 
 export default router;
