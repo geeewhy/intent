@@ -16,6 +16,16 @@ export function log(): LoggerPort | undefined {
 }
 
 // Helper functions for handlers as examples in core
+
+export function createLogger(): LoggerPort | undefined {
+    const logger = log();
+    if (!logger) return undefined;
+
+    return logger.child({
+        component: 'core'
+    });
+}
+
 export function createLoggerForCommandHandler(handler: CommandHandler): LoggerPort | undefined {
     const logger = log();
     if (!logger) return undefined;

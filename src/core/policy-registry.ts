@@ -29,7 +29,12 @@ export function listRegisteredConditions() {
     return Object.keys(conditionMap).sort();
 }
 
+export function getConditionMap(): Record<string, (args: any) => boolean> {
+    return { ...conditionMap }; // read-only clone
+}
+
 type RoleAccessMap = Record<string, string[]>;
+export const RegisteredAccessModels: Record<string, RoleAccessMap> = {};
 
 export function registerCommandConditionsFromModel(
     namespace: string,
@@ -47,5 +52,8 @@ export function registerCommandConditionsFromModel(
             model[role]?.includes(cmd)
         );
     });
+
+    RegisteredAccessModels[namespace] = model;
+
     return registeredConditions;
 }

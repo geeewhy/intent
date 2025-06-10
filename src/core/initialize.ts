@@ -11,7 +11,7 @@ import './system/register';
  * @returns A promise that resolves when initialization is complete
  */
 export async function initializeCore() {
-  console.log('Core initialized with:');
+  console.log('Core initialized');
   console.log(`- ${Object.keys(DomainRegistry.domains()).length} domains`);
   console.log(`- ${Object.keys(DomainRegistry.aggregates()).length} aggregates`);
   console.log(`- ${Object.keys(DomainRegistry.commandHandlers()).length} command handlers`);

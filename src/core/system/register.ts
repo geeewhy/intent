@@ -62,7 +62,7 @@ export function registerSystemDomain(): void {
   });
 
   // Register roles
-  registerRoles('system', ['tester', 'system', 'developer']);
+   registerRoles('system', ['tester', 'system', 'developer']);
 }
 
 // Auto-register when imported
