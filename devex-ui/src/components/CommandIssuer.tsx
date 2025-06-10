@@ -280,6 +280,11 @@ export const CommandIssuer = () => {
   const selectedCommandSchema = commandRegistry.find(cmd => cmd.type === selectedCommand);
   const domain = selectedCommandSchema?.domain;
   const { data: roles = [] } = useRoles(domain);
+  useEffect(() => {
+    if (role && !roles.includes(role)) {
+      setRole(null);
+    }
+  }, [role, roles, setRole]);
 
   const toggleCommandExpansion = (commandId: string) => {
     setExpandedCommand(expandedCommand === commandId ? null : commandId);
@@ -342,9 +347,15 @@ export const CommandIssuer = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="role" className="text-slate-300">Role</Label>
-                <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
-                    <SelectValue placeholder="Select role" />
+                <Select value={role ?? ''} onValueChange={setRole} disabled={!selectedCommand}>
+                <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
+                    <SelectValue placeholder={
+                      !selectedCommand
+                          ? "Roles populate with the selected command type"
+                          : role
+                              ? role
+                              : "Select a role"
+                    } />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
                     {roles.map((r) => (
