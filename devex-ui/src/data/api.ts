@@ -1,6 +1,8 @@
 //devex-ui/src/data/api.ts
 import { toast } from "@/components/ui/sonner";
 
+const apiMode = localStorage.getItem('api_mode') || import.meta.env.VITE_API_MODE || 'mock';
+
 // API client configuration
 export const API_CONFIG = {
   baseUrl: localStorage.getItem('api_uri') || import.meta.env.VITE_API_URL || '',
@@ -17,9 +19,8 @@ export const API_CONFIG = {
 
 // --- URL builder
 function buildUrl(endpoint: string, params?: Record<string, string>): string {
-  const url = API_CONFIG.baseUrl
-      ? new URL(`${API_CONFIG.baseUrl}${endpoint}`)
-      : new URL(endpoint, window.location.origin);
+  const base = apiMode === 'mock' ? '' : (localStorage.getItem('api_uri') || import.meta.env.VITE_API_URL || '');
+  const url = new URL(`${base}${endpoint}`, window.location.origin);
 
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));

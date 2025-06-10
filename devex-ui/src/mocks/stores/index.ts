@@ -2,4 +2,5 @@
 export * from './command.store'
 export * from './event.store'
 export * from './log.store'
+export * from './roles.store'
 export * from './trace.store'

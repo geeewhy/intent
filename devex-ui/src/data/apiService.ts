@@ -53,3 +53,8 @@ export const fetchLogs = (tenant: string, limit=50) =>
 export const fetchCommandRegistry = async (): Promise<CommandSchema[]> => {
   return apiClient.get<CommandSchema[]>(API_CONFIG.endpoints.registry, { includeSchema: 'true' });
 };
+
+export const fetchRolesByDomain = async (domain: string): Promise<string[]> => {
+  const result = await apiClient.get<Record<string, string[]>>('/api/registry/roles');
+  return result[domain] ?? [];
+};

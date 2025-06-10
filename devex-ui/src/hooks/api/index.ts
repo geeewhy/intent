@@ -5,3 +5,4 @@ export * from './useEvent';
 export * from './useCommands';
 export * from './useSubmitCommand';
 export * from './useMetrics';
+export * from './useRoles';

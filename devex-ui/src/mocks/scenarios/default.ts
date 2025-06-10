@@ -3,6 +3,7 @@ import { eventStore } from '../stores/event.store';
 import { commandStore, recentCommandsStore } from '../stores/command.store';
 import { traceStore } from '../stores/trace.store';
 import { logStore } from '../stores/log.store';
+import { rolesStore } from '../stores/roles.store';
 import { makeEvent } from '../factories/event.factory';
 import { makeCommand } from '../factories/command.factory';
 import { makeTrace } from '../factories/trace.factory';
@@ -20,6 +21,7 @@ export function loadDefault() {
   recentCommandsStore.reset();
   traceStore.reset();
   logStore.reset();
+  rolesStore.reset();
 
   // Get seed size from ENV var or use default
   const SEED_SIZE = Number(import.meta.env.VITE_SEED_SIZE ?? 200);
@@ -64,4 +66,42 @@ export function loadDefault() {
     payload: { systemId: "sys-002" },
     response: { success: false, error: "Simulation failed: Network timeout" }
   } as Command);
+
+  // Seed roles store with domain-specific roles
+  rolesStore.push({
+    id: 'system',
+    domain: 'system',
+    roles: ['tester', 'system', 'developer']
+  });
+
+  rolesStore.push({
+    id: 'user',
+    domain: 'user',
+    roles: ['admin', 'viewer']
+  });
+
+  rolesStore.push({
+    id: 'order',
+    domain: 'order',
+    roles: ['sales', 'ops']
+  });
+
+  rolesStore.push({
+    id: 'payment',
+    domain: 'payment',
+    roles: ['billing', 'auditor']
+  });
+
+  rolesStore.push({
+    id: 'catalog',
+    domain: 'catalog',
+    roles: ['manager', 'editor']
+  });
+
+  rolesStore.push({
+    id: 'inventory',
+    domain: 'inventory',
+    roles: ['stock', 'restocker']
+  });
+
 }

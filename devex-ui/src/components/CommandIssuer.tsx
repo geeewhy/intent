@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight, RefreshCw, AlertCircle } from "lucide-react";
-import { useCommands, useSubmitCommand } from "@/hooks/api";
+import { useCommands, useSubmitCommand, useRoles } from "@/hooks/api";
 import { validate, registerSchemas } from "@/utils/schemaValidator";
 import { makeExample } from "@/utils/schemaFaker";
 import { toast } from "@/components/ui/sonner";
@@ -17,8 +17,6 @@ import { useAppCtx } from '@/app/AppProvider';
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommandRegistry } from "@/data/apiService";
 import { cn } from "@/lib/utils";
-
-const roles = ['admin', 'developer', 'tester', 'johndoe'];
 
 export const CommandIssuer = () => {
   const { tenant, role, setRole } = useAppCtx();
@@ -280,6 +278,8 @@ export const CommandIssuer = () => {
   };
 
   const selectedCommandSchema = commandRegistry.find(cmd => cmd.type === selectedCommand);
+  const domain = selectedCommandSchema?.domain;
+  const { data: roles = [] } = useRoles(domain);
 
   const toggleCommandExpansion = (commandId: string) => {
     setExpandedCommand(expandedCommand === commandId ? null : commandId);
