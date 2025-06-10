@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight, RefreshCw, AlertCircle } from "lucide-react";
-import type { CommandSchema } from "@/data/types";
 import { useCommands, useSubmitCommand } from "@/hooks/api";
 import { validate, registerSchemas } from "@/utils/schemaValidator";
 import { makeExample } from "@/utils/schemaFaker";
@@ -17,21 +16,21 @@ import { toast } from "@/components/ui/sonner";
 import { useAppCtx } from '@/app/AppProvider';
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommandRegistry } from "@/data/apiService";
+import { cn } from "@/lib/utils";
 
-const generateUUID4 = (): string => {
-  return crypto.randomUUID();
-};
+const roles = ['admin', 'developer', 'tester', 'johndoe'];
 
 export const CommandIssuer = () => {
-  const { tenant } = useAppCtx();
+  const { tenant, role, setRole } = useAppCtx();
   const [selectedCommand, setSelectedCommand] = useState("");
-  const [aggregateId, setAggregateId] = useState("");
   const [payload, setPayload] = useState("");
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [payloadView, setPayloadView] = useState<"form" | "json">("form");
   const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
+  const [lastSubmittedId, setLastSubmittedId] = useState<string | null>(null);
+  const [highlightedCommandId, setHighlightedCommandId] = useState<string | null>(null);
 
   // Use React Query hooks
   const { data: recentCommands = [] } = useCommands(tenant, 10);
@@ -115,15 +114,12 @@ export const CommandIssuer = () => {
       id: crypto.randomUUID(),
       tenant_id: tenant,
       type: selectedCommand,
-      payload: {
-        ...payloadData,
-        ...(aggregateId ? { aggregateId } : {})
-      },
+      payload: payloadData,
       metadata: {
         timestamp: new Date().toISOString(),
         userId: crypto.randomUUID(),
-        role: 'user',
-        source: 'command-issuer'
+        role,
+        source: 'devx/command-issuer'
       }
     };
 
@@ -133,25 +129,31 @@ export const CommandIssuer = () => {
       onSuccess: (result) => {
         console.log('Command submission result:', result);
 
-        toast.success(
-          result.status === 'success'
-            ? 'Command executed 🎉'
-            : 'Command failed',
-          {
-            description:
-              result.status === 'success'
-                ? `${result.events?.length ?? 0} event(s) produced`
-                : result.error
-          }
-        );
+        if (result.status === 'success') {
+          toast.success('Command executed', {
+            description: `${result.events?.length > 0 ? result.events?.length + 'event(s) produced' : ''}`
+          });
 
-        // Reset form
-        setSelectedCommand("");
-        setAggregateId("");
-        setPayload("");
-        setFormData({});
-        setValidationErrors([]);
-        setInvalidFields(new Set());
+          // Set the last submitted ID
+          setLastSubmittedId(commandPayload.id);
+          setHighlightedCommandId(commandPayload.id);
+
+          setTimeout(() => {
+            setHighlightedCommandId(null);
+          }, 500);
+
+          // Reset form
+          setPayload("");
+          setFormData({});
+          setValidationErrors([]);
+          setInvalidFields(new Set());
+        } else {
+          toast.error('Command failed', {
+            description: 'Error:' + result.error || 'Unknown failure'
+          });
+
+          // Keep form open (do not reset anything)
+        }
       },
       onError: (error) => {
         console.error('Command submission failed:', error);
@@ -164,9 +166,6 @@ export const CommandIssuer = () => {
     });
   };
 
-  const generateAggregateId = () => {
-    setAggregateId(generateUUID4());
-  };
 
 
   const handleFormDataChange = (key: string, value: unknown) => {
@@ -342,25 +341,19 @@ export const CommandIssuer = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="aggregate-id" className="text-slate-300">Aggregate ID</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="aggregate-id"
-                    value={aggregateId}
-                    onChange={(e) => setAggregateId(e.target.value)}
-                    placeholder="e.g., system-123"
-                    className="bg-slate-800 border-slate-700 text-slate-100"
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon"
-                    onClick={generateAggregateId}
-                    className="bg-slate-800 border-slate-700 hover:bg-slate-700"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Label htmlFor="role" className="text-slate-300">Role</Label>
+                <Select value={role} onValueChange={setRole}>
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700">
+                    {roles.map((r) => (
+                      <SelectItem key={r} value={r} className="text-slate-100 hover:bg-slate-700">
+                        {r}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -474,75 +467,88 @@ export const CommandIssuer = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {recentCommands.map((cmd) => (
-                <div key={cmd.id} className="space-y-2">
-                  <div 
-                    className="flex items-center justify-between p-2 bg-slate-800 rounded cursor-pointer hover:bg-slate-750"
-                    onClick={() => toggleCommandExpansion(cmd.id)}
+              {recentCommands.map((cmd, idx) => {
+                const isHighlighted = cmd.id === highlightedCommandId;
+                const highlightClass = isHighlighted ? "ring-2 ring-blue-500 bg-blue-500/10" : "";
+                return (
+                  <div
+                    key={cmd.id}
+                    className={cn("space-y-2 transition-all duration-300", highlightClass)}
                   >
-                    <div className="flex items-center gap-2 text-xs text-slate-300 flex-1 min-w-0">
-                      {expandedCommand === cmd.id ? (
-                        <ChevronDown className="h-3 w-3 flex-shrink-0" />
-                      ) : (
-                        <ChevronRight className="h-3 w-3 flex-shrink-0" />
-                      )}
-                      {
-                        cmd.createdAt && <span className="text-slate-500">
-                        {new Date(cmd.createdAt).toLocaleString(undefined, {
-                          hour:   '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })}
-                       </span>
-                      }
-                      <span className="text-slate-400 font-mono truncate">{cmd.id}</span>
-                      <span className="text-slate-200 truncate">{cmd.type}</span>
-                    </div>
-
-                    <Badge 
-                      variant={
-                        ({
-                          pending:   'secondary',
-                          mocked:   'secondary',
-                          processed: 'default',
-                          consumed:  'default',
-                          failed:    'destructive',
-                        } as const)[cmd.status]
-                      }
-                      className="text-xs flex-shrink-0"
+                    <div 
+                      className="flex items-center justify-between p-2 bg-slate-800 rounded cursor-pointer hover:bg-slate-750"
+                      onClick={() => toggleCommandExpansion(cmd.id)}
                     >
-                      {cmd.status}
-                    </Badge>
-                  </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-300 flex-1 min-w-0">
+                        {expandedCommand === cmd.id ? (
+                          <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3 flex-shrink-0" />
+                        )}
+                        {
+                          cmd.createdAt && <span className="text-slate-500">
+                          {new Date(cmd.createdAt).toLocaleString(undefined, {
+                            hour:   '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
+                         </span>
+                        }
+                        <span className="text-slate-400 font-mono truncate">{cmd.id}</span>
+                        <span className="text-slate-200 truncate">{cmd.type}</span>
+                      </div>
 
-                  {expandedCommand === cmd.id && (
-                    <div key={`${cmd.id}-details`} className="ml-5 p-3 bg-slate-800/50 rounded text-xs space-y-2">
-                      <span className="text-slate-400 font-medium">
-                        {new Date(cmd.createdAt).toLocaleString(undefined, {
-                          year:   '2-digit',
-                          month:   '2-digit',
-                          day:   '2-digit',
-                          hour:   '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })}
-                      </span>
-                      <div>
-                        <div className="text-slate-400 font-medium mb-1">Payload:</div>
-                        <pre className="text-slate-300 bg-slate-900 p-2 rounded overflow-x-auto">
-                          {JSON.stringify(cmd.payload, null, 2)}
-                        </pre>
-                      </div>
-                      <div>
-                        <div className="text-slate-400 font-medium mb-1">Response:</div>
-                        <pre className="text-slate-300 bg-slate-900 p-2 rounded overflow-x-auto">
-                          {JSON.stringify(cmd.response, null, 2)}
-                        </pre>
-                      </div>
+                      <Badge 
+                        variant={
+                          ({
+                            pending:   'secondary',
+                            mocked:   'secondary',
+                            processed: 'default',
+                            consumed:  'default',
+                            failed:    'destructive',
+                          } as const)[cmd.status]
+                        }
+                        className="text-xs flex-shrink-0"
+                      >
+                        {cmd.status}
+                      </Badge>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {expandedCommand === cmd.id && (
+                      <div key={`${cmd.id}-details`} className="ml-5 p-3 bg-slate-800/50 rounded text-xs space-y-2">
+                        <span className="text-slate-400 font-medium">
+                          {new Date(cmd.createdAt).toLocaleString(undefined, {
+                            year:   '2-digit',
+                            month:   '2-digit',
+                            day:   '2-digit',
+                            hour:   '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
+                        </span>
+                        <div>
+                          <div className="text-slate-400 font-medium mb-1">Metadata:</div>
+                          <pre className="text-slate-300 bg-slate-900 p-2 rounded overflow-x-auto">
+                            {JSON.stringify(cmd.metadata ?? {}, null, 2)}
+                          </pre>
+                        </div>
+                        <div>
+                          <div className="text-slate-400 font-medium mb-1">Payload:</div>
+                          <pre className="text-slate-300 bg-slate-900 p-2 rounded overflow-x-auto">
+                            {JSON.stringify(cmd.payload, null, 2)}
+                          </pre>
+                        </div>
+                        <div>
+                          <div className="text-slate-400 font-medium mb-1">Response:</div>
+                          <pre className="text-slate-300 bg-slate-900 p-2 rounded overflow-x-auto">
+                            {JSON.stringify(cmd.response, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

@@ -13,11 +13,10 @@ import { useAppCtx } from '@/app/AppProvider';
 import { isMock, apiMode } from '@/config/apiMode';
 import { Logo } from './Logo';
 
-const tenants = ['tenant-1', 'tenant-2', 'tenant-3', '0af03580-98d5-4884-96e4-e75168d8b887'];
-const roles = ['admin', 'developer', 'tester'];
+const tenants = ['0af03580-98d5-4884-96e4-e75168d8b887'];
 
 export const Header = () => {
-  const { tenant, role, setTenant, setRole } = useAppCtx();
+  const { tenant, setTenant } = useAppCtx();
 
   return (
     <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center px-6 gap-6">
@@ -27,7 +26,7 @@ export const Header = () => {
         <span className="text-xl font-semibold text-slate-100">Intent DevX</span>
       </div>
 
-      {/* Tenant/Role Switchers */}
+      {/* Tenant switcher */}
       <div className="flex items-center gap-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -44,26 +43,6 @@ export const Header = () => {
                 className="text-slate-100 hover:bg-slate-700"
               >
                 {tenant}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700">
-              Role: {role}
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-slate-800 border-slate-700">
-            {roles.map((role) => (
-              <DropdownMenuItem 
-                key={role}
-                onClick={() => setRole(role)}
-                className="text-slate-100 hover:bg-slate-700"
-              >
-                {role}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
