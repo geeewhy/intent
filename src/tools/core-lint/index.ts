@@ -8,7 +8,7 @@
  */
 
 import { DomainRegistry } from '../../core/registry';
-import {getConditionMap, RegisteredAccessModels} from '../../core/policy-registry';
+import {RegisteredAccessModels} from '../../core/policy-registry';
 import initializeCore from "../../core/initialize";
 void initializeCore();
 
