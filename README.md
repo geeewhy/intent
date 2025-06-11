@@ -221,8 +221,7 @@ docker/
 
 ---
 
-## Growing ecosystem
-
+[//]: # (## Growing ecosystem)
 
 [//]: # (- **📚 Docs site** – richer guides and ADR index *&#40;coming soon at intent.heart.dev&#41;*)
 
@@ -236,7 +235,13 @@ docker/
 
 ## License
 
-All rights reserved © DevHeart Technologies Inc.  
+[//]: # (We’ve open-sourced it early to align with the community and grow it in the open.)
 OSS licensing is under consideration. Until an explicit license is published, you may not use, copy, modify, distribute, or deploy this code in any production, commercial, or public context.
 
 ⚠️ Intent is not a product. It’s a developer-first reference implementation of modern event-sourcing patterns with a clear architectural spine. Hosted/cloud support, multi-backend support, and full admin UI are on the roadmap.
+
+Until further notice;
+All rights reserved © DevHeart Technologies Inc.
+
+[//]: # (> Licensed under AGPL-3.0. Commercial licenses available. See [LICENSE]&#40;./LICENSE&#41;.)
+[//]: # (> By contributing, you agree to the [Contributor License Agreement]&#40;./CONTRIBUTOR_LICENSE_AGREEMENT.md&#41;.)
