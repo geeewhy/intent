@@ -86,7 +86,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
 
                     // Check if this is a business rule violation
                     if (result.status === 'fail') {
-                        logger?.warn('Business rule violation in workflow', { error: result.error });
+                        logger?.error('Business rule violation in workflow', { error: result.error });
                         // We don't consider this a failure, just log it
                     } else {
                         logger?.info('Aggregate workflow completed successfully');
@@ -97,15 +97,21 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
                         logger?.info('Signaling saga after aggregate workflow completion');
                         return this.routeSagaCommand(cmd);
                     }
+
                     return result;
-                } catch (error) {
-                    logger?.error('Error waiting for aggregate workflow to complete', { error });
+                } catch (err) {
+                    if (err) {
+                        logger?.warn('Error waiting for aggregate workflow to complete', { error: err });
+                    }
                     // Still signal the saga even if the aggregate workflow fails
                     if (this.isSagaCommand(cmd)) {
                         logger?.info('Signaling saga after aggregate workflow failure');
                         return this.routeSagaCommand(cmd);
                     }
-                    return {status: 'fail', error: `Error waiting for aggregate workflow: ${error}`};
+                    return {
+                        status: 'fail',
+                        error: err instanceof Error ? err : new Error(String(err)),
+                    };
                 }
             });
         } else if (this.isSagaCommand(cmd)) {
@@ -117,7 +123,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
                 tenantId: cmd.tenant_id
             });
             logger?.warn('Ignored unsupported command');
-            return { status: 'fail', error: `Unsupported command: ${cmd.type}` };
+            return { status: 'fail', error: new Error(`Unsupported command: ${cmd.type}`) };
         }
     }
 
@@ -191,7 +197,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
                 tenantId: cmd.tenant_id
             });
             logger?.warn('No matching saga for command');
-            return {status: 'fail', error: `No matching saga for command ${cmd.type}`};
+            return {status: 'fail', error: Error(`No matching saga for command ${cmd.type}`)};
         }
 
         const workflowId = match.idFor(cmd)!;

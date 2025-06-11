@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../db';
 import { TemporalScheduler } from '../../infra/temporal/temporal-scheduler';
 import logger from '../logger';
+import {BusinessRuleViolation} from "../../core/errors";
 
 const router = Router();
 

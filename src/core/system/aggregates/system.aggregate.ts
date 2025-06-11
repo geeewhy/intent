@@ -18,8 +18,8 @@ import {
     TestExecutedPayload,
     RetryableTestExecutedPayload
 } from '../contracts';
-import { buildEvent } from '../../shared/event-factory';
-import {evaluateCondition, isCommandAllowed} from '../../policy-registry';
+import {buildEvent} from '../../shared/event-factory';
+import {isCommandAllowed} from '../../policy-registry';
 import {
     autoRegisteredCommandAccessConditions,
     SystemCommandAccessCondition, GeneratedSystemCommandConditions
@@ -29,6 +29,7 @@ type SystemSnapshotState = {
     numberExecutedTests: number;
     testName?: string;
     parameters?: Record<string, any>;
+    retries: number;
 };
 
 export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
@@ -46,6 +47,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
     version = 0;
     numberExecutedTests = 0;
     lastExecutedTestName = '';
+    retries = 0;
 
     constructor(id: UUID) {
         super(id);
@@ -200,7 +202,11 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
 
     private handleExecuteRetryableTest(cmd: Command<ExecuteRetryableTestPayload>): Event[] {
         if (this.version % 2 === 0) {
-            throw new BusinessRuleViolation('Retryable error', undefined, true);
+            throw new BusinessRuleViolation('Retryable error', {
+                'message': `Increase version by cmds resulting application of other events`,
+                'currentVersion': this.version,
+                'versionToSucceed': this.version + 1
+            }, true);
         }
 
         const now = new Date();
@@ -246,7 +252,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
     }
 
     private applyRetryableTestExecuted(_: Event<RetryableTestExecutedPayload>): void {
-        // no-op
+        this.retries++;
     }
 
     protected upcastSnapshotState(raw: any, version: number): SystemSnapshotState {
@@ -260,6 +266,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
     extractSnapshotState(): SystemSnapshotState {
         const state: SystemSnapshotState = {
             numberExecutedTests: this.numberExecutedTests,
+            retries: this.retries,
         };
 
         if (this.lastExecutedTestName) {

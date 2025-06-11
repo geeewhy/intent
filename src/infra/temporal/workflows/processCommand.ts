@@ -12,7 +12,7 @@ import type * as ObservabilityActivities from '../activities/observabilityActivi
 type CommandResult = {
     status: 'success' | 'fail';
     events?: Event[];
-    error?: string;
+    error?: Error;
 };
 
 const commandSignal = defineSignal<[Command]>('command');

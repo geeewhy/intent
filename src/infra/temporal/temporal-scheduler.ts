@@ -51,7 +51,7 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
 
         let res: CommandResult = {
             status: 'fail',
-            error: 'Command not supported'
+            error: new Error('Command not supported')
         };
 
         logger?.info('Routing command', {cmd});
