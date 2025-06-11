@@ -34,11 +34,33 @@ Deep-dives: [Reflections](docs/reflections/index.md) · [ADRs](ADRs/) · [Curren
 
 ### Use cases and Scale
 
-Todo. Address Scale capabilities in TPS.
-
-Current target scale: low thousands of TPS single-tenant backends. Path to scale mid-thousands as a separate doc. Include perf and load test paths.
+Current target scale: low thousands of TPS single-tenant backends. Open path to scale mid-thousands.
 
 Current target use cases: high-fidelity, multi-tenant, event-sourced backends with complex business logic. Examples include financial systems, manufacturing industries, async-heavy workflows, SaaS platforms, and complex domain applications.
+
+### Why Intent?
+
+**Intent** is more than a framework. It’s an event-sourced CQRS reference platform. Designed from first principles for simplicity and developer velocity in multi-tenant TypeScript backends.
+
+* **Reference Architecture:**
+  Strict hexagonal boundaries, ports/adapters separation, and vertical slicing, [DCB](https://dcb.events/) ready. Every workflow and projection is testable, composable, and observable. Patterns align with the latest event modeling literature—no magic, no leaks.
+
+* **Built for Safety and Evolution:**
+  Automated RLS policy generation, drift detection and repair, snapshotting, and schema upcasting are not afterthoughts—they are part of the platform’s DNA. CI lints, policy gates, and repair tools keep safety guardrails up as you move fast.
+
+* **Full-Stack Dev Experience:**
+  The DevX companion UI, CLI flows, and local-first patterns make simulating, debugging, and evolving your event-sourced system immediate and visual. Real-time traceability, role simulation, and AI-assisted scaffolding let you reason about systems before they run in prod.
+
+* **Multi-Tenant and Policy-First:**
+  Tenant isolation and access policies are enforced from edge to core to database—by design, not convention. Row-level security and role-based projection policies are automated and audited.
+
+* **Transparent, Documented, and Extensible:**
+  Every architectural decision is captured in living ADRs. The codebase is structured for clarity, modification, and onboarding—backed by docs and rationale, not just code comments.
+
+---
+
+**Interested in taking Intent to production, collaborating, or supporting real-world use cases?**
+Contact: **gy at heart dot dev**
 
 ---
 
@@ -199,25 +221,22 @@ docker/
 
 ---
 
-[//]: # (## Growing ecosystem)
+## Growing ecosystem
 
-[//]: # ()
-[//]: # ()
+
 [//]: # (- **📚 Docs site** – richer guides and ADR index *&#40;coming soon at intent.heart.dev&#41;*)
 
-[//]: # ()
 [//]: # (- **🧑‍💻 Sample apps** – see [`intent-samples`]&#40;https://github.com/geeewhy/intent-samples&#41; for a multi-tenant Food Delivery app demo)
 
-[//]: # ()
 [//]: # (- **📦 VS Code snippets** – install `intent-es-snippets` for boilerplate aggregate/command/event files)
 
-[//]: # ()
 [//]: # (- **💬 Community chat** – join `#intent` on the **Event Sourcing Community** Slack &#40;contact `gy` at `heart` dot `dev` for invite&#41;)
 
-[//]: # ()
 [//]: # (- **🛠 Third-party adapters** – early adapters for Kurrent/EventStore, MongoDB event store, AWS SNS/SQS and Kafka Consumer/Producer transports)
 
 ## License
 
 All rights reserved © DevHeart Technologies Inc.  
 OSS licensing is under consideration. Until an explicit license is published, you may not use, copy, modify, distribute, or deploy this code in any production, commercial, or public context.
+
+⚠️ Intent is not a product. It’s a developer-first reference implementation of modern event-sourcing patterns with a clear architectural spine. Hosted/cloud support, multi-backend support, and full admin UI are on the roadmap.

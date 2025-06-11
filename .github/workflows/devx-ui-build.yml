@@ -1,4 +1,4 @@
-name: DevX Build
+name: DevX-UI Build
 
 on:
   pull_request:
