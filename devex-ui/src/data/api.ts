@@ -1,6 +1,4 @@
 //devex-ui/src/data/api.ts
-import { toast } from "@/components/ui/sonner";
-
 const apiMode = localStorage.getItem('api_mode') || import.meta.env.VITE_API_MODE || 'mock';
 
 // API client configuration

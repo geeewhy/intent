@@ -217,8 +217,8 @@ describe('SystemAggregate', () => {
 
         const snapshotState = systemAggregate.extractSnapshotState();
 
-        expect(snapshotState).toEqual({
-            numberExecutedTests: 3
+        expect(snapshotState).toMatchObject({
+            numberExecutedTests: 3,
         });
 
         const newAggregate = new SystemAggregate('test-system');

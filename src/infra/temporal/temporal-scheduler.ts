@@ -1,13 +1,11 @@
 // infra/temporal/temporal-scheduler.ts
-import {WorkflowClient, WorkflowExecutionInfo, WorkflowHandle} from '@temporalio/client';
+import {WorkflowClient} from '@temporalio/client';
 import {Command, Event} from '../../core/contracts';
 import {log} from '../../core/logger';
 import {CommandResult} from "../contracts";
 import {WorkflowRouter} from './workflow-router';
 import {JobSchedulerPort, EventPublisherPort, CommandStorePort} from '../../core/ports';
-import {markConsumed} from '../pump/helpers/command-helpers';
 import {PgCommandStore} from "../pg/pg-command-store";
-import * as pg from "pg";
 
 /**
  * TemporalScheduler - schedules commands and events via Temporal workflows

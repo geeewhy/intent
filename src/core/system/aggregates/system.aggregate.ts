@@ -21,8 +21,12 @@ import {
 import {buildEvent} from '../../shared/event-factory';
 import {isCommandAllowed} from '../../policy-registry';
 import {
-    autoRegisteredCommandAccessConditions,
-    SystemCommandAccessCondition, GeneratedSystemCommandConditions
+/*
+todo compile time will ignore.
+//    autoRegisteredCommandAccessConditions,
+//    SystemCommandAccessCondition,
+*/
+    GeneratedSystemCommandConditions
 } from "../command-access";
 
 type SystemSnapshotState = {
@@ -135,7 +139,6 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
     }
 
     private handleEmitMultipleEvents(cmd: Command<EmitMultipleEventsPayload>): Event[] {
-        const now = new Date();
         const events: Event[] = [];
 
         for (let i = 0; i < cmd.payload.count; i++) {

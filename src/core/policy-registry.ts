@@ -1,6 +1,5 @@
 //src/core/policy-registry.ts
 import { AccessContext } from './contracts';
-import {SystemCommandAccessCondition} from "./system";
 
 export type AccessPolicy = (context: AccessContext) => boolean;
 const conditionMap: Record<string, (args: AccessPolicy) => boolean> = {};

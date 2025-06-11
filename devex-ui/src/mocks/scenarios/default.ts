@@ -1,9 +1,13 @@
 //src/devex-ui/src/mocks/scenarios/default.ts
-import { eventStore } from '../stores/event.store';
-import { commandStore, recentCommandsStore } from '../stores/command.store';
-import { traceStore } from '../stores/trace.store';
-import { logStore } from '../stores/log.store';
-import { rolesStore } from '../stores/roles.store';
+import {
+  eventStore,
+  commandStore,
+  recentCommandsStore,
+  traceStore,
+  logStore,
+  rolesStore
+} from '@/mocks/stores';
+
 import { makeEvent } from '../factories/event.factory';
 import { makeCommand } from '../factories/command.factory';
 import { makeTrace } from '../factories/trace.factory';

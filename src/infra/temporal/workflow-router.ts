@@ -1,5 +1,5 @@
 // infra/temporal/workflow-router.ts
-import {Connection, WorkflowClient, WorkflowIdReusePolicy} from '@temporalio/client';
+import {Connection, WorkflowClient} from '@temporalio/client';
 import {getAllSagas, DomainRegistry} from '../../core/registry';
 import {Command, Event, UUID} from '../../core/contracts';
 import {log} from '../../core/logger';
@@ -52,6 +52,8 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
             const aggregateId = cmd.payload?.aggregateId;
             const workflowId = this.getAggregateWorkflowId(tenant_id, aggregateType, aggregateId);
 
+            /*
+            requires ElasticSearch.
             const searchAttributes = {
                 aggregateType: [`${aggregateType}`],
                 aggregateId: [`${aggregateId}`],
@@ -59,6 +61,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
                 causationId: [`${cmd.metadata?.causationId}`],
                 correlationId: [`${cmd.metadata?.correlationId}`],
             }
+            */
 
             // Start the aggregate workflow
             const logger = log()?.child({
@@ -207,6 +210,8 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
         const aggregateType = cmd.payload?.aggregateType;
         const aggregateId = cmd.payload?.aggregateId;
 
+        /*
+        requires ElasticSearch.
         const searchAttributes = {
             aggregateType: [`${aggregateType}`],
             aggregateId: [`${aggregateId}`],
@@ -214,6 +219,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
             causationId: [`${cmd.metadata?.causationId}`],
             correlationId: [`${cmd.metadata?.correlationId}`],
         }
+        */
 
         const logger = log()?.child({
             commandType: cmd.type,

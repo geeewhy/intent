@@ -8,7 +8,7 @@ import {Card, CardHeader, CardTitle, CardContent} from "@/components/ui/card";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Badge} from "@/components/ui/badge";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
-import {Clock, Send, RotateCcw, Terminal, ChevronDown, ChevronRight, RefreshCw, AlertCircle} from "lucide-react";
+import {Clock, Send, Terminal, ChevronDown, ChevronRight, RefreshCw, AlertCircle} from "lucide-react";
 import {useCommands, useSubmitCommand, useRoles} from "@/hooks/api";
 import {validate, registerSchemas} from "@/utils/schemaValidator";
 import {makeExample} from "@/utils/schemaFaker";
@@ -27,7 +27,7 @@ export const CommandIssuer = () => {
     const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
-    const [lastSubmittedId, setLastSubmittedId] = useState<string | null>(null);
+    const [_, setLastSubmittedId] = useState<string | null>(null);
     const [highlightedCommandId, setHighlightedCommandId] = useState<string | null>(null);
 
     // Use React Query hooks
@@ -506,7 +506,7 @@ export const CommandIssuer = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-2">
-                            {recentCommands.map((cmd, idx) => {
+                            {recentCommands.map((cmd, _) => {
                                 const isHighlighted = cmd.id === highlightedCommandId;
                                 const highlightClass = isHighlighted ? "ring-2 ring-blue-500 bg-blue-500/10" : "";
                                 return (

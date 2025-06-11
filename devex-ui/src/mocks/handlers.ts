@@ -28,7 +28,7 @@ export const handlers = [
     );
   }),
 
-  http.get('/api/registry/roles', ({ request }) => {
+  http.get('/api/registry/roles', () => {
     // Convert roles store data to the expected format
     const rolesData = rolesStore.list(1000);
     const result: Record<string, string[]> = {};
