@@ -1,6 +1,6 @@
 import pino from 'pino';
 import dotenv from 'dotenv';
-import { LoggerPort } from '../../core/ports';
+import {LoggerPort} from '../../core/ports';
 
 dotenv.config();
 
@@ -45,9 +45,7 @@ export const errorSerializer = (err: Error): Record<string, unknown> => {
     };
   }
 
-  const serializedError = { ...base, ...instanceProps };
-
-  return serializedError;
+  return {...base, ...instanceProps};
 };
 
 // Function to get caller information from stack trace
