@@ -1,5 +1,5 @@
 //src/core/registry.ts
-import { CommandHandler, EventHandler, SagaDefinition, ReadModelUpdaterPort } from './contracts';
+import { CommandHandler, EventHandler, SagaDefinition, ReadModelUpdaterPort, UUID } from './contracts';
 import { AggregateClass } from './aggregates';
 import { z } from 'zod';
 
@@ -8,6 +8,10 @@ export interface CommandTypeMeta {
   domain: string;
   description: string;
   payloadSchema?: z.ZodTypeAny;
+  aggregateRouting?: {
+    aggregateType: string;
+    extractId: (payload: any) => UUID;
+  };
 }
 
 export interface EventTypeMeta {
@@ -40,6 +44,7 @@ export interface Registry {
   eventTypes: Record<string, EventTypeMeta>;
   projections: Record<string, ProjectionDefinition>;
   domains: string[];
+  roles: Record<string, string[]>;
 }
 
 const registry: Registry = {
@@ -51,6 +56,7 @@ const registry: Registry = {
   eventTypes: {},
   projections: {},
   domains: [],
+  roles: {},
 };
 
 // --- Registration helpers
@@ -99,6 +105,11 @@ export function registerProjection(name: string, def: ProjectionDefinition): voi
   registry.projections[name] = def;
 }
 
+export function registerRoles(domain: string, roles: string[]): void {
+  if (registry.roles[domain]) throw new Error(`Roles already registered for domain: ${domain}`);
+  registry.roles[domain] = roles;
+}
+
 /* ——— Getters ——— */
 export function getAllAggregates(): Record<string, AggregateClass> {
   return registry.aggregates;
@@ -132,6 +143,10 @@ export function getAllDomains(): string[] {
   return registry.domains;
 }
 
+export function getAllRoles(): Record<string, string[]> {
+  return registry.roles;
+}
+
 // -- convenience exports
 export const DomainRegistry = {
   aggregates: getAllAggregates,
@@ -142,6 +157,7 @@ export const DomainRegistry = {
   eventTypes: getAllEventTypes,
   projections: getAllProjections,
   domains: getAllDomains,
+  roles: getAllRoles,
 };
 
 export default DomainRegistry;

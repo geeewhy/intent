@@ -1,13 +1,11 @@
 // infra/temporal/temporal-scheduler.ts
-import {WorkflowClient, WorkflowExecutionInfo, WorkflowHandle} from '@temporalio/client';
+import {WorkflowClient} from '@temporalio/client';
 import {Command, Event} from '../../core/contracts';
 import {log} from '../../core/logger';
 import {CommandResult} from "../contracts";
 import {WorkflowRouter} from './workflow-router';
 import {JobSchedulerPort, EventPublisherPort, CommandStorePort} from '../../core/ports';
-import {markConsumed} from '../pump/helpers/command-helpers';
 import {PgCommandStore} from "../pg/pg-command-store";
-import * as pg from "pg";
 
 /**
  * TemporalScheduler - schedules commands and events via Temporal workflows
@@ -16,7 +14,7 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
     private constructor(
         private readonly router: WorkflowRouter,
         private readonly client: WorkflowClient,
-        private readonly commandStore:CommandStorePort
+        private readonly commandStore: CommandStorePort
     ) {
     }
 
@@ -41,7 +39,7 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
     /**
      * Schedule a command for execution via Temporal
      */
-    async schedule(cmd: Command): Promise<void> {
+    async schedule(cmd: Command): Promise<CommandResult> {
         const logger = log()?.child({
             commandId: cmd.id,
             commandType: cmd.type,
@@ -49,22 +47,30 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
             correlationId: cmd.metadata?.correlationId
         });
 
-        logger?.info('Routing command');
+        let res: CommandResult = {
+            status: 'fail',
+            error: new Error('Command not supported')
+        };
+
+        logger?.info('Routing command', {cmd});
 
         if (this.router.supportsCommand(cmd)) {
             try {
                 await this.commandStore.upsert(cmd);
-                const res: CommandResult = await this.router.handle(cmd);
+                res = await this.router.handle(cmd);
                 const infraStatus = res.status === 'success' ? 'consumed' : 'failed';
                 await this.commandStore.markStatus(cmd.id, infraStatus, res);
-                logger?.info('Marked command status', { status: infraStatus });
+                logger?.debug('Marked command status', {status: infraStatus});
             } catch (e: any) {
-                await this.commandStore.markStatus(cmd.id, 'failed', { status: 'fail', error: e.message });
-                logger?.error('Failed to schedule command', { error: e });
+                res = {status: 'fail', error: e.message};
+                await this.commandStore.markStatus(cmd.id, 'failed', res);
+                logger?.error('Failed to schedule command', {error: e});
             }
         } else {
             logger?.warn('No router supports command');
         }
+
+        return res;
     }
 
     /**

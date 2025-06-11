@@ -9,12 +9,45 @@ import {
   findTracesByCorrelationId, 
   generateEdges, 
   logStore, 
-  pushLog 
+  pushLog,
+  rolesStore
 } from './stores';
 import { makeEvent } from './factories/event.factory';
 import { makeLog } from './factories/log.factory';
+import { makeCommandRegistry } from './factories/registry.factory';
 
 export const handlers = [
+  // Registry handlers
+  http.get('/api/registry/commands', ({ request }) => {
+    const url = new URL(request.url);
+    const includeSchema = url.searchParams.get('includeSchema') === 'true';
+    const registry = makeCommandRegistry();
+
+    return HttpResponse.json(
+      includeSchema ? registry : registry.map(({ schema, ...rest }) => rest)
+    );
+  }),
+
+  http.get('/api/registry/roles', () => {
+    // Convert roles store data to the expected format
+    const rolesData = rolesStore.list(1000);
+    const result: Record<string, string[]> = {};
+
+    rolesData.forEach(entry => {
+      result[entry.domain] = entry.roles;
+    });
+
+    // If no roles are in the store, return default roles
+    if (Object.keys(result).length === 0) {
+      return HttpResponse.json({
+        system: ['tester', 'system', 'developer'],
+        user: ['admin', 'viewer'],
+        order: ['sales', 'ops']
+      });
+    }
+
+    return HttpResponse.json(result);
+  }),
   // Logs list
   http.get('/api/logs', ({ request }) => {
     const url = new URL(request.url);

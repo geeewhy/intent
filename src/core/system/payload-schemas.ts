@@ -6,14 +6,24 @@ import { SystemCommandType, SystemEventType } from './contracts';
 
 export const LogMessagePayloadSchema = z.object({
   message: z.string(),
-  systemId: z.string().uuid().optional(),
+  systemId: z.string().uuid().optional(), // todo singleton ids = validation trouble. see aggregate code for the ='system' hack
 });
 export type LogMessagePayload = z.infer<typeof LogMessagePayloadSchema>;
 
 export const SimulateFailurePayloadSchema = z.object({
+  aggregateId: z.string(),
   systemId: z.string().uuid().optional(),
 });
 export type SimulateFailurePayload = z.infer<typeof SimulateFailurePayloadSchema>;
+
+//todo rest are NOT DEVX compatible / reflect reality re aggregateType and Id in payloads. need to decide:
+// - before handler, caller figures out aggregate type and prefill
+//    - options: command-bus, scheduler
+//    - good: easy wiring
+//    - bad: implicit / can look like magic
+// - Define shared payload
+//     - good: explicit
+//     - bad: CMDs can be cross cutting aggregates, although rare and can be handled with override exceptions
 
 export const EmitMultipleEventsPayloadSchema = z.object({
   count: z.number(),

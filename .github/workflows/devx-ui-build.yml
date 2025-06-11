@@ -1,4 +1,4 @@
-name: Core and Infra Build
+name: DevX Build
 
 on:
   pull_request:
@@ -23,4 +23,6 @@ jobs:
             ${{ runner.os }}-npm-
 
       - run: npm ci
+        working-directory: devex-ui
       - run: npm run build
+        working-directory: devex-ui

@@ -1,4 +1,4 @@
-name: Core and Infra Build
+name: Core Linter
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
       - '**'
 
 jobs:
-  build:
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,4 +23,4 @@ jobs:
             ${{ runner.os }}-npm-
 
       - run: npm ci
-      - run: npm run build
+      - run: npm run tool:core-lint

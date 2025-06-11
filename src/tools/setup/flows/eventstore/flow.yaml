@@ -10,10 +10,17 @@ description: Setup and manage event store infrastructure
 paths:
   initial:
     description: Fresh bootstrap of event store
-    steps: [connection, reset, schema]
+    steps: [connection, users, reset, schema, envfile]
+  users:
+    description: Generate users
+    steps: [connection, users, envfile]
   upgrade:
     description: Apply migrations on existing store
     steps: [connection, schema]
   test:
     description: Run tests on existing store
     steps: [connection, test]
+  users.teardown:
+      steps:
+        - connection
+        - users.teardown

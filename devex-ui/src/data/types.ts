@@ -53,5 +53,10 @@ export interface Event<T = unknown> {
 export type CommandResult = {
   status: 'success' | 'fail';
   events?: Event[];
-  error?: string;
+  error?: ({
+    name?: string;
+    message?: string;
+    code?: string;
+    details?: Record<string, unknown>;
+  });
 };

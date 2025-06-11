@@ -19,3 +19,9 @@ export const logsKeys = {
   lists: () => [...logsKeys.all, 'list'] as const,
   list: (tenant: string, limit: number) => [...logsKeys.lists(), tenant, limit] as const,
 }
+
+export const rolesKeys = {
+  all: ['roles'] as const,
+  lists: () => [...rolesKeys.all, 'list'] as const,
+  list: (domain: string) => [...rolesKeys.lists(), domain] as const,
+}

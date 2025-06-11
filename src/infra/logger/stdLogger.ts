@@ -1,6 +1,6 @@
 import pino from 'pino';
 import dotenv from 'dotenv';
-import { LoggerPort } from '../../core/ports';
+import {LoggerPort} from '../../core/ports';
 
 dotenv.config();
 
@@ -8,29 +8,44 @@ dotenv.config();
 const isDev = process.env.NODE_ENV !== 'production';
 
 // Configure error serialization for better error handling
-const errorSerializer = (err: any) => {
-  if (!err) return err;
+/**
+ * Custom error serializer for structured logging (e.g. Pino).
+ * Preserves standard fields and safely includes custom ones like `details`, `retryable`, etc.
+ */
+export const errorSerializer = (err: Error): Record<string, unknown> => {
+  if (!err) return { name: 'Error', message: 'Unknown error' };
 
-  // Handle both Error objects and plain objects with error properties
   const base = {
-    message: err.message || (typeof err === 'string' ? err : 'Unknown error'),
-    name: err.name || 'Error',
-    stack: err.stack,
+    name: typeof err === 'object' && 'name' in err ? (err as any).name : 'Error',
+    message: typeof err === 'object' && 'message' in err ? (err as any).message : String(err),
+    stack: typeof err === 'object' && 'stack' in err ? (err as any).stack : undefined,
   };
 
-  // Add enumerable properties from the error object
-  const enumProps = Object.getOwnPropertyNames(err).reduce((acc, key) => {
-    if (key !== 'message' && key !== 'name' && key !== 'stack') {
+  // Extract additional fields safely
+  const instanceProps: Record<string, unknown> = {};
+
+  try {
+    const allKeys = [
+      ...Object.getOwnPropertyNames(err),
+      ...Object.keys(err), // catches enumerable properties set on the instance
+    ];
+
+    for (const key of new Set(allKeys)) {
+      if (key === 'name' || key === 'message' || key === 'stack') continue;
       try {
-        acc[key] = err[key];
-      } catch (e) {
-        acc[key] = 'Error accessing property';
+        instanceProps[key] = (err as any)[key];
+      } catch (accessErr) {
+        instanceProps[key] = 'Error accessing property';
       }
     }
-    return acc;
-  }, {} as Record<string, any>);
+  } catch {
+    // fallback if anything explodes
+    instanceProps['details'] = {
+      "message": "Exception: cant serialize props"
+    };
+  }
 
-  return { ...base, ...enumProps };
+  return {...base, ...instanceProps};
 };
 
 // Function to get caller information from stack trace

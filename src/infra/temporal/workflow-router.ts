@@ -1,6 +1,6 @@
 // infra/temporal/workflow-router.ts
-import {Connection, WorkflowClient, WorkflowIdReusePolicy} from '@temporalio/client';
-import {getAllSagas} from '../../core/registry';
+import {Connection, WorkflowClient} from '@temporalio/client';
+import {getAllSagas, DomainRegistry} from '../../core/registry';
 import {Command, Event, UUID} from '../../core/contracts';
 import {log} from '../../core/logger';
 import {CommandHandler} from '../../core/contracts';
@@ -28,10 +28,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
 
     /** Supports command routing (aggregate or saga) */
     supportsCommand(cmd: Command): boolean {
-        return (
-            (!!cmd.payload?.aggregateId && !!cmd.payload?.aggregateType) ||
-            Object.values(SagaRegistry).some((s) => s.idFor(cmd))
-        );
+        return this.isAggregateCommand(cmd) || this.isSagaCommand(cmd);
     }
 
     /** Supports event routing */
@@ -41,12 +38,22 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
 
     /** Handle a command (always route to aggregate's processCommand workflow) */
     async handle(cmd: Command): Promise<CommandResult> {
+        const meta = DomainRegistry.commandTypes()[cmd.type];
+        const routing = meta?.aggregateRouting;
+
+        if (routing) {
+            cmd.payload.aggregateType ??= routing.aggregateType;
+            cmd.payload.aggregateId ??= routing.extractId(cmd.payload);
+        }
+
         if (this.isAggregateCommand(cmd)) {
             const {tenant_id} = cmd;
             const aggregateType = cmd.payload?.aggregateType;
             const aggregateId = cmd.payload?.aggregateId;
             const workflowId = this.getAggregateWorkflowId(tenant_id, aggregateType, aggregateId);
 
+            /*
+            requires ElasticSearch.
             const searchAttributes = {
                 aggregateType: [`${aggregateType}`],
                 aggregateId: [`${aggregateId}`],
@@ -54,6 +61,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
                 causationId: [`${cmd.metadata?.causationId}`],
                 correlationId: [`${cmd.metadata?.correlationId}`],
             }
+            */
 
             // Start the aggregate workflow
             const logger = log()?.child({
@@ -81,7 +89,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
 
                     // Check if this is a business rule violation
                     if (result.status === 'fail') {
-                        logger?.warn('Business rule violation in workflow', { error: result.error });
+                        logger?.error('Business rule violation in workflow', { error: result.error });
                         // We don't consider this a failure, just log it
                     } else {
                         logger?.info('Aggregate workflow completed successfully');
@@ -92,15 +100,21 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
                         logger?.info('Signaling saga after aggregate workflow completion');
                         return this.routeSagaCommand(cmd);
                     }
+
                     return result;
-                } catch (error) {
-                    logger?.error('Error waiting for aggregate workflow to complete', { error });
+                } catch (err) {
+                    if (err) {
+                        logger?.warn('Error waiting for aggregate workflow to complete', { error: err });
+                    }
                     // Still signal the saga even if the aggregate workflow fails
                     if (this.isSagaCommand(cmd)) {
                         logger?.info('Signaling saga after aggregate workflow failure');
                         return this.routeSagaCommand(cmd);
                     }
-                    return {status: 'fail', error: `Error waiting for aggregate workflow: ${error}`};
+                    return {
+                        status: 'fail',
+                        error: err instanceof Error ? err : new Error(String(err)),
+                    };
                 }
             });
         } else if (this.isSagaCommand(cmd)) {
@@ -112,7 +126,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
                 tenantId: cmd.tenant_id
             });
             logger?.warn('Ignored unsupported command');
-            return { status: 'fail', error: `Unsupported command: ${cmd.type}` };
+            return { status: 'fail', error: new Error(`Unsupported command: ${cmd.type}`) };
         }
     }
 
@@ -186,7 +200,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
                 tenantId: cmd.tenant_id
             });
             logger?.warn('No matching saga for command');
-            return {status: 'fail', error: `No matching saga for command ${cmd.type}`};
+            return {status: 'fail', error: Error(`No matching saga for command ${cmd.type}`)};
         }
 
         const workflowId = match.idFor(cmd)!;
@@ -196,6 +210,8 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
         const aggregateType = cmd.payload?.aggregateType;
         const aggregateId = cmd.payload?.aggregateId;
 
+        /*
+        requires ElasticSearch.
         const searchAttributes = {
             aggregateType: [`${aggregateType}`],
             aggregateId: [`${aggregateId}`],
@@ -203,6 +219,7 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
             causationId: [`${cmd.metadata?.causationId}`],
             correlationId: [`${cmd.metadata?.correlationId}`],
         }
+        */
 
         const logger = log()?.child({
             commandType: cmd.type,
@@ -233,7 +250,8 @@ export class WorkflowRouter implements CommandHandler, EventHandler {
 
     /** Check if a command is for an aggregate */
     private isAggregateCommand(cmd: Command): boolean {
-        return !!cmd.payload?.aggregateId && !!cmd.payload?.aggregateType;
+        const meta = DomainRegistry.commandTypes()[cmd.type];
+        return !!meta?.aggregateRouting || (!!cmd.payload?.aggregateId && !!cmd.payload?.aggregateType);
     }
 
     /** Get workflow ID for aggregates */

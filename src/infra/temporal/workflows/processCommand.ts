@@ -12,7 +12,7 @@ import type * as ObservabilityActivities from '../activities/observabilityActivi
 type CommandResult = {
     status: 'success' | 'fail';
     events?: Event[];
-    error?: string;
+    error?: Error;
 };
 
 const commandSignal = defineSignal<[Command]>('command');
@@ -33,6 +33,7 @@ const {
 const WORKFLOW_TTL_IN_MS = 1000;
 
 export async function processCommand(
+    //todo check if temporal works with fn footprint, even not utilized
     tenantId: UUID,
     aggregateType: string,
     aggregateId: UUID

@@ -80,11 +80,12 @@ export async function dispatchCommand(cmd: Command): Promise<void> {
                     error: validationError,
                     issues: validationError.errors || validationError.issues
                 });
+                const err = new Error(`Command payload validation failed: ${validationError.message}`);
                 await pgCommandStore.markStatus(cmd.id, 'failed', {
                     status: 'fail', 
-                    error: `Validation error: ${validationError.message}`
+                    error: err
                 });
-                throw new Error(`Command payload validation failed: ${validationError.message}`);
+                throw err;
             }
         } else {
             logger?.warn('No schema found for command type', { commandType: cmd.type });
@@ -215,7 +216,7 @@ export async function loadAggregate(
  */
 export async function getEventsForCommand(
     cmd: Command
-): Promise<{ events?: Event[]; status: 'success' | 'fail'; error?: string }> {
+): Promise<{ events?: Event[]; status: 'success' | 'fail'; error?: Error }> {
     try {
         const tenantId = cmd.tenant_id;
         const {aggregateType, aggregateId} = cmd.payload;
@@ -226,7 +227,7 @@ export async function getEventsForCommand(
         return {events, status: 'success'};
     } catch (err) {
         if (err instanceof BusinessRuleViolation) {
-            return {status: 'fail', error: err.reason};
+            return {status: 'fail', error: err};
         }
         throw err;
     }
