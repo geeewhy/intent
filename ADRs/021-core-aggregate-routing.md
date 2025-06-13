@@ -1,32 +1,47 @@
-# ADR 021: Co-locate Aggregate Routing with Command Registration
+# ADR-021: Co-locate Aggregate Routing with Command Registration
 
-## Context
+## What
 
-The system currently registers command types separately from their routing logic. Routing to aggregates (i.e., deriving `aggregateType` and `aggregateId` from a command) is either inferred or redundantly handled elsewhere. This introduces implicit coupling and runtime ambiguity, especially for commands triggered via sagas or external workflows.
+Extend `registerCommandType()` to include `aggregateRouting`, colocating routing logic with the command's metadata. This routing block includes the `aggregateType` and a function to extract `aggregateId` from the payload. It removes the need for implicit or runtime-derived routing behavior in workflows or sagas.
 
-In particular:
+## Why
 
-* Aggregates rely on `aggregateId` and `aggregateType` being available in payloads.
-* Command metadata lives in `DomainRegistry.commandTypes()` but lacks routing.
-* Workflows (`processCommand`) must inject routing metadata for proper aggregate reconstruction.
-* Ambiguous `aggregateId` primary key mappings
+Previously, `aggregateType` and `aggregateId` were inferred at runtime—often inconsistently—across workflows, sagas, and command dispatchers. This caused drift between command intent and routing rules. By colocating routing inside the `commandTypes` registry, we make the behavior deterministic, statically visible, and enforceable by tooling.
 
-This violates the principle of co-location and increases the risk of drift between command schemas and routing logic.
+## How
 
-## Decision
+### 1. Command Type Metadata Update
 
-Extend `CommandTypeMeta` to include an optional `aggregateRouting` key:
+Extend the registry schema:
 
 ```ts
-aggregateRouting?: {
-  aggregateType: string;
-  extractId: (payload: any) => UUID;
-};
+export interface CommandTypeMeta {
+  type: string;
+  domain: string;
+  description?: string;
+  aggregateRouting?: {
+    aggregateType: string;
+    extractId: (payload: any) => UUID;
+  };
+}
 ```
 
-Update all `registerCommandType()` calls (e.g., in `system/register.ts`) to include routing metadata where applicable.
+### 2. Example Registration
 
-During workflow dispatch in `WorkflowRouter.handle(cmd)`, inject routing data into command payloads before processing:
+```ts
+registerCommandType(SystemCommandType.EXECUTE_TEST, {
+  domain: 'system',
+  description: 'Executes a system test',
+  aggregateRouting: {
+    aggregateType: 'system',
+    extractId: (payload) => payload.testId,
+  },
+});
+```
+
+### 3. Workflow Dispatch Logic
+
+Update `WorkflowRouter` (or equivalent):
 
 ```ts
 const meta = DomainRegistry.commandTypes()[cmd.type];
@@ -38,26 +53,48 @@ if (routing) {
 }
 ```
 
-## Consequences
+### 4. Linter Tooling (Optional)
 
-### Pros
+Build a `lint-payloads.ts` tool that asserts:
 
-* Declarative routing co-located with command type definition
-* Avoids ad-hoc inference of `aggregateType` / `aggregateId` at runtime
-* Enables automated analysis (e.g., lint-payloads tool) to verify routing completeness
-* Respects open/closed principle — saga/workflow code need not change per command type
+* If `payloadSchema` is defined for a command, and
+* If `aggregateRouting` is not defined, and
+* The command is not explicitly marked as saga-only
+  → then fail.
 
-### Cons
+This ensures completeness and enforces registration discipline.
 
-* Requires updating all `registerCommandType()` calls with routing
-* Minor learning curve: developers must now specify `aggregateRouting` explicitly
+### Diagrams
+
+```mermaid
+sequenceDiagram
+  participant WFRouter as WorkflowRouter
+  participant Registry
+  participant Workflow as processCommand
+
+  WFRouter->>Registry: getCommandTypeMeta(cmd.type)
+  Registry-->>WFRouter: { aggregateRouting }
+  WFRouter->>cmd.payload: inject routing info
+  WFRouter->>Workflow: signalWithStart(cmd)
+```
+
+## Implications
+
+| Category         | Positive Impact                                                    | Trade-offs / Considerations                                    |
+| ---------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| Maintainability  | Routing logic is colocated with command metadata                   | All new commands require upfront declaration                   |
+| Extensibility    | Easy to inspect and lint; static inference for CLI / DevEx / Docs  | Some command payloads may require schema context to extract ID |
+| Operational      | Ensures workflows receive proper routing state without duplication | Incorrect `extractId()` will silently misroute unless tested   |
+| System Integrity | Prevents desync between workflows and commands                     | Test coverage for extractId functions is now critical          |
 
 ## Alternatives Considered
 
-* **Central Routing Table**: Rejected — adds indirection, risks desync, harder to statically analyze.
-* **Assume client prepopulates routing**: Rejected — contradicts encapsulation; workflows should enforce context, not leak it.
+| Option                                 | Reason for Rejection                                               |
+| -------------------------------------- | ------------------------------------------------------------------ |
+| Infer aggregateId in workflows         | Leads to inconsistency and magic                                   |
+| Require aggregateType in every payload | Burdens callers (especially from sagas); not idiomatic             |
+| Central routing config                 | Adds indirection, less composable than colocating with the command |
 
-## Implementation Notes
+## Result
 
-* A lint tool (`src/tools/lint-payloads.ts`) will enforce that all registered command types with `payloadSchema` also declare `aggregateRouting` (unless explicitly marked as saga-only).
-* This ADR aligns with system goals of deterministic routing, explicit boundaries, and tooling-aware metadata propagation.
+Command routing is now statically defined and colocated with the command type itself. Workflows and sagas no longer need to inject routing logic manually. This improves clarity, reduces bugs, and enables tooling like linter checks and scaffolds to enforce coverage. Aggregate boundaries and command dispatch behavior are now deterministic and maintainable.

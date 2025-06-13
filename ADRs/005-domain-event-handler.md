@@ -1,278 +1,73 @@
-### 005- Routing **events** through a worker-side **Event Bus**
+# ADR-005: Routing Events Through an Event Bus in the Worker
 
-#### 1 Event-pump worker
+## What
 
-```ts
-// packages/worker/event-pump.ts
-import pg from 'pg';
-import { EventBus } from './event-bus';          // see §2
-import { OrderPM } from '../domain/pms/order.pm';
-import { BillingPM } from '../domain/pms/billing.pm';
+Introduce a centralized `EventBus` in the worker to route persisted domain events to registered process managers (`EventHandler`s). Events are streamed from Postgres using LISTEN channels or realtime change feeds, and dispatched to handlers that match via `supports(event)` logic. Each handler is responsible for triggering follow-up commands or side effects using the existing `CommandBus`.
 
-const bus = new EventBus();
-bus.register(new OrderPM(commandBus));          // commandBus already exists
-bus.register(new BillingPM(commandBus));
+## Why
 
-const pgConn = new pg.Client({ connectionString: process.env.SUPABASE_DB_URL });
-await pgConn.connect();
-await pgConn.query('LISTEN new_event');
+Previously, event-triggered logic (e.g., sagas, projections) relied on static imports and direct calls, breaking separation and limiting scale. A centralized event bus allows modular, pluggable handlers while preserving the core principle of event immutability and one-directional flow. It matches the `CommandBus` pattern for symmetry and enables testable, observable event reaction logic per domain.
 
-pgConn.on('notification', async (n) => {
-  const evt: Event = JSON.parse(n.payload!);
-  await bus.publish(evt);                       // routing happens here
-});
+## How
+
+* Define an `EventHandler` interface with `supports()` and `handle()` methods.
+* Register each handler using `eventBus.register(handler)`.
+* Create a worker-side `RealtimePumpBase` that listens to the `events` table via Postgres `LISTEN` or Supabase Realtime.
+* On each new event, the pump publishes it to `eventBus.publish()`, which dispatches to matching handlers.
+* Each handler (e.g. `OrderPM`, `BillingPM`) reacts and uses the `CommandBus` to trigger further domain actions (e.g. retries, follow-ups).
+* The pump runs in the same worker as command pump and other infra listeners.
+
+### Diagrams
+
+#### Flowchart
+
+```mermaid
+flowchart TD
+  Postgres["Postgres LISTEN 'new_event'"]
+  Pump["event-pump.ts"]
+  Bus["EventBus"]
+  OrderPM["OrderPM (EventHandler)"]
+  BillingPM["BillingPM (EventHandler)"]
+  CmdBus["CommandBus"]
+
+  Postgres --> Pump --> Bus
+  Bus --> OrderPM --> CmdBus
+  Bus --> BillingPM --> CmdBus
 ```
 
----
+#### Sequence Diagram
 
-#### 2 Event Bus (mirror of Command Bus)
+```mermaid
+sequenceDiagram
+  participant DB as Postgres
+  participant Pump as EventPump
+  participant Bus as EventBus
+  participant PM1 as OrderPM
+  participant CmdBus as CommandBus
 
-```ts
-interface EventHandler<E extends Event = Event> {
-  supports(e: Event): e is E;
-  handle(e: E): Promise<void>;
-}
-
-export class EventBus {
-  private handlers: EventHandler[] = [];
-  register(h: EventHandler) { this.handlers.push(h); }
-
-  async publish(e: Event) {
-    await Promise.all(
-      this.handlers.filter(h => h.supports(e))
-                   .map(h => h.handle(e))
-    );
-  }
-}
+  DB-->>Pump: new_event (LISTEN)
+  Pump->>Bus: publish(event)
+  Bus->>PM1: handle(event)
+  PM1->>CmdBus: dispatch(follow-up command)
 ```
 
----
+## Implications
 
-#### 3 Process manager example
+| Category         | Positive Impact                                                          | Trade-offs / Considerations                                           |
+| ---------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| Maintainability  | Adds symmetry to command bus pattern                                     | Developers must manage handler registration explicitly                |
+| Extensibility    | Easily add/remove process managers per event                             | Potential for event duplication if handler `supports()` isn’t precise |
+| Operational      | Projections, sagas, and workflows can react independently                | Logging and tracing per handler should be added for observability     |
+| System Integrity | Immutable event log remains the source of truth; no mutation by handlers | Handlers must remain idempotent and side-effect-safe                  |
 
-```ts
-export class OrderPM implements EventHandler<OrderCreatedEvt | OrderReadyEvt> {
-  constructor(private commands: CommandBus) {}
+## Alternatives Considered
 
-  supports(e: Event) {
-    return e.type === 'order.created' || e.type === 'order.ready';
-  }
+| Option                 | Reason for Rejection                            |
+| ---------------------- | ----------------------------------------------- |
+| Static handler calls   | Coupled and unscalable; no runtime registration |
+| Chained event reaction | Hard to trace and debug; poor testability       |
+| Kafka-based fan-out    | Adds unnecessary infra for current use case     |
 
-  async handle(e: Event) {
-    if (e.type === 'order.created') {
-      await this.commands.dispatch({
-        id: uuid(), tenant_id: e.tenant_id,
-        type: 'order.scheduleAutoCancel',
-        payload: { orderId: e.aggregateId, delayMin: 15 },
-        async: true                       // workflow router will pick this up
-      });
-    }
-    if (e.type === 'order.ready') {
-      await this.commands.dispatch({
-        id: uuid(), tenant_id: e.tenant_id,
-        type: 'billing.createInvoice',
-        payload: { orderId: e.aggregateId },
-        async: true
-      });
-    }
-  }
-}
-```
+## Result
 
----
-
-#### 4 Publishing events from `OrderService`
-
-```ts
-const events = aggregate.handle(cmd);
-await eventStore.append(events);      // single commit
-/* No direct call to process managers; worker will receive NOTIFY */
-await realtimePublisher.publish(events);  // WebSocket fan-out
-```
-
-*We* merely persist; the worker guarantees every event is delivered to every interested domain component exactly once.
-
----
-
-```text
-📁 packages/
- └─ infra/
-     └─ pump/
-        ├─ realtime-pump-base.ts   ← generic plumbing (single source of truth)
-        ├─ command-pump.ts         ← config for `commands` stream
-        ├─ event-pump.ts           ← config for `events` stream
-        └─ helpers/
-           ├─ command-helpers.ts
-           └─ supabase-client.ts
-```
-
----
-
-## 1 Generic pump (`realtime-pump-base.ts`)
-
-```ts
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv'; dotenv.config();
-
-export interface PumpConfig<Row> {
-  /** Supabase channel name */
-  channel: string;
-  /** postgres_changes filter */
-  eventSpec: {
-    event: 'INSERT' | 'UPDATE' | 'DELETE';
-    schema: string;
-    table: string;
-    filter?: string;              // e.g. 'status=eq.pending'
-  };
-  batchSize?: number;             // default 50
-  /** fast reject rows we don't want */
-  validate: (row: Row) => boolean;
-  /** process an **array** of rows (batch) */
-  processBatch: (rows: Row[]) => Promise<void>;
-}
-
-export class RealtimePumpBase<Row = any> {
-  private sb: SupabaseClient;
-  private queue: Row[] = [];
-  private draining = false;
-
-  constructor(private cfg: PumpConfig<Row>) {
-    const url = process.env.SUPABASE_URL!;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    this.sb = createClient(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { 'x-supabase-auth-role': 'service_role' } },
-      realtime: { params: { eventsPerSecond: 20 } }
-    });
-  }
-
-  /** bootstrap & listen */
-  async start() {
-    console.log(`[Pump] start ${this.cfg.channel}`);
-    await this.sb.channel(this.cfg.channel)
-      .on('postgres_changes', this.cfg.eventSpec, ({ new: row }) => {
-        if (this.cfg.validate(row)) this.queue.push(row as Row);
-      })
-      .subscribe((status, err) =>
-        console.log(`[Pump] ${this.cfg.channel} status=${status}`, err?.message)
-      );
-    /* drain loop */
-    setInterval(() => this.drain(), 25);     // ~40 Hz
-  }
-
-  private async drain() {
-    if (this.draining || this.queue.length === 0) return;
-    this.draining = true;
-
-    const batchSize = this.cfg.batchSize ?? 50;
-    const batch = this.queue.splice(0, batchSize);
-
-    try   { await this.cfg.processBatch(batch); }
-    catch (e) { console.error('[Pump] batch error', e); }
-    finally { this.draining = false; }
-  }
-}
-```
-
----
-
-## 2 Shared helpers
-
-```ts
-// helpers/supabase-client.ts
-import { createClient } from '@supabase/supabase-js';
-export const sbAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession:false, autoRefreshToken:false } }
-);
-
-// helpers/command-helpers.ts
-import { WorkflowClient } from '@temporalio/client';
-import { sbAdmin } from './supabase-client';
-import { Command } from '../../../core/contracts';
-
-const temporal = new WorkflowClient({ address: process.env.TEMPORAL_ADDR! });
-
-export async function scheduleWorkflow(cmd: Command) {
-  const wfId = `${cmd.tenant_id}-${cmd.id}`;
-  await temporal.signalWithStart('orderSaga',            // or per-type saga
-    { workflowId: wfId, taskQueue:`tenant-${cmd.tenant_id}`, args:[cmd] },
-    ['externalCommand', cmd]
-  );
-}
-
-export const markConsumed = (id: string) =>
-  sbAdmin.from('commands').update({ status:'consumed' }).eq('id', id);
-
-export const markFailed   = (id: string, err: Error) =>
-  sbAdmin.from('commands').update({
-    status:'failed', error_message: err.message
-  }).eq('id', id);
-```
-
----
-
-## 3 Command pump (`command-pump.ts`)
-
-```ts
-import { RealtimePumpBase } from './realtime-pump-base';
-import { scheduleWorkflow, markConsumed, markFailed } from './helpers/command-helpers';
-import { Command } from '../../core/contracts';
-
-new RealtimePumpBase<Command>({
-  channel   : 'commands-pump',
-  eventSpec : {
-    event:'INSERT', schema:'public', table:'commands', filter:'status=eq.pending'
-  },
-  batchSize : 20,
-  validate  : c => c && c.status === 'pending' && !!c.type,
-  processBatch: async rows => {
-    for (const cmd of rows) {
-      try   { await scheduleWorkflow(cmd); await markConsumed(cmd.id); }
-      catch (e) { await markFailed(cmd.id, e as Error); }
-    }
-  }
-}).start();
-```
-
----
-
-## 4 Event pump (`event-pump.ts`)
-
-```ts
-import { RealtimePumpBase } from './realtime-pump-base';
-import { Event } from '../../core/contracts';
-import { eventBus } from '../bootstrap-event-bus';   // EventBus instance
-
-new RealtimePumpBase<Event>({
-  channel   : 'events-pump',
-  eventSpec : { event:'INSERT', schema:'public', table:'events' },
-  batchSize : 200,
-  validate  : () => true,
-  processBatch: rows => eventBus.publishBatch(rows)   // publishBatch performs Promise.all internally
-}).start();
-```
-
----
-
-## 5 EventBus with batch helper
-
-```ts
-// infra/event-bus.ts
-export class EventBus {
-  private handlers: EventHandler[] = [];
-  register(h: EventHandler) { this.handlers.push(h); }
-
-  async publish(evt: Event) { await this.publishBatch([evt]); }
-
-  async publishBatch(evts: Event[]) {
-    for (const e of evts) {
-      await Promise.all(
-        this.handlers.filter(h => h.supports(e)).map(h => h.handle(e))
-      );
-    }
-  }
-}
-export const eventBus = new EventBus();
-```
+All domain events are now routed through a centralized worker-side `EventBus`. Process managers are registered explicitly and determine routing through `supports(event)`. Handlers issue commands via the existing `CommandBus`, preserving system determinism and enabling traceable, testable event reactions. The event pump pipeline becomes modular and consistent with command dispatch.

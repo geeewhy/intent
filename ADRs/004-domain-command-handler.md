@@ -1,78 +1,87 @@
-To keep the architecture grow-able beyond OrderService, we introduce a Command Bus that owns the routing logic. All edges—HTTP, WebSocket, Realtime listeners, Temporal—hand every command to this bus. Internally the bus locates the right domain service and hands the message off.
+# ADR-004: Command Bus for Service Routing and Temporal Integration
 
-```
-interface CommandHandler<C extends Command = Command> {
-  supports(cmd: Command): cmd is C;   // Does this handler take the cmd?
-  handle(cmd: C): Promise<void>;      // Execute business logic
-}
-```
+## What
 
-Each domain service (OrderService, InventoryService, PaymentService …) implements that interface:
+Introduce a centralized `CommandBus` to route all commands to the correct domain service (`CommandHandler`). The bus replaces ad-hoc routing logic and acts as the single interface for dispatching commands across all entry points (HTTP, WebSocket, Temporal, CLI). Temporal workflows also use the bus internally via a `dispatchCommand` activity, preserving deterministic domain execution.
 
-```
-class OrderService implements CommandHandler {
-  supports(cmd: Command) {
-    return cmd.type.startsWith('order.');
-  }
-  async handle(cmd: Command) {
-    /* existing dispatch logic */
-  }
-}
+## Why
 
-```
+Previously, command routing logic was scattered: Temporal workflows, sagas, and edge functions each needed custom knowledge of which service handled which command. This introduced duplication and risk of misrouting. A centralized bus abstracts routing logic, enforces command boundaries, and simplifies handler registration. It also supports future extensibility, observability, and validation tooling.
 
-Building command bus
-```
-class CommandBus {
-  private handlers: CommandHandler[] = [];
+## How
 
-  register(h: CommandHandler) { this.handlers.push(h); }
+* Define a `CommandHandler` interface with `supports()` and `handle()` methods.
+* Domain services like `OrderService` implement `CommandHandler`:
 
-  async dispatch(cmd: Command) {
-    const h = this.handlers.find(h => h.supports(cmd));
-    if (!h) throw new Error(`No handler for ${cmd.type}`);
-    await h.handle(cmd);
-  }
-}
-```
+  ```ts
+  supports(cmd) => cmd.type.startsWith("order.")
+  handle(cmd) => this.dispatch(cmd)
+  ```
+* `CommandBus` holds a list of registered handlers and dispatches the command to the first matching `supports()` handler.
+* The `WorkflowRouter` implements `CommandHandler` and routes commands to Temporal workflows using `signalWithStart`.
+* Inside the workflow, a `dispatchCommand()` activity uses the same `CommandBus` instance to call domain logic.
+* All handlers are registered during system startup via `bus.register(...)`.
 
-At boot we register every service once:
+### Diagrams
 
-```
-const bus = new CommandBus();
-bus.register(new OrderService(store, publisher));
-bus.register(new InventoryService(store, publisher));
-bus.register(new PaymentService(store, publisher));
-```
+#### Flowchart
 
-CommandPump:
-we want every command to enter through a workflow:
-```
-class WorkflowRouter implements CommandHandler {
-  supports() { return true; }                 // handles every cmd
-  async handle(cmd: Command) {
-    const id = `${cmd.tenant_id}-${cmd.payload.aggregateId}`;
-    await temporal.signalWithStart(orderSaga,
-      { workflowId: id, taskQueue:`tenant-${cmd.tenant_id}`, args:[cmd] },
-      ['externalCommand', cmd]               // signal if already running
-    );
-  }
-}
+```mermaid
+flowchart TD
+  API["Edge Function /command"]
+  WS["WebSocket Input"]
+  Saga["Saga Reaction"]
+  CLI["CLI Command"]
+  Bus["CommandBus"]
+  Router["WorkflowRouter"]
+  WF["Temporal Workflow"]
+  Dispatch["dispatchCommand (activity)"]
+  Domain["DomainService.handle"]
 
-bus.register(new WorkflowRouter())
+  API --> Bus
+  WS --> Bus
+  Saga --> Bus
+  CLI --> Bus
+  Bus -->|workflow| Router --> WF
+  WF --> Dispatch --> Bus --> Domain
 ```
 
-Inside orderSaga we add an activity dispatchCommand() that calls the same bus, so the workflow re-uses core rules:
+#### Sequence Diagram
 
+```mermaid
+sequenceDiagram
+  participant Edge as Edge Function
+  participant Bus as CommandBus
+  participant WFRouter as WorkflowRouter
+  participant WF as Temporal Workflow
+  participant Activity as dispatchCommand
+  participant Domain as OrderService
+
+  Edge->>Bus: dispatch(cmd)
+  Bus->>WFRouter: handle(cmd)
+  WFRouter->>WF: signalWithStart(cmd)
+  WF->>Activity: dispatchCommand(cmd)
+  Activity->>Bus: dispatch(cmd)
+  Bus->>Domain: handle(cmd)
 ```
-const { dispatchCommand } = proxyActivities<{ dispatchCommand(cmd: Command): Promise<void> }>({ startToCloseTimeout:'1 minute' });
 
-await dispatchCommand(cmd);   // events flow through aggregates as usual
-```
+## Implications
 
-Benefits from a systems perspective
-Open-Closed – adding BillingService tomorrow is a single bus.register() call.
-Unified observability – one bus means one spot for metrics, tracing, retries, auth.
-Hexagonal purity – services remain pure; only adapters touch Postgres, Temporal, or WebSockets.
-Idempotency – signalWithStart guarantees each command is processed once even across restarts.
-Future flexibility – if a subset of commands should bypass Temporal later, we deregister WorkflowRouter and expose selected services directly—no change to aggregates.
+| Category         | Positive Impact                                      | Trade-offs / Considerations                                   |
+| ---------------- | ---------------------------------------------------- | ------------------------------------------------------------- |
+| Maintainability  | Routing logic is isolated in one place               | Developers must implement `supports()` logic per handler      |
+| Extensibility    | New domains/services register handlers declaratively | Runtime-only registry; requires startup discipline            |
+| Operational      | Supports tracing and metrics at dispatch boundary    | Misrouting bugs may be harder to debug without handler labels |
+| System Integrity | All command entry points use same resolution path    | Conflicts if multiple handlers support same command type      |
+
+## Alternatives Considered
+
+| Option                       | Reason for Rejection                                               |
+| ---------------------------- | ------------------------------------------------------------------ |
+| Static switch/case routing   | Unscalable with multiple domains                                   |
+| Workflow-only routing        | Breaks separation of concerns; forces orchestration at entry point |
+| DI container with decorators | Adds unnecessary complexity and inversion for current scale        |
+
+## Result
+
+All commands, regardless of origin, are dispatched through a central `CommandBus`. Domain services register themselves via `register(handler)`. Temporal workflows invoke `dispatchCommand()` activity, which reuses the same bus instance, ensuring parity and determinism. Adding a new domain requires only a new service that implements `CommandHandler` and is registered at startup—no infra changes required.

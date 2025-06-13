@@ -1,85 +1,51 @@
 # ADR-017: Event Upcasting Strategy
 
-## 1. Context
+## What
 
-* Events are immutable but evolve; new fields or structural changes must not break replay of historical streams.
-* We already store `schemaVersion` in `event.metadata`.
-* Snapshots handle their own upcasting via `applySnapshotState`; we need an equivalent mechanism for **events** during rehydration.
+Introduce an upcasting system for domain events. Events are immutable, but their shape can evolve. Upcasting allows consumers to safely read old events using the latest schema by transforming payloads at load time, based on their `schemaVersion`.
 
-## 2. Decision
+## Why
 
-### 2.1 Upcaster Registry
+Over time, domain models change—new fields are added, renamed, or nested. Without upcasting, replaying old events would cause runtime errors or incorrect state. Instead of polluting aggregates with version-specific logic, we centralize schema transformation inside the persistence port, ensuring clean, deterministic, and forward-compatible event consumption.
 
-```ts
-type UpcasterFn = (payload: any) => any;
+## How
 
-interface Registry {
-  [eventType: string]: { [fromVersion: number]: UpcasterFn };
-}
+* Each event written includes `schemaVersion` in its `metadata`
+* Upcasters are pure functions registered via `registerEventUpcaster(type, fromVersion, fn)`
+* `PgEventStore.load()` applies `upcastEvent()` before returning events to consumers
+* Only one version hop is applied at a time (v1 → v2), but multiple chained upcasters can be registered
+* Upcasters are keyed by `eventType` and `fromVersion`; duplicate registration throws
 
-export const eventUpcasters: Registry = {};
+### Diagram
 
-export function registerEventUpcaster(
-  type: string,
-  fromVersion: number,
-  fn: UpcasterFn
-) {
-  eventUpcasters[type] ??= {};
-  eventUpcasters[type][fromVersion] = fn;
-}
+```mermaid
+sequenceDiagram
+  participant Store as PgEventStore
+  participant Registry as UpcasterRegistry
+  participant Aggregate as Consumer
+
+  Store->>Registry: upcastEvent(type, payload, fromVersion)
+  Registry-->>Store: upcastedPayload
+  Store->>Aggregate: return event with updated payload
 ```
 
-* Upcasters are pure functions, registered at module-load time.
-* Duplicate registrations throw during CI tests.
+## Implications
 
-### 2.2 Application on Load
+| Category         | Positive Impact                                               | Trade-offs / Considerations                                        |
+| ---------------- | ------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Maintainability  | Aggregates stay schema-agnostic                               | Requires careful chaining of version transitions                   |
+| Extensibility    | New fields can be added without breaking consumers            | Must validate old → new compatibility during tests                 |
+| Operational      | Replay-safe; all events can be read without patching data     | Upcasting happens on every replay unless snapshotting is used      |
+| System Integrity | Source-of-truth remains the raw event; logic is deterministic | Missing or incorrect upcasters can cause state divergence silently |
 
-In `PgEventStore.load()` each event row is transformed:
+## Alternatives Considered
 
-```ts
-const schemaVersion = row.metadata.schemaVersion ?? 1;
-const payload      = upcastEvent(row.type, row.payload, schemaVersion);
-```
+| Option                           | Reason for Rejection                                    |
+| -------------------------------- | ------------------------------------------------------- |
+| Store new events only            | Breaks backward compatibility for long-lived aggregates |
+| Rewrite old events               | Violates immutability, brittle, high risk               |
+| Apply version logic in aggregate | Violates separation of concerns, causes logic bloat     |
 
-`upcastEvent` looks up the registry and applies at most **one** hop (vN ➜ vN+1). Chained upgrades are done by registering successive functions.
+## Result
 
-### 2.3 Contract
-
-* **Backwards-compatibility:** Writers always emit the *latest* `schemaVersion`.
-* **Readers:** Transparently consume any prior version present in storage.
-* **Version bump policy:**
-
-    1. Add new code that reads both old & new fields.
-    2. Deploy an upcaster + bump `schemaVersion` constant.
-    3. Update writers to emit the new shape.
-
-### 2.4 Observability
-
-| Span name              | When emitted                                                                               | Key attributes                                                |
-| ---------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| **`event.upcast`**     | Every time an event payload is transformed by `upcastEvent()` inside `PgEventStore.load()` | `event_type` · `from_version` · `to_version` · `aggregate_id` |
-| **`snapshot.persist`** | Inside `PgEventStore.append()` when we write a snapshot                                    | `aggregate_type` · `aggregate_id` · `version` · `bytes`       |
-| **`snapshot.restore`** | When a snapshot is loaded via `loadSnapshot()`                                             | same as above                                                 |
-
-
-## 3. Consequences
-
-| Positive                                                                                                                         | Negative                                                                                                   |
-|----------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
-| Centralised, testable migration logic; no brittle switch-cases in aggregates.                                                    | Upcasting happens every replay; heavy transforms could add latency (mitigated by snapshots).               |
-| Allows gradual roll-out: old producers keep working, new code reads both.                                                        | Registry must be kept in sync with event deletions; CI will fail if an upcaster references a removed type. |
-| Pure functions -> easy unit tests (see `event-upcaster.test.ts`).                                                                | Chained upcasts can be verbose for long-lived domains; consider generating squash migrations later.        |
-| **Aggregates stay schema-agnostic.** All upcasting is handled in the persistence **port**; domain code never sees legacy shapes. | See alternatives                                                                                           |
-
-## 4. Alternatives Considered
-
-1. **Multiple event topics / tables per version** – rejected.
-2. **Writer-side history rewrite** – then what's the point of ES.
-3. **Upcasting directly inside aggregates** (apply/constructor loads detect old payloads)  
-   *Pros*: no extra infra.  
-   *Cons*: pollutes every aggregate with version branches; impossible to remove once in place; violates SRP.  
-   *Decision*: keep aggregates clean; centralise in the port.
-4. **Upcasting in the Event Bus layer** (after load but before dispatch to projections/workflows)  
-   *Pros*: bus already touches every event.
-   *Cons*: aggregates and bus may diverge; replay tests that bypass the bus (unit tests, CLI replays) would still need the logic; two hotspots instead of one. souce of truth of the events is the event store, not the bus.
-   *Decision*: port-level is the single choke-point every reader uses (aggregates, projections, repair jobs), so we upcast there.
+Event upcasting is now centralized and enforced via `PgEventStore`. Each domain event declares its version, and consumers always receive the latest shape. Upcasting logic is pure, testable, and enforced by registration. Aggregates and projections remain free of legacy schema handling, and replay becomes forward-compatible and safe. This supports long-term evolution of domain models without compromising determinism or testability.

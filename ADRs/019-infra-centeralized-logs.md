@@ -1,144 +1,37 @@
-# ADR 019: Centralized Logging Port Across Core and Infra
+# ADR-019: Centralized Logging Port Across Core and Infra
 
-## Context
+## What
 
-Logging in the system is currently done ad-hoc using `console.log`, scattered across both core and infra. This prevents:
+Introduce a unified logging system using a `LoggerPort` interface, accessible from core and infra layers through a runtime-scoped accessor (`log()`). The logging implementation (e.g. Pino) is bound at runtime via worker bootstrap. This preserves deterministic, testable core logic while enabling structured, contextual logging across the stack.
 
-* Standardization of log formats
-* Inclusion of correlation/tenant context
-* Toggleable logging in tests
-* Determinism in core logic
+## Why
 
-We want centralized logging without polluting core code with direct logger injections. Logging must be standardized, scoped, and pluggable.
+Scattered use of `console.log` impedes log structure, tenant correlation, log level control, and downstream observability. Core code should remain pure and optionally log without runtime coupling. By deferring logging to runtime adapters and using a shared `LoggerPort`, logs can be standardized, test-muted, and production-ready—without polluting core logic or introducing direct dependencies.
 
-## Decision
+## Implications
 
-We introduce a `LoggerPort` interface, exposed via an execution-context-style accessor (`log()`), and bind a real logger implementation (`stdLogger`) at the Temporal worker bootstrap layer. This preserves core determinism while enabling structured, contextual logging across all layers.
+* All log calls in core use `log()?.info(...)` style, making them optional and side-effect free.
+* Logging can be toggled or mocked in tests without modifying business logic.
+* Logs are scoped, structured, and leveled via a central adapter (`stdLogger`).
+* The log level is controlled via `LOG_LEVEL` in `.env`, parsed at startup via `dotenv`.
+* Temporal workers bind the logger using `setLoggerAccessor()` during bootstrap.
+* The same logger infrastructure can be extended for workflow-specific context (`.child()`), tracing, or log streaming later.
 
----
+## How
 
-## Structure
+* Define `LoggerPort` with `info`, `warn`, `error`, `debug` methods in `src/core/ports.ts`.
+* Add `setLoggerAccessor()` and `log()` accessors to `src/core/contracts.ts`.
+* Implement a Pino-backed `stdLogger` adapter in `src/infra/logger/stdLogger.ts`.
+* Bind `stdLogger` at worker startup by calling `setLoggerAccessor(() => stdLogger)`.
+* Use `log()?.<level>()` anywhere in core or infra to log messages with optional context.
+* Configure log verbosity in `.env` using `LOG_LEVEL=debug` or other supported levels.
 
-### `LoggerPort` (in `src/core/ports.ts`)
+## Alternatives Considered
 
-```ts
-export interface LoggerPort {
-  info(message: string, context?: Record<string, unknown>): void;
-  warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, context?: Record<string, unknown>): void;
-  debug(message: string, context?: Record<string, unknown>): void;
-}
-```
+* Injecting logger directly into every core module: rejected for violating determinism and adding coupling.
+* Global logger singleton: rejected due to tight runtime binding and poor test isolation.
+* Keeping `console.log`: rejected due to lack of structure, log levels, and forward compatibility.
 
----
+## Result
 
-### Log Context Accessor (in `src/core/contracts.ts`)
-
-```ts
-import type { LoggerPort } from './ports';
-
-let getLogger: (() => LoggerPort | undefined) | null = null;
-
-export function setLoggerAccessor(fn: () => LoggerPort | undefined) {
-  getLogger = fn;
-}
-
-export function log(): LoggerPort | undefined {
-  return getLogger?.();
-}
-```
-
-This enables core to log *optionally* and safely without any runtime or test coupling.
-
----
-
-### Pino Adapter as Logger Implementation (in `src/infra/logger/stdLogger.ts`)
-
-```ts
-import pino from 'pino';
-import dotenv from 'dotenv';
-import { LoggerPort } from '../../core/ports';
-
-dotenv.config();
-
-const baseLogger = pino({
-  name: 'temporal-worker',
-  level: process.env.LOG_LEVEL || 'info', // Default fallback
-  formatters: {
-    bindings: (bindings) => ({ pid: bindings.pid }),
-    level: (label) => ({ level: label }),
-  },
-});
-
-export const stdLogger: LoggerPort = {
-  info: (msg, ctx) => baseLogger.info(ctx ?? {}, msg),
-  warn: (msg, ctx) => baseLogger.warn(ctx ?? {}, msg),
-  error: (msg, ctx) => baseLogger.error(ctx ?? {}, msg),
-  debug: (msg, ctx) => baseLogger.debug(ctx ?? {}, msg),
-};
-```
-
----
-
-### Runtime Binding (e.g., `worker.ts` or bootstrap file)
-
-```ts
-import { setLoggerAccessor } from '../../core/contracts';
-import { stdLogger } from '../logger/stdLogger';
-
-setLoggerAccessor(() => stdLogger);
-```
-
-Tests can override this with a mock logger or no-op.
-
----
-
-### Usage in Core (e.g., `command-bus.ts`)
-
-```ts
-import { log } from './contracts';
-
-log()?.info('Registered handler', { handlerName: handler.constructor.name });
-```
-
----
-
-### Usage in Infra (e.g., `pg-event-store.ts`)
-
-```ts
-import { log } from '../../core/contracts';
-
-log()?.error('Failed to insert event', { aggregateId, error });
-```
-
----
-
-The **log level should be defined inside `stdLogger`**, driven by an environment variable (e.g. `LOG_LEVEL`), and parsed early using `dotenv`. That keeps configuration centralized and avoids polluting your core with env concerns.
-
----
-
-### `.env` addition
-
-```env
-LOG_LEVEL=debug
-```
-
-Available levels (with Pino defaults):
-
-* `fatal`
-* `error`
-* `warn`
-* `info` (default)
-* `debug`
-* `trace`
-* `silent`
-
----
-
-## Consequences
-
-* **Determinism preserved:** Core code remains side-effect free and testable.
-* **Infra owns logging implementation:** Swappable at the adapter level (e.g., Pino → Winston).
-* **Scoped context support:** Enables per-command/workflow metadata via `.child()` if needed.
-* **Compatible with Docker/Kubernetes log forwarding** via stdout/stderr.
-* **Ready for observability stacks:** FluentBit, OpenTelemetry, Loki, etc.
+The logging system is now pluggable, deterministic, and environment-configurable. Core logic is pure and optionally observable. Logs are structured, contextual, and stream-ready for CI/CD, Docker, and Kubernetes environments. This foundation supports future tracing and log enrichment with minimal disruption to core code.

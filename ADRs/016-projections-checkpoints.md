@@ -1,68 +1,71 @@
-# ADR-016: **Per-Projection Checkpointing via Embedded Last Event ID/Version**
+# ADR-016: Per-Projection Checkpointing via Embedded Last Event ID/Version
 
-## Status
+## What
 
-Accepted
+Each projection row will now store its own checkpoint—`last_event_id` and `last_event_version`—as part of the projection payload. This embeds idempotency and recovery directly into the row structure, removing the need for global checkpoints or projection-wide offsets.
 
-## Context
+## Why
 
-The system uses event-sourced aggregates and CQRS-style projections, with real-time and multi-tenant requirements. Projections are backed by Postgres tables and populated by handlers reacting to domain events.
-We must ensure:
+Projections need to be fault-tolerant and idempotent. Without a per-row checkpoint, it is difficult to resume a projection safely after failure or replay. Global checkpoints (e.g., per table or per stream) add unnecessary coordination. By storing the last event per row, we gain local recovery, retry safety, and a simple restart story—critical for multi-tenant, high-cardinality domains.
 
-* Atomic, crash-safe, resumable, and scalable projection updates.
-* Minimal coupling and operational complexity.
+## How
 
-## Decision
+* Add `last_event_id` (UUID) and `last_event_version` (int) to each projection table
+* Projection handlers must update these fields on every successful upsert
+* Before applying an event, the handler can check the last checkpoint to decide whether to skip, update, or ignore
+* Projection repair and replay tools rely on this field to avoid duplicating writes
 
-**Each projection table row will embed its own checkpoint—`last_event_id` (and optionally `last_event_version`)—updated atomically with projection state in the same transaction.**
+### Diagrams
 
-* On each event processed, the handler will upsert both the projection state and checkpoint.
-* No global or separate checkpoint table will be maintained for per-row projections.
-* Recovery, idempotence, and replay are implemented by reading the last processed checkpoint per projection row and replaying events from the next offset as needed.
+#### Flowchart
 
-### Example (System Status Projection)
+```mermaid
+flowchart TD
+  Event["New Event"]
+  Row["Read Model Row"]
+  Check["Compare last_event_id"]
+  Skip["Skip (Already Applied)"]
+  Update["Upsert Projection + last_event_id/version"]
 
-```sql
-ALTER TABLE system_status
-  ADD COLUMN last_event_id UUID,
-  ADD COLUMN last_event_version INTEGER;
+  Event --> Check
+  Row --> Check
+  Check -->|Already applied| Skip
+  Check -->|New| Update
 ```
 
-When applying an event:
+#### Sequence Diagram
 
-```ts
-await updater.upsert(tenant_id, aggregateId, {
-  ...projectionFields,
-  last_event_id: event.id,
-  last_event_version: event.version,
-});
+```mermaid
+sequenceDiagram
+  participant Proj as ProjectionHandler
+  participant DB as Postgres
+  participant Event as NewEvent
+
+  Event->>Proj: handle(event)
+  Proj->>DB: SELECT last_event_id FROM projection WHERE id = event.aggregateId
+  alt already handled
+    Proj-->>Proj: skip
+  else new event
+    Proj->>DB: UPSERT projection row (with last_event_id/version)
+  end
 ```
 
-## Consequences
+## Implications
 
-**Advantages:**
+| Category         | Positive Impact                                                       | Trade-offs / Considerations                                 |
+| ---------------- | --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Maintainability  | No coordination across rows/tables; each row manages its own progress | Projection handlers must consistently include checkpointing |
+| Extensibility    | Works across all domains and high-cardinality aggregates              | Snapshot/migration must preserve checkpoint fields          |
+| Operational      | Replay-safe; reprocessing won’t overwrite correct state               | Some minor extra storage (2 fields per row)                 |
+| System Integrity | Ensures at-most-once projection execution per row                     | Errors during write must not update `last_event_id`         |
 
-* **Atomicity:** Projection and checkpoint are always in sync—no chance of partial update or crash inconsistency.
-* **Recovery Simplicity:** After a crash/restart, load the row, get its checkpoint, and resume from the next event—no split-brain.
-* **Isolation:** Each projection row tracks its own stream, supporting high-cardinality, multi-tenant, and sharded projections.
-* **No global locks or join logic** for checkpointing—scales to thousands/millions of projections.
+## Alternatives Considered
 
-**Disadvantages:**
+| Option                        | Reason for Rejection                                    |
+| ----------------------------- | ------------------------------------------------------- |
+| Global projection checkpoints | Doesn’t scale per-tenant; race conditions possible      |
+| No checkpointing              | Replay could duplicate or overwrite data inconsistently |
 
-* Adds two fields to each projection table (minor storage cost).
-* Cannot easily track global progress across all projections in one query (not required for CQRS/read-side patterns).
+## Result
 
-**Alternatives Rejected:**
-
-* **Separate Checkpoint Table:** Adds complexity, risk of out-of-sync state, and introduces multi-table transactional coupling.
-* **No Checkpointing:** Makes resumable, crash-tolerant, idempotent projection nearly impossible at scale.
-
-## Alignment
-
-This pattern is recommended in modern ES/CQRS literature for high-cardinality systems. It is a common approach in event-sourced architectures to ensure that projections can be independently updated and recovered without global state management.
-
-## See Also
-
-* Research: *Understanding Event Sourcing*, Chapter: Projections and Consistency
-* Core: `/src/infra/projections/pg-updater.ts`
-* Previous ADRs: [015](015-projections-repairs.md) [014](014-projections-schema-drift.md) [012](012-projections.md)
+Projection logic now includes per-row checkpoints. This supports safe reprocessing, automated repairs, and idempotency. Each projection row tracks its last event ID and version, reducing the need for global coordination or complex reconciliation logic. Projection correctness becomes fully local, testable, and resilient.
