@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import pool from '../db';
-import { TemporalScheduler } from '../../infra/temporal/temporal-scheduler';
+import { Scheduler } from '../../infra/temporal/scheduler';
 import logger from '../logger';
 
 const router = Router();
@@ -84,7 +84,7 @@ router.post('/api/commands', async (req, res) => {
     }
 
     // Create scheduler instance
-    const scheduler = await TemporalScheduler.create();
+    const scheduler = await Scheduler.create();
 
     try {
       // Schedule the command

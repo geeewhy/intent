@@ -1,6 +1,6 @@
 //src/infra/integration-tests/snapshot-integration.test.ts
 import {v4 as uuidv4} from 'uuid';
-import {TemporalScheduler} from '../temporal/temporal-scheduler';
+import {Scheduler} from '../temporal/scheduler';
 import {Command} from '../../core/contracts';
 import {SystemCommandType, SystemEventType} from '../../core/system';
 import {waitForNewEvents, waitForSnapshot} from './utils';
@@ -29,11 +29,11 @@ describe('snapshot-frequency', () => {
     const tenant = uuidv4();
     const user = uuidv4();
     const schedules: Promise<any>[] = [];
-    let scheduler: TemporalScheduler;
+    let scheduler: Scheduler;
     let store: PgEventStore;
 
     beforeAll(async () => {
-        scheduler = await TemporalScheduler.create(tenant);
+        scheduler = await Scheduler.create(tenant);
         store = new PgEventStore();
     }, TEST_TIMEOUT);
 
@@ -66,11 +66,11 @@ describe('snapshot-frequency', () => {
 describe('no-snapshot-before-threshold', () => {
     const tenant = uuidv4();
     const user = uuidv4();
-    let scheduler: TemporalScheduler;
+    let scheduler: Scheduler;
     let store: PgEventStore;
 
     beforeAll(async () => {
-        scheduler = await TemporalScheduler.create(tenant);
+        scheduler = await Scheduler.create(tenant);
         store = new PgEventStore();
     }, TEST_TIMEOUT);
 
@@ -94,11 +94,11 @@ describe('no-snapshot-before-threshold', () => {
 describe('snapshot-concurrency', () => {
     const tenant = uuidv4();
     const user = uuidv4();
-    let scheduler: TemporalScheduler;
+    let scheduler: Scheduler;
     let store: PgEventStore;
 
     beforeAll(async () => {
-        scheduler = await TemporalScheduler.create(tenant);
+        scheduler = await Scheduler.create(tenant);
         store = new PgEventStore();
     }, TEST_TIMEOUT);
 
@@ -132,13 +132,13 @@ describe('snapshot-cross-tenant', () => {
     const tenantA = uuidv4();
     const tenantB = uuidv4();
     const user = uuidv4();
-    let schedA: TemporalScheduler;
-    let schedB: TemporalScheduler;
+    let schedA: Scheduler;
+    let schedB: Scheduler;
     let store: PgEventStore;
 
     beforeAll(async () => {
-        schedA = await TemporalScheduler.create(tenantA);
-        schedB = await TemporalScheduler.create(tenantB);
+        schedA = await Scheduler.create(tenantA);
+        schedB = await Scheduler.create(tenantB);
         store = new PgEventStore();
     }, TEST_TIMEOUT);
 

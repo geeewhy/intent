@@ -10,7 +10,7 @@ import {PgCommandStore} from "../pg/pg-command-store";
 /**
  * TemporalScheduler - schedules commands and events via Temporal workflows
  */
-export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
+export class Scheduler implements JobSchedulerPort, EventPublisherPort {
     private constructor(
         private readonly router: WorkflowRouter,
         private readonly client: WorkflowClient,
@@ -19,11 +19,11 @@ export class TemporalScheduler implements JobSchedulerPort, EventPublisherPort {
     }
 
     /** async builder */
-    static async create(cfg?: any): Promise<TemporalScheduler> {
+    static async create(cfg?: any): Promise<Scheduler> {
         const router = await WorkflowRouter.create(cfg);
         const client = (router as any)['client'] as WorkflowClient; // reuse internal client
         const pgCommandStore = new PgCommandStore();
-        return new TemporalScheduler(router, client, pgCommandStore);
+        return new Scheduler(router, client, pgCommandStore);
     }
 
     /* ---------- main API ---------- */

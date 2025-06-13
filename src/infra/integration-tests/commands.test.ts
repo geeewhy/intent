@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { TemporalScheduler } from '../temporal/temporal-scheduler';
+import { Scheduler } from '../temporal/scheduler';
 import { Command, Event } from '../../core/contracts';
 import { SystemCommandType, SystemEventType } from '../../core/system';
 import { getAggregateWorkflowId, getSagaWorkflowId, getWorkflowsById, verifyWorkflowsById, getWorkflowDetails, wait, verifyNoLeakedWorkflows } from './utils';
@@ -10,13 +10,13 @@ import { log } from '../../core/logger';
 const TEST_TIMEOUT = 30000;
 
 describe.only('Temporal Workflow Integration Tests', () => {
-    let scheduler: TemporalScheduler;
+    let scheduler: Scheduler;
     let eventStore: PgEventStore;
     let tenantId: string;
 
     beforeAll(async () => {
         tenantId = process.env.TEST_TENANT_ID || 'test-tenant';
-        scheduler = await TemporalScheduler.create(tenantId);
+        scheduler = await Scheduler.create(tenantId);
         eventStore = new PgEventStore();
     }, TEST_TIMEOUT);
 

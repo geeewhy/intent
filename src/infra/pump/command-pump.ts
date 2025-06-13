@@ -7,7 +7,7 @@
 import { RealtimePumpBase } from './realtime-pump-base';
 import { Command } from '../../core/contracts';
 import { markConsumed, markFailed } from './helpers/command-helpers';
-import { TemporalScheduler } from '../temporal/temporal-scheduler';
+import { Scheduler } from '../temporal/scheduler';
 
 /**
  * Start the command pump
@@ -15,7 +15,7 @@ import { TemporalScheduler } from '../temporal/temporal-scheduler';
 export async function startCommandPump() {
   console.log('[CommandPump] Starting command pump');
 
-  const scheduler = await TemporalScheduler.create();
+  const scheduler = await Scheduler.create();
 
   console.log('[CommandPump] Temporal scheduler created');
 

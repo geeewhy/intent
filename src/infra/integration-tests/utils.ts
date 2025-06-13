@@ -1,5 +1,5 @@
 //src/infra/integration-tests/utils.ts
-import {TemporalScheduler} from '../temporal/temporal-scheduler';
+import {Scheduler} from '../temporal/scheduler';
 import {WorkflowExecutionInfo} from '@temporalio/client';
 import {Event} from '../../core/contracts';
 import {PgEventStore} from '../pg/pg-event-store';
@@ -111,7 +111,7 @@ export const getAggregateWorkflowId = (tenantId: string, aggregateType: string, 
  * @returns An array of running workflows
  */
 export const getWorkflowsById = async (
-    scheduler: TemporalScheduler,
+    scheduler: Scheduler,
     workflowIds: string[]
 ): Promise<WorkflowExecutionInfo[]> => {
     const workflowClient = await scheduler.getClient();
@@ -136,7 +136,7 @@ export const getWorkflowsById = async (
  * Find all running workflows with tenant prefix, optionally terminate them.
  */
 export const verifyNoLeakedWorkflows = async (
-    scheduler: TemporalScheduler,
+    scheduler: Scheduler,
     tenantId: string,
     terminate = false,
     workflowIdsToCheck = [],
@@ -192,7 +192,7 @@ export const verifyNoLeakedWorkflows = async (
 };
 
 export const getWorkflowDetails = async (
-    scheduler: TemporalScheduler,
+    scheduler: Scheduler,
     workflowId: string
 ): Promise<WorkflowExecutionInfo | undefined> => {
     const workflowClient = await scheduler.getClient();

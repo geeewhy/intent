@@ -9,7 +9,7 @@ import { Command, Event, UUID } from '../../core/contracts';
 import { CommandPort } from '../../core/ports';
 import { PgEventStore } from '../pg/pg-event-store';
 import { PgNotifyListener } from '../pg/pg-notify-listener';
-import { TemporalScheduler } from '../temporal/temporal-scheduler';
+import { Scheduler } from '../temporal/scheduler';
 import { SupabasePublisher } from './supabase-publisher';
 
 /**
@@ -122,7 +122,7 @@ export class SupabaseServer {
 
     // Create adapters
     const eventStore = new PgEventStore();
-    const scheduler = await TemporalScheduler.create();
+    const scheduler = await Scheduler.create();
     //
     // // Use the TemporalScheduler as both JobSchedulerPort and EventPublisherPort
     // // This ensures events are published to the appropriate aggregate workflows

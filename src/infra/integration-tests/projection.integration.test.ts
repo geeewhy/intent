@@ -1,5 +1,5 @@
 import {v4 as uuidv4} from 'uuid';
-import {TemporalScheduler} from '../temporal/temporal-scheduler';
+import {Scheduler} from '../temporal/scheduler';
 import {Command} from '../../core/contracts';
 import {SystemCommandType} from '../../core/system/contracts';
 import {createPool} from '../projections/pg-pool';
@@ -13,7 +13,7 @@ dotenv.config();
 const TEST_TIMEOUT = 30000;
 
 describe('Projection Integration Tests', () => {
-    let scheduler: TemporalScheduler;
+    let scheduler: Scheduler;
     let eventStore: PgEventStore;
     let tenantId: string;
     let pool: any;
@@ -22,7 +22,7 @@ describe('Projection Integration Tests', () => {
     beforeAll(async () => {
         tenantId = process.env.TEST_TENANT_ID || 'test-tenant';
         log()?.info('Setting up Projection Integration Tests', { tenantId });
-        scheduler = await TemporalScheduler.create(tenantId);
+        scheduler = await Scheduler.create(tenantId);
         eventStore = new PgEventStore();
         pool = createPool();
         log()?.info('Projection Integration Tests setup complete');
