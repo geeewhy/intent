@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     'process.env.VITE_API_MODE': JSON.stringify(process.env.VITE_API_MODE || 'mock'),
-    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || '')
+    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || ''),
+    'process.env.VITE_API_NO_SWITCH': JSON.stringify(process.env.VITE_API_NO_SWITCH || '')
   },
 }));

@@ -12,6 +12,9 @@ import { useFeatures } from '@/hooks/useFeatures';
 import { loadDefault } from '@/mocks/scenarios/default';
 import { isMock } from '@/config/apiMode';
 
+// Check if API switching is disabled via environment variable
+const isApiSwitchingDisabled = import.meta.env.VITE_API_NO_SWITCH === 'true';
+
 const FEATURE_FLAGS = [
   { id: 'ai', label: 'AI Companion' },
   { id: 'projections', label: 'Projections' },
@@ -57,6 +60,16 @@ export const Settings = () => {
   };
 
   const handleSave = () => {
+    // Check if API switching is disabled and the user is trying to change the API mode
+    if (isApiSwitchingDisabled && (useRealBackend !== (localStorage.getItem('api_mode') === 'real'))) {
+      toast({
+        title: "API switching not allowed",
+        description: "Switching between real and mock API is not allowed in this environment.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     localStorage.setItem('api_uri', apiUri);
     localStorage.setItem('use_basic_auth', useBasicAuth.toString());
     localStorage.setItem('api_mode', useRealBackend ? 'real' : 'mock');
@@ -83,7 +96,21 @@ export const Settings = () => {
     setUseBasicAuth(false);
     setUsername('');
     setPassword('');
-    setUseRealBackend(false);
+
+    // Only reset API mode if switching is allowed
+    if (!isApiSwitchingDisabled) {
+      setUseRealBackend(false);
+      localStorage.removeItem('api_mode');
+    } else if (useRealBackend !== (localStorage.getItem('api_mode') === 'real')) {
+      // If switching is disabled and the user tried to change the mode, show an error
+      toast({
+        title: "API switching not allowed",
+        description: "Switching between real and mock API is not allowed in this environment.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Reset feature flags
     FEATURE_FLAGS.forEach(flag => toggle(flag.id, false));
 
@@ -91,8 +118,6 @@ export const Settings = () => {
     localStorage.removeItem('use_basic_auth');
     localStorage.removeItem('basic_auth_username');
     localStorage.removeItem('basic_auth_password');
-    localStorage.removeItem('api_mode');
-
 
     toast({
       title: "Settings reset",
@@ -115,7 +140,12 @@ export const Settings = () => {
         <CardHeader>
           <CardTitle className="text-slate-100">API Configuration</CardTitle>
           <CardDescription className="text-slate-400">
-            Set up your API endpoint and authentication credentials
+            <div>Set up your API endpoint and authentication credentials</div>
+            <div>
+              {isApiSwitchingDisabled && (
+                  <span className="text-xs text-amber-500">(Switching disabled by environment configuration)</span>
+              )}
+            </div>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -137,8 +167,9 @@ export const Settings = () => {
                 id="real-backend"
                 checked={useRealBackend}
                 onCheckedChange={setUseRealBackend}
+                disabled={isApiSwitchingDisabled}
               />
-              <Label htmlFor="real-backend" className="text-slate-200">
+              <Label htmlFor="real-backend" className={`${isApiSwitchingDisabled ? 'text-slate-400' : 'text-slate-200'}`}>
                 Use real backend
               </Label>
             </div>
@@ -148,6 +179,7 @@ export const Settings = () => {
                 id="basic-auth"
                 checked={useBasicAuth}
                 onCheckedChange={setUseBasicAuth}
+                disabled={isApiSwitchingDisabled}
               />
               <Label htmlFor="basic-auth" className="text-slate-200">
                 Enable HTTP Basic Authentication
@@ -183,7 +215,10 @@ export const Settings = () => {
           </div>
 
           <div className="flex space-x-3 pt-4">
-            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={handleSave}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    disabled={isApiSwitchingDisabled}
+            >
               Save Settings
             </Button>
             <Button 
