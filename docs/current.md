@@ -13,7 +13,7 @@
 | **Observability**          | Correlation / causation / request IDs on every cmd → event → projection → saga hop; Otel spans emitted | Trace utilities; exporter TODO |
 | **Schema Safety**          | Umzug migrations; drift scanner & selective checkpoint rewind (ADR 016) | CI job; repair script |
 | **Resilience**             | Idempotent command insert, optimistic version check, workflow retries with jitter, snapshot roll-forward logic | Failure-path simulations |
-| **Dev-X Tooling & CI/CD** | CLI command-pump; in-mem event store; drift scanner → JSON/MD report → auto-repair; RLS linter; SQL migration planner; ADR & debt dashboards | CI pipeline matrix: lint → unit → integration → drift-scan *(fail-fast)*; optional `repair` stage; local Jest watch |
+| **Dev-X Tooling & CI/CD** | DevX-UI companion; in-mem event store; drift scanner → JSON/MD report → auto-repair; RLS linter; SQL migration planner; ADR & debt dashboards | CI pipeline matrix: lint → unit → integration → drift-scan *(fail-fast)*; optional `repair` stage; local Jest watch |
 | **Upcasting Strategy**            | Enable schema evolution for historical event compatibility with clearly defined migration tests.       | integration tests for upcasting logic; snapshot tests for event schema changes. |
 
 ---
@@ -46,7 +46,7 @@
     * **Least-privilege by default** – each consumer sees only rows they own, essential when a single event log fans out to multi-tenant projections.
     * **Replay-safe** – during checkpoint rewind or full rebuild, the same policies are reapplied automatically, blocking leaks in transitional states.
     * Linter step fails the CI pipeline if any projection lacks a policy or references an undefined role, so “temporary” insecure tables never reach main.
- 
+
 * **Drift-aware projection repair**
     - `scan → plan → repair` rewinds only to the last safe checkpoint—avoids full rebuilds common in other stacks.
 
@@ -55,7 +55,7 @@
     The `repair` script consumes that report to rewind checkpoints and backfill events; gated behind an explicit CI stage.
   * **RLS rule linter** – validates that every `SystemAccessCondition` maps to at least one PG policy; pipeline fails on gaps.
   * **SQL migration planner** – static-analyses raw SQL files, orders them safely, and feeds Umzug; identical across environments.
-  * **CLI productivity loop** – `command-pump` injects a command and tails events/projections in real time; accelerates local debugging.
+  * **DevX-UI productivity loop** – The DevX-UI companion provides a command issuer to test flows, event stream viewer with filtering, trace viewer, and system metrics panel; accelerates local debugging.
   * **ADR & debt dashboards** – Markdown ADRs and `docs/debt.md` surface in pull-request checks, keeping architecture and TODOs visible.
   * **CI matrix** – Pipeline runs lint → unit → integration → drift-scan; the same scripts run locally via `npm run test:watch`, ensuring laptop-to-pipeline parity.
 
