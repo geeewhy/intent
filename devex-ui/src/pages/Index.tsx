@@ -19,7 +19,11 @@ import { useAppCtx } from '@/app/AppProvider';
 
 type ActiveView = 'dashboard' | 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status' | 'rewind' | 'ai' | 'settings';
 
-const Index = () => {
+interface IndexProps {
+  onSwitchToDocs?: () => void;
+}
+
+const Index = ({ onSwitchToDocs }: IndexProps) => {
   const initialView = window.location.pathname.replace(/^\//, '') as ActiveView || 'dashboard';
   const [activeView, setActiveView] = useState<ActiveView>(initialView);
   const [isAICompanionOpen, setIsAICompanionOpen] = useState(false);
@@ -89,6 +93,7 @@ const Index = () => {
         <Sidebar 
           activeView={activeView}
           onViewChange={handleViewChange}
+          onSwitchToDocs={onSwitchToDocs}
         />
 
         <main className="flex-1 p-6 overflow-auto">

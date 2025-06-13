@@ -14,9 +14,11 @@ import {
     ChevronLeft,
     ChevronRight,
     LayoutDashboard,
+    BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFeatures } from '@/hooks/useFeatures';
+import { Button } from '@/components/ui/button';
 
 /* ─────────────────────── Types / constants ────────────────────── */
 
@@ -35,6 +37,7 @@ type View =
 interface SidebarProps {
     onViewChange?: (view: View) => void;
     activeView?: View; // optional – parent can still control
+    onSwitchToDocs?: () => void;
 }
 
 const NAV_ITEMS = [
@@ -61,7 +64,7 @@ const viewFromPath = (path: string): View => {
 
 /* ───────────────────────── component ───────────────────────────── */
 
-export const Sidebar = ({ onViewChange, activeView }: SidebarProps) => {
+export const Sidebar = ({ onViewChange, activeView, onSwitchToDocs }: SidebarProps) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const { enabled } = useFeatures();
     const { pathname } = useLocation();
@@ -134,6 +137,18 @@ export const Sidebar = ({ onViewChange, activeView }: SidebarProps) => {
                         </button>
                     );
                 })}
+
+                {/* Switch to Docs button at the bottom */}
+                <div className="pt-4 mt-4 border-t border-slate-800">
+                    <Button
+                        onClick={onSwitchToDocs}
+                        variant="outline"
+                        className="w-full flex items-center gap-2 justify-center"
+                    >
+                        <BookOpen className="h-4 w-4" />
+                        {!isCollapsed && <span>Switch to Docs</span>}
+                    </Button>
+                </div>
             </nav>
         </aside>
     );
