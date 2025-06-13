@@ -1,0 +1,11 @@
+import { AccessContext } from './contracts';
+export type AccessPolicy = (context: AccessContext) => boolean;
+export declare function registerCondition(name: string, fn: (args: any) => boolean): void;
+export declare function evaluateCondition(name: string, args: any): boolean;
+export declare function isCommandAllowed(condition: string, context: AccessContext): boolean;
+export declare function listRegisteredConditions(): string[];
+export declare function getConditionMap(): Record<string, (args: any) => boolean>;
+type RoleAccessMap = Record<string, string[]>;
+export declare const RegisteredAccessModels: Record<string, RoleAccessMap>;
+export declare function registerCommandConditionsFromModel(namespace: string, model: RoleAccessMap): Set<string>;
+export {};

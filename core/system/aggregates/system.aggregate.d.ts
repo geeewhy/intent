@@ -1,0 +1,41 @@
+import { Command, Event } from '../../contracts';
+import { BaseAggregate } from '../../base/aggregate';
+import { UUID, SystemCommandType, LogMessagePayload, EmitMultipleEventsPayload, ExecuteTestPayload } from '../contracts';
+type SystemSnapshotState = {
+    numberExecutedTests: number;
+    testName?: string;
+    parameters?: Record<string, any>;
+    retries: number;
+};
+export declare class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
+    aggregateType: string;
+    static CURRENT_SCHEMA_VERSION: number;
+    static readonly COMMAND_LIST: SystemCommandType[];
+    id: UUID;
+    version: number;
+    numberExecutedTests: number;
+    lastExecutedTestName: string;
+    retries: number;
+    constructor(id: UUID);
+    static create(cmd: Command<LogMessagePayload | EmitMultipleEventsPayload | ExecuteTestPayload>): SystemAggregate;
+    static rehydrate(events: Event[]): SystemAggregate;
+    private readonly handlers;
+    handle(cmd: Command): Event[];
+    apply(event: Event, isNew?: boolean): void;
+    private handleLogMessage;
+    private handleSimulateFailure;
+    private handleEmitMultipleEvents;
+    private handleExecuteTest;
+    private handleExecuteRetryableTest;
+    private applyMessageLogged;
+    private applyFailureSimulated;
+    private applyMultiEventEmitted;
+    private applyTestExecuted;
+    private applyRetryableTestExecuted;
+    protected upcastSnapshotState(raw: any, version: number): SystemSnapshotState;
+    protected applyUpcastedSnapshot(state: SystemSnapshotState): void;
+    extractSnapshotState(): SystemSnapshotState;
+    getId(): UUID;
+    getVersion(): number;
+}
+export {};
