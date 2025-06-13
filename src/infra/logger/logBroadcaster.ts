@@ -4,6 +4,7 @@ type LogLine = {
   message: string;
   category: string;
   tenant_id: string;
+  meta?: any; // Include the full metadata
 };
 
 type Subscriber = (log: LogLine) => void;

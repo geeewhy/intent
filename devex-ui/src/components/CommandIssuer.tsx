@@ -225,7 +225,7 @@ export const CommandIssuer = () => {
                                     variant="outline"
                                     size="icon"
                                     onClick={() => handleFormDataChange(key, isIdField ? crypto.randomUUID() : `sample-${key}`)}
-                                    className="bg-slate-800 border-slate-700 hover:bg-slate-700 h-8 w-8"
+                                    className="bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 h-8 w-8"
                                 >
                                     <RefreshCw className="h-3 w-3"/>
                                 </Button>

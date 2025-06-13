@@ -23,7 +23,8 @@ const wrappedLogger: LoggerPort = {
       level: 'info',
       message: msg,
       category: meta?.operation ?? 'http',
-      tenant_id: meta?.tenantId ?? 'unknown'
+      tenant_id: meta?.tenantId ?? 'unknown',
+      meta: meta // Include the full metadata
     });
   },
   warn: (msg: string, meta?: any) => {
@@ -35,7 +36,8 @@ const wrappedLogger: LoggerPort = {
       level: 'warning',
       message: msg,
       category: meta?.operation ?? 'http',
-      tenant_id: meta?.tenantId ?? 'unknown'
+      tenant_id: meta?.tenantId ?? 'unknown',
+      meta: meta // Include the full metadata
     });
   },
   error: (msg: string, meta?: any) => {
@@ -47,7 +49,8 @@ const wrappedLogger: LoggerPort = {
       level: 'error',
       message: msg,
       category: meta?.operation ?? 'http',
-      tenant_id: meta?.tenantId ?? 'unknown'
+      tenant_id: meta?.tenantId ?? 'unknown',
+      meta: meta // Include the full metadata
     });
   },
   debug: (msg: string, meta?: any) => baseLogger.debug(msg, meta),
