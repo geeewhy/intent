@@ -35,9 +35,14 @@ export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => 
 
     const searchTerm = filter.toLowerCase();
     return event.tenant_id === currentTenant && (
-      event.type.toLowerCase().includes(searchTerm) ||
-      event.aggregateId.toLowerCase().includes(searchTerm) ||
-      event.aggregateType.toLowerCase().includes(searchTerm)
+        event.type?.toLowerCase().includes(searchTerm) ||
+        event.aggregateId?.toLowerCase().includes(searchTerm) ||
+        event.aggregateType?.toLowerCase().includes(searchTerm) ||
+        event.metadata?.causationId?.toLowerCase().includes(searchTerm) ||
+        event.metadata?.correlationId?.toLowerCase().includes(searchTerm) ||
+        event.metadata?.userId?.toLowerCase().includes(searchTerm) ||
+        event.metadata?.requestId?.toLowerCase().includes(searchTerm) ||
+        event.metadata?.source?.toLowerCase().includes(searchTerm)
     );
   });
 
@@ -129,13 +134,6 @@ export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => 
                   <div className="text-slate-400">Source:</div>
                   <div className="text-slate-100">{event.metadata?.source || 'Unknown'}</div>
                 </div>
-
-                {event.metadata?.userId && (
-                  <div>
-                    <div className="text-slate-400">User ID:</div>
-                    <div className="text-slate-100 font-mono">{event.metadata.userId}</div>
-                  </div>
-                )}
 
                 {event.metadata?.requestId && (
                   <div>

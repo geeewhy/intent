@@ -3,6 +3,7 @@ import healthRoutes from './health';
 import registryRoutes from './registry';
 import metricsRoutes from './metrics';
 import commandsRoutes from './commands';
+import eventsRoutes from './events';
 import accessLogMiddleware from '../middlewares/accessLog';
 
 /**
@@ -24,6 +25,9 @@ export const registerRoutes = (app: Express): void => {
 
   // Register commands routes
   app.use(commandsRoutes);
+
+  // Register events routes
+  app.use(eventsRoutes);
 };
 
 export default registerRoutes;

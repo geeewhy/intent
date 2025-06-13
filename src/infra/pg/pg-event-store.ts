@@ -123,6 +123,13 @@ export class PgEventStore implements EventStorePort {
                         evt.metadata?.timestamp ?? new Date(),
                     ],
                 );
+
+                const payload = JSON.stringify(evt).replace(/'/g, "''"); // escape single quotes for SQL
+
+                await client.query(
+                    `NOTIFY "events:${tenantId}", '${payload}'`
+                );
+
             }
 
             // Persist snapshot (if provided) atomically

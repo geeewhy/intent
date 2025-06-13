@@ -5,14 +5,38 @@ import type { LogLine } from './mockLogs';
 
 // Events API
 export const fetchEvents = async (tenantId: string, limit = 50): Promise<Event[]> => {
-  return apiClient.get<Event[]>(API_CONFIG.endpoints.events, { 
+  const raw = await apiClient.get<any[]>(API_CONFIG.endpoints.events, {
     tenant_id: tenantId,
     limit: limit.toString()
   });
+
+  return raw.map((e) => ({
+    ...e,
+    aggregateId: e.aggregate_id,
+    aggregateType: e.aggregate_type,
+    timestamp: e.created_at,
+    metadata: {
+      ...e.metadata,
+      timestamp: e.created_at
+    },
+    status: 'processed' // optional for UI styling
+  }));
 };
 
 export const fetchEvent = async (eventId: string): Promise<Event> => {
-  return apiClient.get<Event>(`${API_CONFIG.endpoints.events}/${eventId}`);
+  const raw = await apiClient.get<any>(`${API_CONFIG.endpoints.events}/${eventId}`);
+
+  return {
+    ...raw,
+    aggregateId: raw.aggregate_id,
+    aggregateType: raw.aggregate_type,
+    timestamp: raw.created_at,
+    metadata: {
+      ...raw.metadata,
+      timestamp: raw.created_at
+    },
+    status: 'processed'
+  };
 };
 
 // Commands API
