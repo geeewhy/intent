@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Activity, Filter, Clock } from "lucide-react";
+import { Activity, Filter, Clock, X } from "lucide-react";
 import type { Event } from "@/data";
 import { useEvents } from "@/hooks/api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,16 @@ export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => 
   const [filter, setFilter] = useState("");
   const [isLive, setIsLive] = useState(true);
   const queryClient = useQueryClient();
+
+  // Function to handle filter icon click
+  const handleFilterClick = (value: string) => {
+    setFilter(value);
+  };
+
+  // Function to reset the filter
+  const resetFilter = () => {
+    setFilter("");
+  };
 
   // Use the events hook for data fetching and live updates
   const { data: events = [], isFetching } = useEvents(currentTenant, 50, { enabled: isLive });
@@ -75,6 +85,12 @@ export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => 
               onChange={(e) => setFilter(e.target.value)}
               className="pl-10 bg-slate-800 border-slate-700 text-slate-100 w-64"
             />
+            {filter && (
+              <X 
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-300 hover:text-slate-800 cursor-pointer bg-slate-900 bg-opacity-80 rounded-md p-1"
+                onClick={resetFilter}
+              />
+            )}
           </div>
 
           <Button
@@ -115,31 +131,79 @@ export const EventStreamViewer = ({ currentTenant }: EventStreamViewerProps) => 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
                   <div className="text-slate-400">Aggregate ID:</div>
-                  <div className="text-slate-100 font-mono">{event.aggregateId}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-slate-100 font-mono">{event.aggregateId}</div>
+                    <Filter
+                      className="h-3 w-3 text-slate-400 cursor-pointer hover:text-slate-200"
+                      onClick={() => handleFilterClick(event.aggregateId || '')}
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <div className="text-slate-400">Correlation ID:</div>
-                  <div className="text-slate-100 font-mono">{event.metadata?.correlationId || 'N/A'}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-slate-100 font-mono">{event.metadata?.correlationId || 'N/A'}</div>
+                    {event.metadata?.correlationId && (
+                      <Filter
+                        className="h-3 w-3 text-slate-400 cursor-pointer hover:text-slate-200"
+                        onClick={() => handleFilterClick(event.metadata.correlationId)}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 {event.metadata?.causationId && (
                   <div>
                     <div className="text-slate-400">Causation ID:</div>
-                    <div className="text-slate-100 font-mono">{event.metadata.causationId}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-slate-100 font-mono">{event.metadata.causationId}</div>
+                      <Filter
+                        className="h-3 w-3 text-slate-400 cursor-pointer hover:text-slate-200"
+                        onClick={() => handleFilterClick(event.metadata.causationId)}
+                      />
+                    </div>
                   </div>
                 )}
 
-                <div>
+                  {event.metadata?.source && (<div>
                   <div className="text-slate-400">Source:</div>
-                  <div className="text-slate-100">{event.metadata?.source || 'Unknown'}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-slate-100">{event.metadata?.source || 'Unknown'}</div>
+                    {event.metadata?.source && event.metadata.source !== 'Unknown' && (
+                      <Filter
+                        className="h-3 w-3 text-slate-400 cursor-pointer hover:text-slate-200"
+                        onClick={() => handleFilterClick(event.metadata.source)}
+                      />
+                    )}
+                  </div>
                 </div>
+                  )}
 
                 {event.metadata?.requestId && (
                   <div>
                     <div className="text-slate-400">Request ID:</div>
-                    <div className="text-slate-100 font-mono">{event.metadata.requestId}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-slate-100 font-mono">{event.metadata.requestId}</div>
+                      <Filter
+                        className="h-3 w-3 text-slate-400 cursor-pointer hover:text-slate-200"
+                        onClick={() => handleFilterClick(event.metadata.requestId)}
+                      />
+                    </div>
                   </div>
+                )}
+
+                {event.metadata?.userId && (
+                      <div>
+                          <div className="text-slate-400">User ID:</div>
+                          <div className="flex items-center gap-2">
+                              <div className="text-slate-100 font-mono">{event.metadata.userId}</div>
+                              <Filter
+                                  className="h-3 w-3 text-slate-400 cursor-pointer hover:text-slate-200"
+                                  onClick={() => handleFilterClick(event.metadata.userId)}
+                              />
+                          </div>
+                      </div>
                 )}
               </div>
 

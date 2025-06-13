@@ -27,7 +27,7 @@ export const Header = () => {
       {/* Tenant switcher */}
       <div className="flex items-center gap-3">
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger asChild className="hover:text-slate-100">
             <Button variant="outline" className="bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700">
               Tenant: {tenant}
               <ChevronDown className="ml-2 h-4 w-4" />
