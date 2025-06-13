@@ -5,6 +5,7 @@ import { createLogStream } from '@/mocks/stores/log.store';
 import type { LogLine } from '@/mocks/factories/log.factory';
 import React from 'react';
 import { logsKeys } from './queryKeys';
+import { isMock } from '@/config/apiMode';
 
 export function useLogs(tenant: string, limit = 100, options = { enabled: true, paused: false }) {
   const qc = useQueryClient();
@@ -25,30 +26,34 @@ export function useLogs(tenant: string, limit = 100, options = { enabled: true, 
   const query = useQuery({
     queryKey,
     queryFn: () => fetchLogs(tenant, limit),
+    enabled: isMock // only run fetch if mock mode is active
   });
 
   // live updates → merge into cache
   React.useEffect(() => {
     if (!enabled || paused) return;
 
-    let isActive = true;
     const currentTenant = stableTenant.current;
     const currentQueryKey = logsKeys.list(currentTenant, limit);
 
-    const unsub = createLogStream(currentTenant).subscribe((log: LogLine) => {
-      // Only update if the component is still mounted and tenant hasn't changed
-      if (isActive && currentTenant === stableTenant.current) {
-        qc.setQueryData<LogLine[]>(currentQueryKey, old => {
-          const next = old ? [log, ...old] : [log];
-          return next.slice(0, limit);
-        });
-      }
-    });
+    if (isMock) {
+      const unsub = createLogStream(currentTenant).subscribe((log) => {
+        qc.setQueryData<LogLine[]>(currentQueryKey, old => [log, ...(old || [])].slice(0, limit));
+      });
+      return () => unsub?.();
+    }
 
-    return () => {
-      isActive = false;
-      unsub?.();
+    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3009'}/api/logs/stream?tenant_id=${currentTenant}`;
+    const es = new EventSource(url);
+
+    es.onmessage = (event) => {
+      try {
+        const log = JSON.parse(event.data);
+        qc.setQueryData<LogLine[]>(currentQueryKey, old => [log, ...(old || [])].slice(0, limit));
+      } catch {}
     };
+
+    return () => es.close();
   }, [limit, qc, enabled, paused]);
 
   return query;

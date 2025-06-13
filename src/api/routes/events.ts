@@ -53,10 +53,11 @@ router.get('/api/events/stream', async (req, res) => {
     }
   };
 
-  client.on('notification', onNotify);
+  // Use type assertion to tell TypeScript that 'notification' is a valid event
+  (client as any).on('notification', onNotify);
 
   req.on('close', async () => {
-    client.removeListener('notification', onNotify);
+    (client as any).removeListener('notification', onNotify);
     await client.query(`UNLISTEN "${channel}"`);
     client.release();
     res.end();

@@ -18,7 +18,7 @@ export const LogFooter = () => {
     id: '', 
     timestamp: new Date().toISOString(), 
     level: 'info', 
-    message: 'No logs available', 
+    message: 'No logs available yet...',
     category: 'event',
     tenant_id: tenant
   };
