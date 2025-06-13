@@ -51,7 +51,6 @@ const NAV_ITEMS: NavItem[] = [
 /* ───────────────────────── component ───────────────────────────── */
 
 export const DocsSidebar = ({ onViewChange, activeView, onSwitchToConsole }: DocsSidebarProps) => {
-    const [isCollapsed, setIsCollapsed] = useState(false);
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
         guidelines: true, // Start with guidelines expanded
     });
@@ -67,24 +66,7 @@ export const DocsSidebar = ({ onViewChange, activeView, onSwitchToConsole }: Doc
     };
 
     return (
-        <aside
-            className={cn(
-                'bg-slate-900 border-r border-slate-800 transition-all duration-300 relative',
-                isCollapsed ? 'w-16' : 'w-64',
-            )}
-        >
-            {/* Collapse toggle */}
-            <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="absolute -right-3 top-6 bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors z-10 p-1 rounded-full"
-            >
-                {isCollapsed ? (
-                    <ChevronRight className="h-3 w-3 text-slate-400" />
-                ) : (
-                    <ChevronLeft className="h-3 w-3 text-slate-400" />
-                )}
-            </button>
-
+        <aside className="w-64 transition-all duration-300">
             <nav className="space-y-2 p-4">
                 {NAV_ITEMS.map(({ id, label, icon: Icon, children }) => {
                     const selected = current === id;
@@ -101,35 +83,23 @@ export const DocsSidebar = ({ onViewChange, activeView, onSwitchToConsole }: Doc
                                     onViewChange?.(id);
                                 }}
                                 className={cn(
-                                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors relative group',
+                                    'w-full flex items-center gap-3 px-3 py-2 text-left transition-colors',
                                     selected
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-slate-300 hover:text-white hover:bg-slate-800',
+                                        ? 'text-blue-500 font-medium'
+                                        : 'text-slate-300 hover:text-white',
                                 )}
-                                title={isCollapsed ? label : undefined}
                             >
                                 <Icon className="h-5 w-5 flex-shrink-0" />
-                                {!isCollapsed && (
-                                    <>
-                                        <span className="text-sm font-medium flex-1">{label}</span>
-                                        {hasChildren && (
-                                            isExpanded ? 
-                                                <ChevronUp className="h-4 w-4" /> : 
-                                                <ChevronDown className="h-4 w-4" />
-                                        )}
-                                    </>
-                                )}
-
-                                {/* Tooltip for collapsed sidebar */}
-                                {isCollapsed && (
-                                    <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-slate-100 text-sm rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-50">
-                                        {label}
-                                    </div>
+                                <span className="text-sm font-medium flex-1">{label}</span>
+                                {hasChildren && (
+                                    isExpanded ? 
+                                        <ChevronUp className="h-4 w-4" /> : 
+                                        <ChevronDown className="h-4 w-4" />
                                 )}
                             </button>
 
                             {/* Children items */}
-                            {!isCollapsed && hasChildren && isExpanded && (
+                            {hasChildren && isExpanded && (
                                 <div className="ml-8 space-y-1">
                                     {children.map(child => (
                                         <button
@@ -138,7 +108,7 @@ export const DocsSidebar = ({ onViewChange, activeView, onSwitchToConsole }: Doc
                                                 // For now, just navigate to the parent view
                                                 onViewChange?.(id);
                                             }}
-                                            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-left text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-400 hover:text-white transition-colors"
                                         >
                                             {child.label}
                                         </button>
@@ -150,14 +120,14 @@ export const DocsSidebar = ({ onViewChange, activeView, onSwitchToConsole }: Doc
                 })}
 
                 {/* Switch to Console button at the bottom */}
-                <div className="pt-4 mt-4 border-t border-slate-800">
+                <div className="pt-4 mt-4">
                     <Button
                         onClick={onSwitchToConsole}
-                        variant="outline"
-                        className="w-full flex items-center gap-2 justify-center"
+                        variant="ghost"
+                        className="w-full flex items-center gap-2 justify-start text-slate-300 hover:text-white"
                     >
                         <ExternalLink className="h-4 w-4" />
-                        {!isCollapsed && <span>Switch to DevX Console</span>}
+                        <span>Switch to DevX Console</span>
                     </Button>
                 </div>
             </nav>

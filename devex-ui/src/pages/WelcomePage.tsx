@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Header } from "@/components/Header";
+import { DocsHeader } from "@/components/DocsHeader";
 import { DocsSidebar } from "@/components/DocsSidebar";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -161,7 +161,7 @@ const WelcomePage = ({ onSwitchToConsole }: WelcomePageProps) => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <Header />
+      <DocsHeader />
 
       <div className="flex flex-1">
         <DocsSidebar 
