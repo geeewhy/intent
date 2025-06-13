@@ -12,7 +12,7 @@ export interface ProjectionMeta {
 
 const PROJECTION_GLOB = 'src/core/**/read-models/*.projection.ts';
 
-/** crude “CREATE TABLE …” parser — good enough for migration tracking */
+/** crude “CREATE TABLE …” parser  --  good enough for migration tracking */
 function extractTables(sql: string): string[] {
     const rx = /create\s+table\s+(?:if\s+not\s+exists\s+)?("?[\w.]+"?)/gi;
     const out: string[] = [];

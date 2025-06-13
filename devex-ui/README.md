@@ -36,12 +36,12 @@ Open `http://localhost:8080` in your browser.
 
 ## Structure
 
-* `src/components/` — UI panels and shared components
-* `src/pages/` — Routed views
-* `src/mocks/` — Mock data, stores, handlers
-* `src/data/` — Types, API client, command registry
-* `src/hooks/` — Query and stream hooks
-* `src/app/` — Global context and providers
+* `src/components/`  --  UI panels and shared components
+* `src/pages/`  --  Routed views
+* `src/mocks/`  --  Mock data, stores, handlers
+* `src/data/`  --  Types, API client, command registry
+* `src/hooks/`  --  Query and stream hooks
+* `src/app/`  --  Global context and providers
 
 ## Modifications
 

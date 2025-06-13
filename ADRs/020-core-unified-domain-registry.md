@@ -2,7 +2,7 @@
 
 ## What
 
-Introduce a central registry (`DomainRegistry`) for all core domain types—aggregates, command handlers, event handlers, command/event types, sagas, and projections. Each domain self-registers by importing a `register.ts` file. This enables dynamic loading and tooling access without hardcoded lists scattered across the system.
+Introduce a central registry (`DomainRegistry`) for all core domain types -- aggregates, command handlers, event handlers, command/event types, sagas, and projections. Each domain self-registers by importing a `register.ts` file. This enables dynamic loading and tooling access without hardcoded lists scattered across the system.
 
 ## Why
 

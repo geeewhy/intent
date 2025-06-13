@@ -110,7 +110,7 @@ export function registerRoles(domain: string, roles: string[]): void {
   registry.roles[domain] = roles;
 }
 
-/* ——— Getters ——— */
+/*  --  --  --  Getters  --  --  --  */
 export function getAllAggregates(): Record<string, AggregateClass> {
   return registry.aggregates;
 }

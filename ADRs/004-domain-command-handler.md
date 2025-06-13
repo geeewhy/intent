@@ -84,4 +84,4 @@ sequenceDiagram
 
 ## Result
 
-All commands, regardless of origin, are dispatched through a central `CommandBus`. Domain services register themselves via `register(handler)`. Temporal workflows invoke `dispatchCommand()` activity, which reuses the same bus instance, ensuring parity and determinism. Adding a new domain requires only a new service that implements `CommandHandler` and is registered at startup—no infra changes required.
+All commands, regardless of origin, are dispatched through a central `CommandBus`. Domain services register themselves via `register(handler)`. Temporal workflows invoke `dispatchCommand()` activity, which reuses the same bus instance, ensuring parity and determinism. Adding a new domain requires only a new service that implements `CommandHandler` and is registered at startup -- no infra changes required.

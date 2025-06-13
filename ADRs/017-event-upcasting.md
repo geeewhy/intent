@@ -6,7 +6,7 @@ Introduce an upcasting system for domain events. Events are immutable, but their
 
 ## Why
 
-Over time, domain models change—new fields are added, renamed, or nested. Without upcasting, replaying old events would cause runtime errors or incorrect state. Instead of polluting aggregates with version-specific logic, we centralize schema transformation inside the persistence port, ensuring clean, deterministic, and forward-compatible event consumption.
+Over time, domain models change -- new fields are added, renamed, or nested. Without upcasting, replaying old events would cause runtime errors or incorrect state. Instead of polluting aggregates with version-specific logic, we centralize schema transformation inside the persistence port, ensuring clean, deterministic, and forward-compatible event consumption.
 
 ## How
 

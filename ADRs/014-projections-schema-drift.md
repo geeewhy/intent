@@ -6,7 +6,7 @@ Introduce static schema drift detection for Postgres-backed projections to ensur
 
 ## Why
 
-Read models evolve alongside domain events and projection logic. Without static checks, mismatches between code and schema lead to silent projection failures, incorrect data, RLS bypass, or broken business functionality. A simple, auditable tool helps ensure consistency across event evolution, migrations, and refactors—before bugs reach production.
+Read models evolve alongside domain events and projection logic. Without static checks, mismatches between code and schema lead to silent projection failures, incorrect data, RLS bypass, or broken business functionality. A simple, auditable tool helps ensure consistency across event evolution, migrations, and refactors -- before bugs reach production.
 
 ## Implications
 

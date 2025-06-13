@@ -27,7 +27,7 @@ export const waitForNewEvents = async (
     while (Date.now() - start < timeoutMs) {
         const result = await eventStore.load(tenantId, aggregateType, aggregateId, fromVersion);
 
-        // Defensive null check — aggregate may not yet exist
+        // Defensive null check  --  aggregate may not yet exist
         if (result && result?.events.length >= expectedCount) {
             return result.events;
         }

@@ -6,7 +6,7 @@ Adopt a hexagonal architecture to support a real-time, multi-tenant collaboratio
 
 ## Why
 
-The platform must support concurrent real-time collaboration with durable command/event handling and strict tenant isolation. A hexagonal core decouples infrastructure from business logic, enabling per-tenant scale-out and testing. Partykit handles low-latency sync, Postgres provides an auditable event log, and Temporal allows deferred execution and orchestration—all without entangling core logic with infra concerns.
+The platform must support concurrent real-time collaboration with durable command/event handling and strict tenant isolation. A hexagonal core decouples infrastructure from business logic, enabling per-tenant scale-out and testing. Partykit handles low-latency sync, Postgres provides an auditable event log, and Temporal allows deferred execution and orchestration -- all without entangling core logic with infra concerns.
 
 ## How
 

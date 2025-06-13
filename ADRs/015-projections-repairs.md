@@ -6,7 +6,7 @@ Introduce a repair workflow for projections exhibiting schema drift. When a proj
 
 ## Why
 
-Drift between a projection handler and its backing table—due to refactors, partial migrations, or event evolution—can cause silent failures. While detection tooling (ADR-014) surfaces drift, resolving it manually is error-prone. By automating repair with replay-based rebuilding, we make drift non-catastrophic and reduce time-to-recovery. It also reinforces event-sourced principles: state is ephemeral, events are canonical.
+Drift between a projection handler and its backing table -- due to refactors, partial migrations, or event evolution -- can cause silent failures. While detection tooling (ADR-014) surfaces drift, resolving it manually is error-prone. By automating repair with replay-based rebuilding, we make drift non-catastrophic and reduce time-to-recovery. It also reinforces event-sourced principles: state is ephemeral, events are canonical.
 
 ## How
 
@@ -62,4 +62,4 @@ sequenceDiagram
 
 ## Result
 
-Projection repair is now automated via a CLI tool that drops, migrates, replays, and patches RLS for any drifted table. This gives developers confidence in evolving read models without breaking production flows. Repair is safe, stateless, and domain-isolated—scalable across slices and aligned with the system’s event-sourced guarantees. Combined with ADR-014, this forms a complete detection-and-recovery pipeline.
+Projection repair is now automated via a CLI tool that drops, migrates, replays, and patches RLS for any drifted table. This gives developers confidence in evolving read models without breaking production flows. Repair is safe, stateless, and domain-isolated -- scalable across slices and aligned with the system’s event-sourced guarantees. Combined with ADR-014, this forms a complete detection-and-recovery pipeline.

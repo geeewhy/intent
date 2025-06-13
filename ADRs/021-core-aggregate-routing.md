@@ -6,7 +6,7 @@ Extend `registerCommandType()` to include `aggregateRouting`, colocating routing
 
 ## Why
 
-Previously, `aggregateType` and `aggregateId` were inferred at runtime—often inconsistently—across workflows, sagas, and command dispatchers. This caused drift between command intent and routing rules. By colocating routing inside the `commandTypes` registry, we make the behavior deterministic, statically visible, and enforceable by tooling.
+Previously, `aggregateType` and `aggregateId` were inferred at runtime -- often inconsistently -- across workflows, sagas, and command dispatchers. This caused drift between command intent and routing rules. By colocating routing inside the `commandTypes` registry, we make the behavior deterministic, statically visible, and enforceable by tooling.
 
 ## How
 

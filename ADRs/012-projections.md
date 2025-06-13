@@ -1,4 +1,4 @@
-# ADR-012: Projection Layer — Modular, Slice-Owned, Temporal-Executed
+# ADR-012: Projection Layer  --  Modular, Slice-Owned, Temporal-Executed
 
 ## What
 

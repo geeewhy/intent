@@ -6,7 +6,7 @@ Introduce a unified logging system using a `LoggerPort` interface, accessible fr
 
 ## Why
 
-Scattered use of `console.log` impedes log structure, tenant correlation, log level control, and downstream observability. Core code should remain pure and optionally log without runtime coupling. By deferring logging to runtime adapters and using a shared `LoggerPort`, logs can be standardized, test-muted, and production-ready—without polluting core logic or introducing direct dependencies.
+Scattered use of `console.log` impedes log structure, tenant correlation, log level control, and downstream observability. Core code should remain pure and optionally log without runtime coupling. By deferring logging to runtime adapters and using a shared `LoggerPort`, logs can be standardized, test-muted, and production-ready -- without polluting core logic or introducing direct dependencies.
 
 ## Implications
 

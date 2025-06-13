@@ -1,4 +1,4 @@
-## CURRENT SYSTEM OUTLOOK — May 30 2025
+## CURRENT SYSTEM OUTLOOK  --  May 30 2025
 
 | Vertical Concern           | Current State / Design Choice | Tests / Tooling |
 |----------------------------| ----------------------------- | --------------- |
@@ -41,14 +41,14 @@
     * All tenants share identical domain rules, a single event stream is safe; if divergence ever appears, ports allow migrating a tenant to its own store without touching core logic.
 
 * **Automated RLS generation + lint**
-    * Projection definitions express access rules once; a generator converts them into deterministic SQL RLS policies—no hand-written GRANT files to drift.
+    * Projection definitions express access rules once; a generator converts them into deterministic SQL RLS policies -- no hand-written GRANT files to drift.
     * **Policy-first separation** – Core code states *what* each role/tenant may read; infra code handles *how*. This keeps aggregates and projections free of interface-level bindings to core.
     * **Least-privilege by default** – each consumer sees only rows they own, essential when a single event log fans out to multi-tenant projections.
     * **Replay-safe** – during checkpoint rewind or full rebuild, the same policies are reapplied automatically, blocking leaks in transitional states.
     * Linter step fails the CI pipeline if any projection lacks a policy or references an undefined role, so “temporary” insecure tables never reach main.
 
 * **Drift-aware projection repair**
-    - `scan → plan → repair` rewinds only to the last safe checkpoint—avoids full rebuilds common in other stacks.
+    - `scan → plan → repair` rewinds only to the last safe checkpoint -- avoids full rebuilds common in other stacks.
 
 * **Tooling & CI/CD pipeline**
   * **Drift scanner + auto-repair** – `scanner` diff-checks projection schema vs. event history, emitting a JSON/Markdown report.  

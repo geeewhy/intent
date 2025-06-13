@@ -49,7 +49,7 @@ sequenceDiagram
 
 | Option                         | Reason for Rejection                                     |
 | ------------------------------ | -------------------------------------------------------- |
-| Snapshot after `handle()`      | Unsafe—command may be invalid or rejected                |
+| Snapshot after `handle()`      | Unsafe -- command may be invalid or rejected                |
 | Snapshot every N commands      | May capture uncommitted or inconsistent state            |
 | Snapshot via a synthetic event | Pollutes event stream with infrastructure-only artifacts |
 

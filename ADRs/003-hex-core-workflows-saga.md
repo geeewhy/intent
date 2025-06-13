@@ -6,7 +6,7 @@ Refactor the command-processing pipeline to route all commands through Temporal 
 
 ## Why
 
-The previous architecture used an explicit `requiresJob` flag and conditional logic to determine when to schedule workflows. This introduced complexity and fragmented responsibility between command ingress, scheduling, and domain logic. By routing all commands through Temporal workflows, the system becomes consistent, observable, and fault-tolerant by default—while domain logic remains clean and framework-independent.
+The previous architecture used an explicit `requiresJob` flag and conditional logic to determine when to schedule workflows. This introduced complexity and fragmented responsibility between command ingress, scheduling, and domain logic. By routing all commands through Temporal workflows, the system becomes consistent, observable, and fault-tolerant by default -- while domain logic remains clean and framework-independent.
 
 ## Implications
 

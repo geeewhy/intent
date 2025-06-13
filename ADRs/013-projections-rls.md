@@ -56,4 +56,4 @@ sequenceDiagram
 
 ## Result
 
-All read models are now protected with declarative, testable RLS policies defined in their domain slices. Each policy maps a scope to a table and SQL condition and can optionally redact fields. Policies are generated automatically and enforced at the Postgres level. Multi-tenant data access is now auditable, enforced by default, and tied to domain logic—not infrastructure assumptions.
+All read models are now protected with declarative, testable RLS policies defined in their domain slices. Each policy maps a scope to a table and SQL condition and can optionally redact fields. Policies are generated automatically and enforced at the Postgres level. Multi-tenant data access is now auditable, enforced by default, and tied to domain logic -- not infrastructure assumptions.

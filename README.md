@@ -43,19 +43,23 @@ Current target use cases: high-fidelity, multi-tenant, event-sourced backends wi
 **Intent** is more than a framework. It’s an event-sourced CQRS reference platform. Designed from first principles for simplicity and developer velocity in multi-tenant TypeScript backends.
 
 * **Reference Architecture:**
-  Strict hexagonal boundaries, ports/adapters separation, and vertical slicing, [DCB](https://dcb.events/) ready. Every workflow and projection is testable, composable, and observable. Patterns align with the latest event modeling literature—no magic, no leaks.
+  Strict hexagonal boundaries, ports/adapters separation, and vertical slicing, [DCB](https://dcb.events/) ready. Every workflow and projection is testable, composable, and observable. Patterns align with the latest event modeling literature -- no magic, no leaks.
 
 * **Built for Safety and Evolution:**
-  Automated RLS policy generation, drift detection and repair, snapshotting, and schema upcasting are not afterthoughts—they are part of the platform’s DNA. CI lints, policy gates, and repair tools keep safety guardrails up as you move fast.
+  Automated RLS policy generation, drift detection and repair, snapshotting, and schema upcasting are not afterthoughts -- they are part of the platform’s DNA. CI lints, policy gates, and repair tools keep safety guardrails up as you move fast.
 
 * **Full-Stack Dev Experience:**
   The DevX companion UI, CLI flows, and local-first patterns make simulating, debugging, and evolving your event-sourced system immediate and visual. Real-time traceability, role simulation, and AI-assisted scaffolding let you reason about systems before they run in prod.
 
 * **Multi-Tenant and Policy-First:**
-  Tenant isolation and access policies are enforced from edge to core to database—by design, not convention. Row-level security and role-based projection policies are automated and audited.
+  Tenant isolation and access policies are enforced from edge to core to database -- by design, not convention. Row-level security and role-based projection policies are automated and audited.
 
 * **Transparent, Documented, and Extensible:**
-  Every architectural decision is captured in living ADRs. The codebase is structured for clarity, modification, and onboarding—backed by docs and rationale, not just code comments.
+  Every architectural decision is captured in living [ADRs](ADRs/). The codebase is structured for clarity, modification, and onboarding -- backed by docs and rationale, not just code comments.
+
+### DevX-UI Demo
+
+You can see the demo at https://intent-demo.heart.dev
 
 ---
 

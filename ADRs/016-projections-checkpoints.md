@@ -2,11 +2,11 @@
 
 ## What
 
-Each projection row will now store its own checkpoint—`last_event_id` and `last_event_version`—as part of the projection payload. This embeds idempotency and recovery directly into the row structure, removing the need for global checkpoints or projection-wide offsets.
+Each projection row will now store its own checkpoint -- `last_event_id` and `last_event_version` -- as part of the projection payload. This embeds idempotency and recovery directly into the row structure, removing the need for global checkpoints or projection-wide offsets.
 
 ## Why
 
-Projections need to be fault-tolerant and idempotent. Without a per-row checkpoint, it is difficult to resume a projection safely after failure or replay. Global checkpoints (e.g., per table or per stream) add unnecessary coordination. By storing the last event per row, we gain local recovery, retry safety, and a simple restart story—critical for multi-tenant, high-cardinality domains.
+Projections need to be fault-tolerant and idempotent. Without a per-row checkpoint, it is difficult to resume a projection safely after failure or replay. Global checkpoints (e.g., per table or per stream) add unnecessary coordination. By storing the last event per row, we gain local recovery, retry safety, and a simple restart story -- critical for multi-tenant, high-cardinality domains.
 
 ## How
 

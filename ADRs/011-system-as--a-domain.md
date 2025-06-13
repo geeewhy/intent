@@ -6,7 +6,7 @@ Introduce a dedicated `SystemAggregate` used solely for infrastructure and workf
 
 ## Why
 
-The system needs a stable mechanism for testing domain behaviors under real runtime conditions—without interfering with business aggregates. `SystemAggregate` isolates test logic into a dedicated domain, providing stateful event emission, snapshot verification, and controlled failure paths. This supports CI pipelines, regression testing, and infrastructure validation using the actual event/command infrastructure. It also allows safe evolution of retry logic, projection fan-out, and saga orchestration.
+The system needs a stable mechanism for testing domain behaviors under real runtime conditions -- without interfering with business aggregates. `SystemAggregate` isolates test logic into a dedicated domain, providing stateful event emission, snapshot verification, and controlled failure paths. This supports CI pipelines, regression testing, and infrastructure validation using the actual event/command infrastructure. It also allows safe evolution of retry logic, projection fan-out, and saga orchestration.
 
 ## Implications
 
@@ -20,7 +20,7 @@ The system needs a stable mechanism for testing domain behaviors under real runt
 * Snapshots can be generated and validated by running real workflows.
 * `SystemAggregate` and its `systemSaga` provide reusable scaffolds for testing event-command fanout and saga auto-reactions.
 * The domain is safely testable with the in-memory or Postgres event store and Temporal orchestration.
-* No production commands or events are used—ensures hard safety boundaries for test logic.
+* No production commands or events are used -- ensures hard safety boundaries for test logic.
 
 ## How
 

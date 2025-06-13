@@ -10,35 +10,35 @@ export const Dashboard = () => {
   const stats = [
     {
       title: "Commands Issued",
-      value: data?.commands ?? '—',
+      value: data?.commands ?? ' -- ',
       description: "Total commands processed",
       icon: Terminal,
       color: "text-blue-500"
     },
     {
       title: "Total Events",
-      value: data?.totalEvents ?? '—',
+      value: data?.totalEvents ?? ' -- ',
       description: "Events in stream",
       icon: Activity,
       color: "text-green-500"
     },
     {
       title: "Projections",
-      value: data?.projections ?? '—',
+      value: data?.projections ?? ' -- ',
       description: "Active projections",
       icon: Database,
       color: "text-purple-500"
     },
     {
       title: "Traces",
-      value: data?.traces ?? '—',
+      value: data?.traces ?? ' -- ',
       description: "Active traces",
       icon: GitBranch,
       color: "text-orange-500"
     },
     {
       title: "Aggregates",
-      value: data?.aggregates ?? '—',
+      value: data?.aggregates ?? ' -- ',
       description: "Total aggregates",
       icon: Package,
       color: "text-cyan-500"

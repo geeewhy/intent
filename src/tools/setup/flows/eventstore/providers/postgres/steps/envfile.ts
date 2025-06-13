@@ -63,7 +63,7 @@ export default async function step(ctx: FlowCtx): Promise<void> {
       }
     }
   } catch {
-    // file doesn't exist — proceed
+    // file doesn't exist  --  proceed
     ctx.logger.info('.env.local not found, will generate a new one.');
   }
 

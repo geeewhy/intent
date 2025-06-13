@@ -2,11 +2,11 @@
 
 ## What
 
-Introduce a local-first Developer Experience (DevEx) UI side-panel that integrates with the platform’s event-sourced architecture. It provides real-time inspection, replay, and scaffolding of commands, events, projections, and sagas—backed by the same ports, workflows, and LISTEN channels used in production. The UI is context-aware, multi-tenant safe, and designed for offline use with optional AI scaffolding.
+Introduce a local-first Developer Experience (DevEx) UI side-panel that integrates with the platform’s event-sourced architecture. It provides real-time inspection, replay, and scaffolding of commands, events, projections, and sagas -- backed by the same ports, workflows, and LISTEN channels used in production. The UI is context-aware, multi-tenant safe, and designed for offline use with optional AI scaffolding.
 
 ## Why
 
-Prior to this, needed to rely on low-level tooling (psql, curl, Jaeger, Temporal Web) to understand and experiment with domain behavior. This was fragmented, error-prone, and lacked introspection. A unified DevEx panel brings observability, traceability, validation, and scaffolding into a single interface—without violating domain boundaries or bypassing access control.
+Prior to this, needed to rely on low-level tooling (psql, curl, Jaeger, Temporal Web) to understand and experiment with domain behavior. This was fragmented, error-prone, and lacked introspection. A unified DevEx panel brings observability, traceability, validation, and scaffolding into a single interface -- without violating domain boundaries or bypassing access control.
 
 ... and it's cool.
 
@@ -100,4 +100,4 @@ sequenceDiagram
 
 ## Result
 
-The platform now includes a unified, local-first DevEx UI that exposes core domain capabilities in real-time. Developers can explore, emit, trace, replay, and scaffold commands and events through actual infrastructure paths. It aligns with the system’s principles—multi-tenant safety, hexagonal architecture, and strict access control—while unlocking powerful productivity and debugging capabilities for contributors.
+The platform now includes a unified, local-first DevEx UI that exposes core domain capabilities in real-time. Developers can explore, emit, trace, replay, and scaffold commands and events through actual infrastructure paths. It aligns with the system’s principles -- multi-tenant safety, hexagonal architecture, and strict access control -- while unlocking powerful productivity and debugging capabilities for contributors.

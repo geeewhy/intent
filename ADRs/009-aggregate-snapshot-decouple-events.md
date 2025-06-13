@@ -1,4 +1,4 @@
-# ADR-009: Migration Plan — From Embedded Snapshot in `load()` to Separate `loadSnapshot()` + `load()`
+# ADR-009: Migration Plan  --  From Embedded Snapshot in `load()` to Separate `loadSnapshot()` + `load()`
 
 ## What
 
@@ -13,7 +13,7 @@ Embedding snapshot logic inside `load()` conflates two responsibilities and hide
 * `PgEventStore.load()` becomes a pure event loader, taking a `fromVersion` argument.
 * A new method `loadSnapshot()` is introduced to load the latest snapshot (if any).
 * `loadAggregate()` in the activity layer is updated to invoke `loadSnapshot()` and `load()` explicitly.
-* No domain logic changes—only infrastructure composition shifts.
+* No domain logic changes -- only infrastructure composition shifts.
 * The rest of the system continues using `loadAggregate()` as a single entrypoint.
 * `PgEventStore.load()` no longer applies any snapshot; it only returns events from a given version onward.
 

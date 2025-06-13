@@ -11,7 +11,7 @@ export class BusinessRuleViolation extends Error {
         this.details = details;
         this.retryable = retryable;
 
-        // Fix prototype chain — **CRUCIAL**
+        // Fix prototype chain  --  **CRUCIAL**
         Object.setPrototypeOf(this, new.target.prototype);
 
         // Optional: capture proper stack trace

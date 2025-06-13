@@ -2,7 +2,7 @@
 
 ## What
 
-Introduce a unified CLI tool to bootstrap and evolve infrastructure slices like `eventstore`, `scheduler`, and `projections`. Each flow supports multiple paths (e.g., `initial`, `upgrade`) and multiple providers (e.g., `postgres`, `temporal`). Execution logic is organized as modular step files resolved from a `flow.yaml` descriptor. No logic is hardcoded—flows, paths, and providers are dynamically discovered.
+Introduce a unified CLI tool to bootstrap and evolve infrastructure slices like `eventstore`, `scheduler`, and `projections`. Each flow supports multiple paths (e.g., `initial`, `upgrade`) and multiple providers (e.g., `postgres`, `temporal`). Execution logic is organized as modular step files resolved from a `flow.yaml` descriptor. No logic is hardcoded -- flows, paths, and providers are dynamically discovered.
 
 ## Why
 
@@ -17,7 +17,7 @@ Infrastructure initialization must be consistent, slice-modular, and extensible 
 
     * `--provider <name>` (e.g., postgres)
     * `--path <name>` (e.g., initial, upgrade)
-    * `--interactive` — prompts for missing flags
+    * `--interactive`  --  prompts for missing flags
 * Invalid or missing args without `--interactive` cause CLI to exit with code `1`
 
 ### 2. Flow Metadata (`flow.yaml`)
