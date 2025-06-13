@@ -2,6 +2,10 @@
 
 A developer side-panel for simulating and inspecting event-sourced systems. Supports mock and real APIs, with in-memory data and live visualizations.
 
+## Demo
+
+You can see it in action at: https://intent-devx.vercel.app/
+
 ## Features
 
 - Command issuer to test your flows
