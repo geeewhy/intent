@@ -36,7 +36,7 @@ Deep-dives: [Reflections](docs/reflections/index.md) · [ADRs](ADRs/) · [Curren
 
 Current target scale: low thousands of TPS single-tenant backends. Open path to scale mid-thousands.
 
-Current target use cases: high-fidelity, multi-tenant, event-sourced backends with complex business logic. Examples include financial systems, manufacturing industries, async-heavy workflows, SaaS platforms, and complex domain applications.
+Current target use cases: high-fidelity, multi-tenant, event-sourced backends with complex business logic. Examples include AI orchestration, financial systems, manufacturing industries, async-heavy workflows, SaaS platforms, and high-complexity business domain applications.
 
 ### Why Intent?
 
@@ -178,7 +178,9 @@ C4Container
     UpdateElementStyle(core, $shape="Hexagon")
 ```
 
-*Full rationale lives in* **[docs/reflections](docs/reflections/index.md)** and [ADRs](ADRs).
+* You can find the full rationale in [docs/reflections](docs/reflections/index.md), 
+* History of design decisions made in [ADRs](ADRs),
+* and references to follow the code in [core/README](src/core/README.md) and [infra/README](src/infra/README.md).
 
 ---
 
