@@ -136,10 +136,16 @@ export const handlers = [
     // ensure we have an id – issuer now sends one, but just in case
     const commandId = cmd.id ?? uuid();
 
+    // Ensure createdAt is set to a valid ISO date string
+    cmd.createdAt = cmd.createdAt || new Date().toISOString();
+
     cmd.status = 'mocked';
 
     // Add command to store
     commandStore.push(cmd);
+
+    // Also add to recent commands store to ensure it appears in the UI
+    recentCommandsStore.push(cmd);
 
     // 💡  Fake "business logic"
     const didSucceed = Math.random() > 0.1;
