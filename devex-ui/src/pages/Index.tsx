@@ -1,6 +1,7 @@
 //devex-ui/src/pages/Index.tsx
 
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -19,13 +20,14 @@ import { useAppCtx } from '@/app/AppProvider';
 
 type ActiveView = 'dashboard' | 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status' | 'rewind' | 'ai' | 'settings';
 
-interface IndexProps {
-  onSwitchToDocs?: () => void;
-}
-
-const Index = ({ onSwitchToDocs }: IndexProps) => {
-  const initialView = window.location.pathname.replace(/^\//, '') as ActiveView || 'dashboard';
-  const [activeView, setActiveView] = useState<ActiveView>(initialView);
+const Index = () => {
+  const location = useLocation();
+  const path = location.pathname;
+  const activeView = (() => {
+    const match = path.match(/^\/devx\/?([^\/]*)/);
+    const slug = match?.[1] || 'dashboard';
+    return slug as ActiveView;
+  })();
   const [isAICompanionOpen, setIsAICompanionOpen] = useState(false);
   const { tenant, role, flags } = useAppCtx();
 
@@ -78,9 +80,7 @@ const Index = ({ onSwitchToDocs }: IndexProps) => {
   const handleViewChange = (view: string) => {
     if (view === 'ai') {
       setIsAICompanionOpen(true);
-      return;
     }
-    setActiveView(view as ActiveView);
   };
 
   const shouldShowAICompanion = flags.ai === true;
@@ -93,7 +93,6 @@ const Index = ({ onSwitchToDocs }: IndexProps) => {
         <Sidebar 
           activeView={activeView}
           onViewChange={handleViewChange}
-          onSwitchToDocs={onSwitchToDocs}
         />
 
         <main className="flex-1 p-6 overflow-auto">

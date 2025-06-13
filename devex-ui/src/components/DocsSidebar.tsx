@@ -1,5 +1,6 @@
 // devex-ui/src/components/DocsSidebar.tsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Book,
     FileText,
@@ -22,7 +23,6 @@ type View = 'welcome' | 'guidelines' | 'architecture' | 'examples' | 'references
 interface DocsSidebarProps {
     onViewChange?: (view: View) => void;
     activeView?: View;
-    onSwitchToConsole?: () => void;
 }
 
 interface NavItem {
@@ -50,7 +50,8 @@ const NAV_ITEMS: NavItem[] = [
 
 /* ───────────────────────── component ───────────────────────────── */
 
-export const DocsSidebar = ({ onViewChange, activeView, onSwitchToConsole }: DocsSidebarProps) => {
+export const DocsSidebar = ({ onViewChange, activeView }: DocsSidebarProps) => {
+    const navigate = useNavigate();
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
         guidelines: true, // Start with guidelines expanded
     });
@@ -122,7 +123,7 @@ export const DocsSidebar = ({ onViewChange, activeView, onSwitchToConsole }: Doc
                 {/* Switch to Console button at the bottom */}
                 <div className="pt-4 mt-4">
                     <Button
-                        onClick={onSwitchToConsole}
+                        onClick={() => navigate('/devx')}
                         variant="ghost"
                         className="w-full flex items-center gap-2 justify-start text-slate-300 hover:text-white"
                     >

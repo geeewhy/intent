@@ -7,17 +7,14 @@ import { Button } from "@/components/ui/button";
 
 type ActiveView = 'welcome' | 'guidelines' | 'architecture' | 'examples' | 'references';
 
-interface WelcomePageProps {
-  onSwitchToConsole?: () => void;
-}
-
-const WelcomePage = ({ onSwitchToConsole }: WelcomePageProps) => {
+const WelcomePage = () => {
   const initialView = window.location.pathname.replace(/^\/docs\//, '') as ActiveView || 'welcome';
   const [activeView, setActiveView] = useState<ActiveView>(initialView || 'welcome');
   const navigate = useNavigate();
 
   const renderActiveView = () => {
     switch (activeView) {
+      default:
       case 'welcome':
         return (
           <div className="space-y-6">
@@ -133,13 +130,6 @@ const WelcomePage = ({ onSwitchToConsole }: WelcomePageProps) => {
             </Card>
           </div>
         );
-      default:
-        return (
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold">Welcome to Intent</h1>
-            <p>Default content</p>
-          </div>
-        );
     }
   };
 
@@ -148,16 +138,6 @@ const WelcomePage = ({ onSwitchToConsole }: WelcomePageProps) => {
     navigate(`/docs/${view === 'welcome' ? '' : view}`);
   };
 
-  // Use the prop if provided, otherwise fallback to local implementation
-  const handleSwitchToConsole = () => {
-    if (onSwitchToConsole) {
-      onSwitchToConsole();
-    } else {
-      // Fallback implementation
-      localStorage.setItem('docs_mode', 'false');
-      window.location.href = '/';
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -167,7 +147,6 @@ const WelcomePage = ({ onSwitchToConsole }: WelcomePageProps) => {
         <DocsSidebar 
           activeView={activeView}
           onViewChange={handleViewChange}
-          onSwitchToConsole={handleSwitchToConsole}
         />
 
         <main className="flex-1 p-6 overflow-auto">

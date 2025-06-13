@@ -37,7 +37,6 @@ type View =
 interface SidebarProps {
     onViewChange?: (view: View) => void;
     activeView?: View; // optional – parent can still control
-    onSwitchToDocs?: () => void;
 }
 
 const NAV_ITEMS = [
@@ -55,16 +54,17 @@ const NAV_ITEMS = [
 
 /* ───────────────────────── helpers ─────────────────────────────── */
 
-const pathForView = (view: View) => (view === 'dashboard' ? '/' : `/${view}`);
+const pathForView = (view: View) => (view === 'dashboard' ? '/devx' : `/devx/${view}`);
 
 const viewFromPath = (path: string): View => {
-    const slug = path === '/' ? 'dashboard' : path.replace(/^\//, '');
+    const match = path.match(/^\/devx\/?([^\/]*)/);
+    const slug = match?.[1] || 'dashboard';
     return slug as View;
 };
 
 /* ───────────────────────── component ───────────────────────────── */
 
-export const Sidebar = ({ onViewChange, activeView, onSwitchToDocs }: SidebarProps) => {
+export const Sidebar = ({ onViewChange, activeView }: SidebarProps) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const { enabled } = useFeatures();
     const { pathname } = useLocation();
@@ -141,7 +141,7 @@ export const Sidebar = ({ onViewChange, activeView, onSwitchToDocs }: SidebarPro
                 {/* Switch to Docs button at the bottom */}
                 <div className="pt-4 mt-4 border-t border-slate-800">
                     <Button
-                        onClick={onSwitchToDocs}
+                        onClick={() => navigate('/docs')}
                         variant="outline"
                         className="w-full flex items-center gap-2 justify-center"
                     >
