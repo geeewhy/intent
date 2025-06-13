@@ -88,7 +88,7 @@ export const AICompanion = ({ isOpen, onToggle }: AICompanionProps) => {
       </button>
 
       {/* AI Panel */}
-      <div className={`fixed top-0 right-0 h-full w-96 bg-slate-900 border-l border-slate-700 transform transition-transform duration-300 z-40 ${
+      <div className={`fixed top-0 right-0 bottom-12 w-96 bg-slate-900 border-l border-slate-700 transform transition-transform duration-300 z-40 ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <Card className="h-full bg-transparent border-0 rounded-none flex flex-col">
