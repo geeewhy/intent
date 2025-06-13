@@ -236,6 +236,7 @@ export const handlers = [
     const events   = eventStore.list(1000).length;
     const totalEvents = Math.floor(events * 10) + Math.floor(Math.random() * 20); // mock logic
     const traces   = traceStore.list(1000).length;
+    const memory   = 60 + Math.floor(Math.random() * 6); // Random value between 60-65
     return HttpResponse.json({
       commands,
       events,
@@ -243,6 +244,7 @@ export const handlers = [
       totalEvents,
       traces,
       aggregates  : 67,
+      memory,
       health      : 1 // a number between 0 and 1, 1 = ok, <1 = trouble
     });
   })

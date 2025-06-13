@@ -3,9 +3,30 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Database, Terminal, GitBranch, Package, AlertTriangle } from "lucide-react";
 import { useMetrics } from "@/hooks/api";
+import { useState, useEffect } from "react";
+import { isMock } from '@/config/apiMode';
 
 export const Dashboard = () => {
   const { data } = useMetrics();
+  const [memoryUsage, setMemoryUsage] = useState<number | null>(null);
+
+  // Update memory usage every 2-3 seconds in mock mode
+  useEffect(() => {
+    if (isMock) {
+      // Initial value
+      setMemoryUsage(data?.memory || (60 + Math.floor(Math.random() * 6)));
+
+      // Update every 2-3 seconds
+      const interval = setInterval(() => {
+        setMemoryUsage(60 + Math.floor(Math.random() * 6));
+      }, 2000 + Math.floor(Math.random() * 1000)); // Random interval between 2-3 seconds
+
+      return () => clearInterval(interval);
+    } else {
+      // In real API mode, use the value from the metrics response if available
+      setMemoryUsage(data?.memory || null);
+    }
+  }, [data?.memory]);
 
   const stats = [
     {
@@ -131,10 +152,12 @@ export const Dashboard = () => {
                 <span className="text-sm text-slate-300">Projection Engine</span>
                 <span className="text-sm text-green-500">Healthy</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-300">Memory Usage</span>
-                <span className="text-sm text-yellow-500">65%</span>
-              </div>
+              {(memoryUsage !== null) && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-300">Memory Usage</span>
+                  <span className="text-sm text-yellow-500">{memoryUsage}%</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
