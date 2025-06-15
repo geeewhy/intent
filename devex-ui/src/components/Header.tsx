@@ -54,14 +54,12 @@ export const Header = () => {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* System Status Indicators */}
+      {/* API type indicators */}
+
       <div className="flex items-center gap-2">
-        <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" title="System Healthy" />
-        <div className="h-2 w-2 bg-yellow-500 rounded-full" title="2 Warnings" />
+          {!isMock && <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" title="Real API" />}
+          {isMock && <div className="h-2 w-2 bg-yellow-500 rounded-full" title="Mocked API" />}
       </div>
-      <span className={`badge ${isMock ? 'bg-yellow-600' : 'bg-green-600'} text-white text-xs px-2 py-1 rounded`}>
-          {apiMode.toUpperCase()} API
-      </span>
     </header>
   );
 };

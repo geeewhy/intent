@@ -1,5 +1,5 @@
 // devex-ui/src/pages/DocsPage.tsx
-import { useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -29,69 +29,72 @@ import noteTenancy from '$docs/reflections/note-multi-tenancy.md?raw';
 import noteObs from '$docs/reflections/note-observability.md?raw';
 import noteTemporal from '$docs/reflections/note-temporal-workflows.md?raw';
 import noteTesting from '$docs/reflections/note-testing-strategies.md?raw';
+import {DocsFooter} from "@/components/DocsFooter.tsx";
 
 const docsMap: Record<string, string> = {
-  welcome,
-  'project-structure': projectStructure,
-  quickstart,
-  'architecture-overview': archOverview,
-  'cqrs-projections': cqrs,
-  'domain-modeling': domain,
-  'temporal-workflows': temporal,
-  'multi-tenancy': tenancy,
-  'observability': observability,
-  testing,
-  'devx-ui': devxUi,
-  'cli-tools': cli,
-  reflections,
-  'note-cqrs-projections': noteCQRS,
-  'note-domain-modeling': noteDomain,
-  'note-event-sourcing': noteES,
-  'note-multi-tenancy': noteTenancy,
-  'note-observability': noteObs,
-  'note-temporal-workflows': noteTemporal,
-  'note-testing-strategies': noteTesting,
+  'basics/introduction': welcome,
+  'basics/project-structure': projectStructure,
+  'basics/quickstart': quickstart,
+  'architecture/architecture-overview': archOverview,
+  'architecture/cqrs-projections': cqrs,
+  'architecture/domain-modeling': domain,
+  'architecture/temporal-workflows': temporal,
+  'architecture/multi-tenancy-details': tenancy,
+  'architecture/observability-details': observability,
+  'architecture/testing-strategies': testing,
+  'devx/devx-ui': devxUi,
+  'devx/cli-tools': cli,
+  'reflections/index': reflections,
+  'reflections/note-cqrs-projections': noteCQRS,
+  'reflections/note-domain-modeling': noteDomain,
+  'reflections/note-event-sourcing': noteES,
+  'reflections/note-multi-tenancy': noteTenancy,
+  'reflections/note-observability': noteObs,
+  'reflections/note-temporal-workflows': noteTemporal,
+  'reflections/note-testing-strategies': noteTesting,
 };
 
 export default function DocsPage() {
-  const { view = 'welcome' } = useParams();
+  const location = useLocation();
+  const slug = location.pathname.replace(/^\/docs\//, '') || 'basics/introduction';
   const [content, setContent] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!docsMap[view]) {
-      setContent(`# 404\nPage \`${view}\` not found.`);
+    if (!docsMap[slug]) {
+      setContent(`# 404\nPage \`${slug}\` not found.`);
     } else {
-      setContent(docsMap[view]);
+      setContent(docsMap[slug]);
     }
-  }, [view]);
+  }, [slug]);
 
   return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-        <DocsHeader />
+        <DocsHeader section="Documentation" />
         <div className="flex flex-1">
-          <DocsSidebar activeView={view} />
+          <DocsSidebar activeView={slug} />
           <main className="flex-1 p-6 overflow-auto prose prose-invert max-w-4xl">
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
                   a: ({ href = '', children, ...props }) => {
-                    // match *.md or *.md#fragment
                     const match = href.match(/^([^#]+)\.md(#.*)?$/);
-                    const slug = match?.[1];
+                    const link = match?.[1];
                     const fragment = match?.[2] || '';
 
-                    // Rewrite internal .md links
-                    if (slug) {
+                    if (!link) {
                       return (
-                          <a href={`/docs/${slug}${fragment}`} {...props} className="text-blue-400 hover:underline">
+                          <a href={href} {...props} className="text-blue-400 hover:underline" target="_blank" rel="noreferrer">
                             {children}
                           </a>
                       );
                     }
 
-                    // fallback: external or already-routed
+                    // Base: current doc's path minus filename
+                    const basePath = slug.split('/').slice(0, -1).join('/'); // e.g. architecture
+                    const resolvedPath = `${basePath}/${link}`.replace(/\/+/, '/');
+
                     return (
-                        <a href={href} {...props} className="text-blue-400 hover:underline" target="_blank" rel="noreferrer">
+                        <a href={`/docs/${resolvedPath}${fragment}`} {...props} className="text-blue-400 hover:underline">
                           {children}
                         </a>
                     );
@@ -102,6 +105,7 @@ export default function DocsPage() {
             </ReactMarkdown>
           </main>
         </div>
+        <DocsFooter/>
       </div>
   );
 }

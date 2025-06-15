@@ -11,27 +11,14 @@ import {
     ChevronRight,
     ChevronDown,
     ChevronUp,
-    Home,
+    Home, LayoutDashboard,
 } from 'lucide-react';
 import {cn} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
 
 /* ─────────────────────── Types / constants ────────────────────── */
 
-type View =
-    | 'welcome'
-    | 'project-structure'
-    | 'quickstart'
-    | 'architecture-overview'
-    | 'cqrs-projections'
-    | 'domain-modeling'
-    | 'temporal-workflows'
-    | 'multi-tenancy'
-    | 'observability'
-    | 'testing'
-    | 'devx-ui'
-    | 'cli-tools'
-    | 'reflections';
+type View = string;
 
 interface DocsSidebarProps {
     onViewChange?: (view: View) => void;
@@ -47,58 +34,58 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
     {
-        id: 'welcome',
+        id: 'basics/introduction',
         label: 'Basics',
         icon: FileText,
         children: [
-            {id: 'welcome', label: 'Introduction'},
-            {id: 'project-structure', label: 'Project Structure'},
-            {id: 'quickstart', label: 'Quickstart'},
+            {id: 'basics/introduction', label: 'Introduction'},
+            {id: 'basics/project-structure', label: 'Project Structure'},
+            {id: 'basics/quickstart', label: 'Quickstart'},
         ],
     },
     {
-        id: 'architecture-overview',
+        id: 'architecture/architecture-overview',
         label: 'Architecture',
         icon: Book,
         children: [
-            {id: 'architecture-overview', label: 'Overview'},
-            {id: 'cqrs-projections', label: 'CQRS & Projections'},
-            {id: 'domain-modeling', label: 'Domain Modeling'},
-            {id: 'temporal-workflows', label: 'Temporal Workflows'},
-            {id: 'multi-tenancy', label: 'Multi-Tenancy'},
-            {id: 'observability', label: 'Observability'},
-            {id: 'testing', label: 'Testing Strategies'},
+            {id: 'architecture/architecture-overview', label: 'Overview'},
+            {id: 'architecture/cqrs-projections', label: 'CQRS & Projections'},
+            {id: 'architecture/domain-modeling', label: 'Domain Modeling'},
+            {id: 'architecture/temporal-workflows', label: 'Temporal Workflows'},
+            {id: 'architecture/multi-tenancy-details', label: 'Multi-Tenancy'},
+            {id: 'architecture/observability-details', label: 'Observability'},
+            {id: 'architecture/testing-strategies', label: 'Testing Strategies'},
         ],
     },
     {
-        id: 'devx-ui',
+        id: 'devx/devx-ui',
         label: 'DevX',
         icon: Code,
         children: [
-            {id: 'devx-ui', label: 'DevX UI'},
-            {id: 'cli-tools', label: 'CLI Tools'},
+            {id: 'devx/devx-ui', label: 'DevX UI'},
+            {id: 'devx/cli-tools', label: 'CLI Tools'},
         ],
     },
     {
-        id: 'reflections',
+        id: 'reflections/index',
         label: 'Reflections',
         icon: BookOpen,
         children: [
-            {id: 'reflections', label: 'Overview'},
-            {id: 'note-cqrs-projections', label: 'CQRS & Projections'},
-            {id: 'note-domain-modeling', label: 'Domain Modeling'},
-            {id: 'note-event-sourcing', label: 'Event Sourcing'},
-            {id: 'note-multi-tenancy', label: 'Multi-Tenancy'},
-            {id: 'note-observability', label: 'Observability'},
-            {id: 'note-temporal-workflows', label: 'Temporal Workflows'},
-            {id: 'note-testing-strategies', label: 'Testing Strategies'},
+            {id: 'reflections/index', label: 'Overview'},
+            {id: 'reflections/note-cqrs-projections', label: 'CQRS & Projections'},
+            {id: 'reflections/note-domain-modeling', label: 'Domain Modeling'},
+            {id: 'reflections/note-event-sourcing', label: 'Event Sourcing'},
+            {id: 'reflections/note-multi-tenancy', label: 'Multi-Tenancy'},
+            {id: 'reflections/note-observability', label: 'Observability'},
+            {id: 'reflections/note-temporal-workflows', label: 'Temporal Workflows'},
+            {id: 'reflections/note-testing-strategies', label: 'Testing Strategies'},
         ],
     },
 ];
 
 const viewFromPath = (path: string): View => {
     const match = path.match(/^\/docs\/?(.*)$/);
-    const slug = match?.[1] || 'welcome';
+    const slug = match?.[1] || 'basics/introduction';
     return slug as View;
 };
 
@@ -135,6 +122,8 @@ export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
                                 onClick={() => {
                                     if (hasChildren) {
                                         toggleExpand(id);
+                                    } else {
+                                        navigate(`/docs/${id}`);
                                     }
                                     onViewChange?.(id);
                                 }}
@@ -181,8 +170,8 @@ export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
                         variant="secondary"
                         className="w-full flex items-center gap-2 justify-start text-slate-300 hover:text-white"
                     >
-                        <ExternalLink className="h-4 w-4"/>
-                        <span>Switch to DevX Console</span>
+                        <LayoutDashboard className="h-4 w-4"/>
+                        <span>Launch DevX Console</span>
                     </Button>
                 </div>
             </nav>

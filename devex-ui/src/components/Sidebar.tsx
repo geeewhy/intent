@@ -135,12 +135,12 @@ export const Sidebar = ({ onViewChange, activeView }: SidebarProps) => {
                 {/* Switch to Docs button at the bottom */}
                 <div className="pt-4 mt-4 border-t border-slate-800">
                     <Button
-                        onClick={() => navigate('/docs')}
-                        variant="secondary"
-                        className="w-full flex items-center gap-2 justify-center"
+                        onClick={() => navigate('/docs/devx/devx-ui')}
+                        variant="primary"
+                        className="w-full flex items-center gap-2 justify-start"
                     >
                         <BookOpen className="h-4 w-4" />
-                        {!isCollapsed && <span>Switch to Docs</span>}
+                        {!isCollapsed && <span>Read the Docs</span>}
                     </Button>
                 </div>
             </nav>
