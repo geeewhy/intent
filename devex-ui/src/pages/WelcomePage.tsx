@@ -1,3 +1,4 @@
+// devex-ui/src/pages/WelcomePage.tsx
 import { DocsHeader } from "@/components/DocsHeader";
 import { DocsSidebar } from "@/components/DocsSidebar";
 import { Card, CardContent } from "@/components/ui/card";

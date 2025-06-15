@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "$docs": path.resolve(__dirname, "../docs"), //  alias for docs
+      "$docs": path.resolve(__dirname, "./docs"), //symlink follow
     },
   },
   define: {
