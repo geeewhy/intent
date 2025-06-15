@@ -20,8 +20,6 @@ import { cn } from '@/lib/utils';
 import { useFeatures } from '@/hooks/useFeatures';
 import { Button } from '@/components/ui/button';
 
-/* ─────────────────────── Types / constants ────────────────────── */
-
 type View =
     | 'dashboard'
     | 'commands'
@@ -52,8 +50,6 @@ const NAV_ITEMS = [
     { id: 'settings', label: 'Settings', icon: Settings },
 ] as const;
 
-/* ───────────────────────── helpers ─────────────────────────────── */
-
 const pathForView = (view: View) => (view === 'dashboard' ? '/devx' : `/devx/${view}`);
 
 const viewFromPath = (path: string): View => {
@@ -61,8 +57,6 @@ const viewFromPath = (path: string): View => {
     const slug = match?.[1] || 'dashboard';
     return slug as View;
 };
-
-/* ───────────────────────── component ───────────────────────────── */
 
 export const Sidebar = ({ onViewChange, activeView }: SidebarProps) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -90,7 +84,7 @@ export const Sidebar = ({ onViewChange, activeView }: SidebarProps) => {
     return (
         <aside
             className={cn(
-                'bg-slate-900 border-r border-slate-800 transition-all duration-300 relative',
+                'bg-slate-900 border-r border-slate-800 transition-all duration-300 relative relative pt-[3px]',
                 isCollapsed ? 'w-16' : 'w-64',
             )}
         >
@@ -142,7 +136,7 @@ export const Sidebar = ({ onViewChange, activeView }: SidebarProps) => {
                 <div className="pt-4 mt-4 border-t border-slate-800">
                     <Button
                         onClick={() => navigate('/docs')}
-                        variant="outline"
+                        variant="secondary"
                         className="w-full flex items-center gap-2 justify-center"
                     >
                         <BookOpen className="h-4 w-4" />
