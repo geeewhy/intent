@@ -1,6 +1,6 @@
 // devex-ui/src/components/DocsSidebar.tsx
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import {useLocation, useNavigate} from 'react-router-dom';
 import {
     Book,
     FileText,
@@ -48,16 +48,23 @@ const NAV_ITEMS: NavItem[] = [
     { id: 'references', label: 'References', icon: BookOpen },
 ];
 
+const viewFromPath = (path: string): View => {
+    const match = path.match(/^\/docs\/?(.*)$/);
+    const slug = match?.[1] || 'welcome';
+    return slug as View;
+};
+
 /* ───────────────────────── component ───────────────────────────── */
 
 export const DocsSidebar = ({ onViewChange, activeView }: DocsSidebarProps) => {
     const navigate = useNavigate();
+    const { pathname } = useLocation();
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
         guidelines: true, // Start with guidelines expanded
     });
 
     /* source of truth: prefer explicit prop, else derive from URL */
-    const current = activeView || 'welcome';
+    const current = viewFromPath(pathname);
 
     const toggleExpand = (id: string) => {
         setExpandedItems(prev => ({
@@ -124,7 +131,7 @@ export const DocsSidebar = ({ onViewChange, activeView }: DocsSidebarProps) => {
                 <div className="pt-4 mt-4">
                     <Button
                         onClick={() => navigate('/devx')}
-                        variant="ghost"
+                        variant="secondary"
                         className="w-full flex items-center gap-2 justify-start text-slate-300 hover:text-white"
                     >
                         <ExternalLink className="h-4 w-4" />

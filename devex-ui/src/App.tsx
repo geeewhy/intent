@@ -7,7 +7,7 @@ import { AppProvider } from '@/app/AppProvider';
 import Index from './pages/Index';
 import WelcomePage from './pages/WelcomePage';
 import NotFound from './pages/NotFound';
-
+import { Navigate } from 'react-router-dom';
 /** all sidebar slugs except the default “dashboard” */
 const VIEWS = [
   'commands',
@@ -28,7 +28,12 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Docs: root + /docs */}
-            <Route path="/" element={<WelcomePage />} />
+            <Route
+                path="/"
+                element={
+                  <Navigate to={`/${import.meta.env.VITE_DEFAULT_PAGE}`} replace />
+                }
+            />
             <Route path="/docs" element={<WelcomePage />} />
             <Route path="/docs/:view" element={<WelcomePage />} />
 
