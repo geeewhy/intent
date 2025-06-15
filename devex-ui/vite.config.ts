@@ -6,20 +6,25 @@ import { plugin as Markdown } from 'vite-plugin-markdown';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  root: './',
   server: {
     host: "::",
     port: 8080,
-    historyApiFallback: true
+    historyApiFallback: true,
+    fs: {
+      allow: ['..'], // allow ../docs
+    },
   },
   plugins: [
     react(),
     mode === 'development' &&
     componentTagger(),
-    Markdown({ mode: ['html', 'toc'] }),
+    Markdown({ mode: ['raw'] }),
   ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "$docs": path.resolve(__dirname, "../docs"), //  alias for docs
     },
   },
   define: {

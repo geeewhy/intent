@@ -6,7 +6,7 @@ export const DocsHeader = () => {
       {/* Logo */}
       <div className="flex items-center gap-3">
         <Logo />
-        <span className="text-xl font-semibold text-slate-100">Intent Documentation</span>
+        <span className="text-xl font-semibold text-slate-100">Intent | Documentation</span>
       </div>
       
       {/* Spacer */}

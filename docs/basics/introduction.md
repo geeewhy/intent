@@ -1,7 +1,5 @@
 # Introduction to Intent
 
-## What is Intent?
-
 Intent is a pragmatic, ports-first reference platform for multi-tenant, event-sourced CQRS back-ends powered by TypeScript and [Temporal](https://github.com/temporalio/temporal) for durable workflow execution. It turns event-sourcing theory into a platform you can demo in five minutes.
 
 ## Who is it for?
@@ -15,6 +13,8 @@ Intent is designed for developers building high-fidelity, multi-tenant backends 
 - SaaS platforms
 - High-complexity business domain applications
 
+Here's a comparison and perspective of Event Sourcing, the model behind Intent and traditional CRUD.
+
 ## Core Design Principles
 
 Intent is built on several modern software design patterns:
@@ -27,13 +27,13 @@ Intent is built on several modern software design patterns:
 
 ## Key Capabilities
 
-| Capability | What it gives you |
-|------------|-------------------|
-| **Lossless event sourcing** | Guarantees no data loss, even under retries, crashes, or partial failures. Every command, event, and projection is persisted and replayable. |
+| Capability                          | What it gives you |
+|-------------------------------------|-------------------|
+| **Lossless backends**               | Guarantees no data loss, even under retries, crashes, or partial failures. Every command, event, and projection is persisted and replayable. |
 | **Built-in multi-tenant isolation** | Tenant IDs propagate edge → core → infra. Row isolation in DB and namespaced workflows prevent accidental cross-tenant access or leaks. |
-| **Automatic RLS enforcement** | Each projection declares access rules in metadata; they are compiled into Postgres RLS policies. CI linter blocks insecure access before it ships. |
+| **Automatic RLS enforcement**       | Each projection declares access rules in metadata; they are compiled into Postgres RLS policies. CI linter blocks insecure access before it ships. |
 | **Temporal workflow orchestration** | Commands and events are processed in durable Temporal workflows → supports back-pressure, retries, and exactly-once delivery at the source of truth. |
-| **Observability** | Unified structured logging with context-aware `LoggerPort`, customizable log levels, and error serialization. OpenTelemetry spans wrap all key flows; logs and traces correlate via causation/correlation IDs. |
+| **Observability**                   | Unified structured logging with context-aware `LoggerPort`, customizable log levels, and error serialization. OpenTelemetry spans wrap all key flows; logs and traces correlate via causation/correlation IDs. |
 
 ## Key Terminology
 

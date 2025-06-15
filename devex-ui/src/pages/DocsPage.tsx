@@ -1,160 +1,107 @@
-import { useState } from "react";
-import { DocsHeader } from "@/components/DocsHeader";
-import { DocsSidebar } from "@/components/DocsSidebar";
-import { Card, CardContent } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+// devex-ui/src/pages/DocsPage.tsx
+import { useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { DocsHeader } from '@/components/DocsHeader';
+import { DocsSidebar } from '@/components/DocsSidebar';
 
-type ActiveView = 'welcome' | 'guidelines' | 'architecture' | 'examples' | 'references';
+import welcome from '$docs/basics/introduction.md?raw';
+import projectStructure from '$docs/basics/project-structure.md?raw';
+import quickstart from '$docs/basics/quickstart.md?raw';
 
-const DocsPage = () => {
-  const initialView = window.location.pathname.replace(/^\/docs\//, '') as ActiveView || 'welcome';
-  const [activeView, setActiveView] = useState<ActiveView>(initialView || 'welcome');
-  const navigate = useNavigate();
+import archOverview from '$docs/architecture/architecture-overview.md?raw';
+import cqrs from '$docs/architecture/cqrs-projections.md?raw';
+import domain from '$docs/architecture/domain-modeling.md?raw';
+import temporal from '$docs/architecture/temporal-workflows.md?raw';
+import tenancy from '$docs/architecture/multi-tenancy-details.md?raw';
+import observability from '$docs/architecture/observability-details.md?raw';
+import testing from '$docs/architecture/testing-strategies.md?raw';
 
-  const renderActiveView = () => {
-    switch (activeView) {
-      default:
-      case 'welcome':
-        return (
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold">Welcome to Intent</h1>
-            <p className="text-lg text-slate-300">
-              Intent turns event-sourcing theory into a platform you can demo in five minutes. 
-              It's a pragmatic, ports-first reference for multi-tenant, event-sourced CQRS back-ends 
-              powered by TypeScript and uses Temporal for durable workflow execution.
-            </p>
+import devxUi from '$docs/devx/devx-ui.md?raw';
+import cli from '$docs/devx/cli-tools.md?raw';
 
-            <h2 className="text-2xl font-bold mt-8">Highlights</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <Card className="bg-slate-900 border-slate-800">
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-medium text-blue-400 mb-2">Lossless backend processing</h3>
-                  <p className="text-slate-300">
-                    Event-sourced core guarantees no data loss, even under retries, crashes, or partial failures. 
-                    Structure follows DDD. Every command, event, and projection is persisted and replayable.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-slate-900 border-slate-800">
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-medium text-blue-400 mb-2">Ports-first hexagon</h3>
-                  <p className="text-slate-300">
-                    Technology-agnostic core logic. Adapters for PostgreSQL (event store + RLS) and 
-                    Temporal (workflows) plug in via explicit, testable ports.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-slate-900 border-slate-800">
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-medium text-blue-400 mb-2">Tenant isolation by default</h3>
-                  <p className="text-slate-300">
-                    Tenant IDs propagate edge → core → infra. Row isolation in DB and namespaced 
-                    workflows prevent accidental cross-tenant access or leaks.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-slate-900 border-slate-800">
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-medium text-blue-400 mb-2">Production-grade observability</h3>
-                  <p className="text-slate-300">
-                    Unified structured logging with context-aware LoggerPort, customizable log levels, 
-                    and error serialization. OpenTelemetry spans wrap all key flows.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        );
-      case 'guidelines':
-        return (
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold">Guidelines</h1>
-            <Card className="bg-slate-900 border-slate-800">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-medium text-blue-400 mb-2">Simplicity of Event Sourcing</h3>
-                <p className="text-slate-300">
-                  Content about simplicity of event sourcing will be added here.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-slate-900 border-slate-800">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-medium text-blue-400 mb-2">Initial Setup</h3>
-                <p className="text-slate-300">
-                  Content about initial setup will be added here.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case 'architecture':
-        return (
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold">Architecture</h1>
-            <Card className="bg-slate-900 border-slate-800">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-medium text-blue-400 mb-2">High-level Architecture</h3>
-                <p className="text-slate-300">
-                  Content about high-level architecture will be added here.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case 'examples':
-        return (
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold">Examples</h1>
-            <Card className="bg-slate-900 border-slate-800">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-medium text-blue-400 mb-2">Example Applications</h3>
-                <p className="text-slate-300">
-                  Content about example applications will be added here.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case 'references':
-        return (
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold">References</h1>
-            <Card className="bg-slate-900 border-slate-800">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-medium text-blue-400 mb-2">API References</h3>
-                <p className="text-slate-300">
-                  Content about API references will be added here.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-    }
-  };
+import reflections from '$docs/reflections/index.md?raw';
+import noteCQRS from '$docs/reflections/note-cqrs-projections.md?raw';
+import noteDomain from '$docs/reflections/note-domain-modeling.md?raw';
+import noteES from '$docs/reflections/note-event-sourcing.md?raw';
+import noteTenancy from '$docs/reflections/note-multi-tenancy.md?raw';
+import noteObs from '$docs/reflections/note-observability.md?raw';
+import noteTemporal from '$docs/reflections/note-temporal-workflows.md?raw';
+import noteTesting from '$docs/reflections/note-testing-strategies.md?raw';
 
-  const handleViewChange = (view: string) => {
-    setActiveView(view as ActiveView);
-    navigate(`/docs/${view === 'welcome' ? '' : view}`);
-  };
-
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <DocsHeader />
-
-      <div className="flex flex-1">
-        <DocsSidebar 
-          activeView={activeView}
-          onViewChange={handleViewChange}
-        />
-
-        <main className="flex-1 p-6 overflow-auto">
-          {renderActiveView()}
-        </main>
-      </div>
-    </div>
-  );
+const docsMap: Record<string, string> = {
+  welcome,
+  'project-structure': projectStructure,
+  quickstart,
+  'architecture-overview': archOverview,
+  'cqrs-projections': cqrs,
+  'domain-modeling': domain,
+  'temporal-workflows': temporal,
+  'multi-tenancy': tenancy,
+  'observability': observability,
+  testing,
+  'devx-ui': devxUi,
+  'cli-tools': cli,
+  reflections,
+  'note-cqrs-projections': noteCQRS,
+  'note-domain-modeling': noteDomain,
+  'note-event-sourcing': noteES,
+  'note-multi-tenancy': noteTenancy,
+  'note-observability': noteObs,
+  'note-temporal-workflows': noteTemporal,
+  'note-testing-strategies': noteTesting,
 };
 
-export default DocsPage;
+export default function DocsPage() {
+  const { view = 'welcome' } = useParams();
+  const [content, setContent] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!docsMap[view]) {
+      setContent(`# 404\nPage \`${view}\` not found.`);
+    } else {
+      setContent(docsMap[view]);
+    }
+  }, [view]);
+
+  return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+        <DocsHeader />
+        <div className="flex flex-1">
+          <DocsSidebar activeView={view} />
+          <main className="flex-1 p-6 overflow-auto prose prose-invert max-w-4xl">
+            <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  a: ({ href = '', children, ...props }) => {
+                    // match *.md or *.md#fragment
+                    const match = href.match(/^([^#]+)\.md(#.*)?$/);
+                    const slug = match?.[1];
+                    const fragment = match?.[2] || '';
+
+                    // Rewrite internal .md links
+                    if (slug) {
+                      return (
+                          <a href={`/docs/${slug}${fragment}`} {...props} className="text-blue-400 hover:underline">
+                            {children}
+                          </a>
+                      );
+                    }
+
+                    // fallback: external or already-routed
+                    return (
+                        <a href={href} {...props} className="text-blue-400 hover:underline" target="_blank" rel="noreferrer">
+                          {children}
+                        </a>
+                    );
+                  }
+                }}
+            >
+              {content || 'Loading...'}
+            </ReactMarkdown>
+          </main>
+        </div>
+      </div>
+  );
+}
