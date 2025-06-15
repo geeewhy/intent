@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 type ActiveView = 'welcome' | 'guidelines' | 'architecture' | 'examples' | 'references';
 
-const WelcomePage = () => {
+const DocsPage = () => {
   const initialView = window.location.pathname.replace(/^\/docs\//, '') as ActiveView || 'welcome';
   const [activeView, setActiveView] = useState<ActiveView>(initialView || 'welcome');
   const navigate = useNavigate();
@@ -157,4 +157,4 @@ const WelcomePage = () => {
   );
 };
 
-export default WelcomePage;
+export default DocsPage;
