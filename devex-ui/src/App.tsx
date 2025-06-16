@@ -1,5 +1,5 @@
 // devex-ui/src/App.tsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { AppProvider } from '@/app/AppProvider';
@@ -26,28 +26,26 @@ const App = () => (
   <AppProvider>
     <TooltipProvider>
       <ErrorBoundary>
-        <BrowserRouter>
-          <Routes>
-            {/* Docs: root + /docs */}
-            <Route
-                path="/"
-                element={
-                  <Navigate to={`/${import.meta.env.VITE_DEFAULT_PAGE}`} replace />
-                }
-            />
-            <Route path="/welcome" element={<WelcomePage />} />
-            <Route path="/docs" element={<Navigate to="/docs/basics/introduction" replace />} />
-            <Route path="/docs/*" element={<DocsPage />} />
+        <Routes>
+          {/* Docs: root + /docs */}
+          <Route
+              path="/"
+              element={
+                <Navigate to={`/${import.meta.env.VITE_DEFAULT_PAGE}`} replace />
+              }
+          />
+          <Route path="/welcome" element={<WelcomePage />} />
+          <Route path="/docs" element={<Navigate to="/docs/basics/introduction" replace />} />
+          <Route path="/docs/*" element={<DocsPage />} />
 
-            {/* DevX UI */}
-            <Route path="/devx" element={<Index />} />
-            {VIEWS.map(view => (
-              <Route key={view} path={`/devx/${view}`} element={<Index />} />
-            ))}
+          {/* DevX UI */}
+          <Route path="/devx" element={<Index />} />
+          {VIEWS.map(view => (
+            <Route key={view} path={`/devx/${view}`} element={<Index />} />
+          ))}
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </ErrorBoundary>
     </TooltipProvider>
   </AppProvider>

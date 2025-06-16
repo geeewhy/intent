@@ -7,8 +7,14 @@
     "dev": "vite",
     "dev:mock": "vite --mode mock",
     "dev:real": "vite --mode real",
+    "dev:ssr": "node server.js",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "build:ssr": "npm run build:ssr:client && npm run build:ssr:server",
+    "build:ssr:client": "SSR=false vite build --outDir dist/client",
+    "build:ssr:server": "SSR=true vite build --outDir dist/server",
+    "start": "NODE_ENV=production node server.js",
+    "vercel-build": "npm run build:ssr",
     "lint": "eslint .",
     "preview": "vite preview",
     "type-check": "tsc --noEmit"
@@ -51,6 +57,7 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
+    "express": "^4.18.2",
     "input-otp": "^1.2.4",
     "json-schema-faker": "^0.5.9",
     "lucide-react": "^0.462.0",
@@ -73,6 +80,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@emotion/react": "^11.14.0",
     "@eslint/js": "^9.9.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.5.5",

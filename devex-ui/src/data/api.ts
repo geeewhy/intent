@@ -1,9 +1,20 @@
 //devex-ui/src/data/api.ts
-const apiMode = localStorage.getItem('api_mode') || import.meta.env.VITE_API_MODE || 'mock';
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined';
+
+// Safely access localStorage
+const getLocalStorage = (key: string): string | null => {
+  if (isBrowser) {
+    return localStorage.getItem(key);
+  }
+  return null;
+};
+
+const apiMode = getLocalStorage('api_mode') || import.meta.env.VITE_API_MODE || 'mock';
 
 // API client configuration
 export const API_CONFIG = {
-  baseUrl: localStorage.getItem('api_uri') || import.meta.env.VITE_API_URL || '',
+  baseUrl: getLocalStorage('api_uri') || import.meta.env.VITE_API_URL || '',
   wsUrl: import.meta.env.VITE_WS_URL || 'ws://localhost:8080/events/stream',
   endpoints: {
     events: '/api/events',
@@ -17,8 +28,13 @@ export const API_CONFIG = {
 
 // --- URL builder
 function buildUrl(endpoint: string, params?: Record<string, string>): string {
-  const base = apiMode === 'mock' ? '' : (localStorage.getItem('api_uri') || import.meta.env.VITE_API_URL || '');
-  const url = new URL(`${base}${endpoint}`, window.location.origin);
+  const base = apiMode === 'mock' ? '' : (getLocalStorage('api_uri') || import.meta.env.VITE_API_URL || '');
+
+  // Use a default origin for SSR
+  const origin = isBrowser ? window.location.origin : 'http://localhost';
+
+  // Create URL with the appropriate origin
+  const url = new URL(`${base}${endpoint}`, origin);
 
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
