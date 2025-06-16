@@ -1,3 +1,4 @@
+//devex-ui/src/mocks/factories/event.factory.ts
 import { v4 as uuid } from 'uuid';
 import type { Event, Metadata } from '@/data/types';
 

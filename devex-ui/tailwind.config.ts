@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
+import typography from '@tailwindcss/typography';
 
 export default {
 	darkMode: ["class"],
@@ -90,8 +91,22 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+			},
+			typography: ({ theme }) => ({
+				invert: {
+					css: {
+						color: theme('colors.slate.300'),
+						a: { color: theme('colors.blue.400'), '&:hover': { color: theme('colors.blue.500') } },
+						h1: { color: theme('colors.white') },
+						h2: { color: theme('colors.white') },
+						h3: { color: theme('colors.white') },
+						code: { color: theme('colors.pink.400') },
+						'blockquote p:first-of-type::before': { content: 'none' },
+						'blockquote p:first-of-type::after': { content: 'none' },
+					}
+				},
+			}),
 		}
 	},
-	plugins: [tailwindcssAnimate],
+	plugins: [typography, tailwindcssAnimate],
 } satisfies Config;

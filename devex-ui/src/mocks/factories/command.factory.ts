@@ -1,3 +1,4 @@
+//devex-ui/src/mocks/factories/command.factory.ts
 import { v4 as uuid } from 'uuid';
 import type { Command, Metadata } from '@/data/types';
 

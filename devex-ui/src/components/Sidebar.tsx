@@ -14,11 +14,11 @@ import {
     ChevronLeft,
     ChevronRight,
     LayoutDashboard,
+    BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFeatures } from '@/hooks/useFeatures';
-
-/* ─────────────────────── Types / constants ────────────────────── */
+import { Button } from '@/components/ui/button';
 
 type View =
     | 'dashboard'
@@ -50,16 +50,13 @@ const NAV_ITEMS = [
     { id: 'settings', label: 'Settings', icon: Settings },
 ] as const;
 
-/* ───────────────────────── helpers ─────────────────────────────── */
-
-const pathForView = (view: View) => (view === 'dashboard' ? '/' : `/${view}`);
+const pathForView = (view: View) => (view === 'dashboard' ? '/devx' : `/devx/${view}`);
 
 const viewFromPath = (path: string): View => {
-    const slug = path === '/' ? 'dashboard' : path.replace(/^\//, '');
+    const match = path.match(/^\/devx\/?([^\/]*)/);
+    const slug = match?.[1] || 'dashboard';
     return slug as View;
 };
-
-/* ───────────────────────── component ───────────────────────────── */
 
 export const Sidebar = ({ onViewChange, activeView }: SidebarProps) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -87,7 +84,7 @@ export const Sidebar = ({ onViewChange, activeView }: SidebarProps) => {
     return (
         <aside
             className={cn(
-                'bg-slate-900 border-r border-slate-800 transition-all duration-300 relative',
+                'bg-slate-900 border-r border-slate-800 transition-all duration-300 relative relative pt-[3px]',
                 isCollapsed ? 'w-16' : 'w-64',
             )}
         >
@@ -134,6 +131,18 @@ export const Sidebar = ({ onViewChange, activeView }: SidebarProps) => {
                         </button>
                     );
                 })}
+
+                {/* Switch to Docs button at the bottom */}
+                <div className="pt-4 mt-4 border-t border-slate-800">
+                    <Button
+                        onClick={() => navigate('/docs/devx/devx-ui')}
+                        variant="primary"
+                        className="w-full flex items-center gap-2 justify-start"
+                    >
+                        <BookOpen className="h-4 w-4" />
+                        {!isCollapsed && <span>Read the Docs</span>}
+                    </Button>
+                </div>
             </nav>
         </aside>
     );

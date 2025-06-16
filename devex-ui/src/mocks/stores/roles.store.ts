@@ -1,3 +1,4 @@
+//devex-ui/src/mocks/stores/roles.store.ts
 import { createStore } from './createStore';
 
 // Define the role entry type with domain as id to satisfy Identifiable

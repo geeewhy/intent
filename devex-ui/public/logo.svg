@@ -1,27 +1,27 @@
 <!-- intent-logo.svg -->
 <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"
-     fill="none" stroke="#494618" stroke-width="6"
+     fill="none" stroke="#ffff" stroke-width="6"
      stroke-linecap="round" stroke-linejoin="round">
 
     <!-- Hexagon with one-time draw animation -->
     <polygon id="hex"
              points="60,6 108,34 108,86 60,114 12,86 12,34"
              fill="none"
-             stroke="#494618"
+             stroke="#ffff"
              stroke-dasharray="348"
              stroke-dashoffset="348">
         <animate attributeName="stroke-dashoffset"
-                 from="348" to="0"
+                 from="0" to="0"
                  dur="4s"
                  fill="freeze" />
     </polygon>
 
     <!-- Play arrow with subtle curved back -->
-    <path id="play" fill="#494618"
+    <path id="play" fill="#ffff"
           d="M80,60 L50,40
            A0.7,6 0 0,1 50,80
            Z" />
 
     <!-- Event dot -->
-    <circle id="dot" cx="38" cy="60" r="5" fill="#494618" stroke="none" />
+    <circle id="dot" cx="38" cy="60" r="5" fill="#ffff" stroke="none" />
 </svg>

@@ -1,6 +1,7 @@
 //devex-ui/src/pages/Index.tsx
 
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -20,8 +21,13 @@ import { useAppCtx } from '@/app/AppProvider';
 type ActiveView = 'dashboard' | 'commands' | 'events' | 'projections' | 'traces' | 'aggregates' | 'status' | 'rewind' | 'ai' | 'settings';
 
 const Index = () => {
-  const initialView = window.location.pathname.replace(/^\//, '') as ActiveView || 'dashboard';
-  const [activeView, setActiveView] = useState<ActiveView>(initialView);
+  const location = useLocation();
+  const path = location.pathname;
+  const activeView = (() => {
+    const match = path.match(/^\/devx\/?([^\/]*)/);
+    const slug = match?.[1] || 'dashboard';
+    return slug as ActiveView;
+  })();
   const [isAICompanionOpen, setIsAICompanionOpen] = useState(false);
   const { tenant, role, flags } = useAppCtx();
 
@@ -74,9 +80,7 @@ const Index = () => {
   const handleViewChange = (view: string) => {
     if (view === 'ai') {
       setIsAICompanionOpen(true);
-      return;
     }
-    setActiveView(view as ActiveView);
   };
 
   const shouldShowAICompanion = flags.ai === true;

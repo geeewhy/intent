@@ -1,3 +1,4 @@
+//devex-ui/src/mocks/stores/command.store.ts
 import { createStore } from './createStore';
 import { makeCommand } from '../factories/command.factory';
 import type { Command } from '@/data/types';

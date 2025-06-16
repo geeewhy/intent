@@ -1,3 +1,4 @@
+//devex-ui/src/mocks/stores/event.store.ts
 import { createStore } from './createStore';
 import { makeEvent } from '../factories/event.factory';
 import type { Event } from '@/data/types';

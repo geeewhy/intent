@@ -1,3 +1,4 @@
+//devex-ui/src/mocks/stores/log.store.ts
 import { createStore } from './createStore';
 import { makeLog, type LogLine } from '../factories/log.factory';
 

@@ -1,3 +1,4 @@
+//devex-ui/src/graph/edgeUtils.ts
 export interface Edge { from:string; to:string; type:'causation' }
 
 export function generateEdges(

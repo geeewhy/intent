@@ -1,3 +1,4 @@
+//devex-ui/src/hooks/useFeatures.ts
 import { useAppCtx } from '@/app/AppProvider';
 export function useFeatures() {
   const { flags, toggleFlag } = useAppCtx();

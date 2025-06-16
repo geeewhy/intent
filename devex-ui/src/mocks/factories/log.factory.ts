@@ -1,3 +1,4 @@
+//devex-ui/src/mocks/factories/log.factory.ts
 import { v4 as uuid } from 'uuid';
 
 export interface LogLine {

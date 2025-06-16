@@ -1,12 +1,14 @@
 // devex-ui/src/App.tsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { AppProvider } from '@/app/AppProvider';
 
 import Index from './pages/Index';
+import DocsPage from './pages/DocsPage';
 import NotFound from './pages/NotFound';
-
+import { Navigate } from 'react-router-dom';
+import WelcomePage from "@/pages/WelcomePage.tsx";
 /** all sidebar slugs except the default “dashboard” */
 const VIEWS = [
   'commands',
@@ -21,26 +23,32 @@ const VIEWS = [
 ] as const;
 
 const App = () => (
-    <AppProvider>
-      <TooltipProvider>
-        <ErrorBoundary>
-          <BrowserRouter>
-            <Routes>
-              {/* dashboard */}
-              <Route path="/" element={<Index />} />
+  <AppProvider>
+    <TooltipProvider>
+      <ErrorBoundary>
+        <Routes>
+          {/* Docs: root + /docs */}
+          <Route
+              path="/"
+              element={
+                <Navigate to={`/${import.meta.env.VITE_DEFAULT_PAGE}`} replace />
+              }
+          />
+          <Route path="/welcome" element={<WelcomePage />} />
+          <Route path="/docs" element={<Navigate to="/docs/basics/introduction" replace />} />
+          <Route path="/docs/*" element={<DocsPage />} />
 
-              {/* other sidebar views → same Index page for now */}
-              {VIEWS.map(view => (
-                  <Route key={view} path={`/${view}`} element={<Index />} />
-              ))}
+          {/* DevX UI */}
+          <Route path="/devx" element={<Index />} />
+          {VIEWS.map(view => (
+            <Route key={view} path={`/devx/${view}`} element={<Index />} />
+          ))}
 
-              {/* fallback */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </ErrorBoundary>
-      </TooltipProvider>
-    </AppProvider>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </ErrorBoundary>
+    </TooltipProvider>
+  </AppProvider>
 );
 
 export default App;

@@ -1,3 +1,4 @@
+//devex-ui/src/mocks/scenarios/default.ts
 //src/devex-ui/src/mocks/scenarios/default.ts
 import {
   eventStore,
