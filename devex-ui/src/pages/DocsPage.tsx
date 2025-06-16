@@ -1,11 +1,12 @@
 // devex-ui/src/pages/DocsPage.tsx
 import { useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { DocsHeader } from '@/components/DocsHeader';
 import { DocsSidebar } from '@/components/DocsSidebar';
 
+// markdown docs
 import welcome from '$docs/basics/introduction.md?raw';
 import projectStructure from '$docs/basics/project-structure.md?raw';
 import quickstart from '$docs/basics/quickstart.md?raw';
@@ -54,10 +55,20 @@ const docsMap: Record<string, string> = {
   'reflections/note-testing-strategies': noteTesting,
 };
 
+//codebox support
+import Prism from 'prismjs';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/themes/prism-tomorrow.css';
+import 'prismjs/plugins/line-numbers/prism-line-numbers';
+import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
+
+
 export default function DocsPage() {
   const location = useLocation();
   const slug = location.pathname.replace(/^\/docs\//, '') || 'basics/introduction';
   const [content, setContent] = useState<string | null>(null);
+  const codeBlockRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!docsMap[slug]) {
@@ -67,45 +78,81 @@ export default function DocsPage() {
     }
   }, [slug]);
 
+  // Highlight code blocks after content updates
+  useEffect(() => {
+    if (content) {
+      // setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        Prism.highlightAll();
+      }, 0);
+    }
+  }, [content]);
+
   return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
         <DocsHeader section="Documentation" />
         <div className="flex flex-1">
           <DocsSidebar activeView={slug} />
           <main className="flex-1 p-6 overflow-auto prose prose-invert max-w-4xl">
-            <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  a: ({ href = '', children, ...props }) => {
-                    const match = href.match(/^([^#]+)\.md(#.*)?$/);
-                    const link = match?.[1];
-                    const fragment = match?.[2] || '';
+            <div ref={codeBlockRef}>
+              <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({ node, className = '', children, ...props }) {
+                      const match = /language-(\w+)/.exec(className);
+                      const language = match?.[1];
 
-                    if (!link) {
+                      // Fenced block with a language → highlight with Prism
+                      if (language) {
+                        return (
+                        <pre className={`language-${language} line-numbers`}>
+                          <code className={`language-${language}`} {...props}>
+                            {String(children).replace(/\n$/, '')}
+                          </code>
+                        </pre>
+                        );
+                      }
+
+                      // Inline code or fenced block without language
                       return (
-                          <a href={href} {...props} className="text-blue-400 hover:underline" target="_blank" rel="noreferrer">
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                      );
+                    },
+                    a: ({ href = '', children, ...props }) => {
+                      // Your existing link handling logic
+                      const match = href.match(/^([^#]+)\.md(#.*)?$/);
+                      const link = match?.[1];
+                      const fragment = match?.[2] || '';
+
+                      if (!link) {
+                        return (
+                            <a href={href} {...props} className="text-blue-400 hover:underline" target="_blank" rel="noreferrer">
+                              {children}
+                            </a>
+                        );
+                      }
+
+                      // Base: current doc's path minus filename
+                      const basePath = slug.split('/').slice(0, -1).join('/'); // e.g. architecture
+                      const resolvedPath = `${basePath}/${link}`.replace(/\/+/, '/');
+
+                      return (
+                          <a href={`/docs/${resolvedPath}${fragment}`} {...props} className="text-blue-400 hover:underline">
                             {children}
                           </a>
                       );
                     }
-
-                    // Base: current doc's path minus filename
-                    const basePath = slug.split('/').slice(0, -1).join('/'); // e.g. architecture
-                    const resolvedPath = `${basePath}/${link}`.replace(/\/+/, '/');
-
-                    return (
-                        <a href={`/docs/${resolvedPath}${fragment}`} {...props} className="text-blue-400 hover:underline">
-                          {children}
-                        </a>
-                    );
-                  }
-                }}
-            >
-              {content || 'Loading...'}
-            </ReactMarkdown>
+                  }}
+              >
+                {content || 'Loading...'}
+              </ReactMarkdown>
+            </div>
           </main>
         </div>
         <DocsFooter/>
       </div>
   );
 }
+

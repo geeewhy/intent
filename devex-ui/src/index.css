@@ -99,3 +99,27 @@
     @apply bg-background text-foreground;
   }
 }
+
+pre[class*="language-typescript"] {
+  margin: 0 0;
+  border-radius: 0.3rem;
+  overflow: auto;
+  border: 2px;
+  background-color: #14141c;
+}
+
+pre[class*="language-typescript"] .keyword,
+pre[class*="language-typescript"] .function
+{
+  color: #f18f3f;
+}
+
+code[class*="language-typescript"] {
+  font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 0.9em;
+}
+
+.line-numbers .line-numbers-rows {
+  border-right: 1px solid #404040;
+}
+

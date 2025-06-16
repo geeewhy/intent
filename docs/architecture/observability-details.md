@@ -1,4 +1,4 @@
-# Observability & Monitoring (Detailed)
+# Observability & Monitoring
 
 This document provides a deep dive into how Intent implements observability beyond the basics, covering the technical details of tracing, logging, and monitoring throughout the system.
 
