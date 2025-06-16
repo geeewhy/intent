@@ -74,7 +74,7 @@ const WelcomePage = () => {
                         </Card>
                         <Card className="bg-slate-900 border-slate-800">
                             <CardContent className="p-6">
-                                <h3 className="text-xl font-medium text-blue-400 mb-2">Production-grade observability</h3>
+                                <h3 className="text-xl font-medium text-blue-400 mb-2">End to end observability</h3>
                                 <p className="text-slate-300">
                                     Unified structured logging with context-aware LoggerPort, customizable log levels,
                                     and error serialization. OpenTelemetry spans wrap all key flows.
