@@ -6,12 +6,9 @@ import {
     FileText,
     Code,
     BookOpen,
-    ExternalLink,
-    ChevronLeft,
-    ChevronRight,
     ChevronDown,
     ChevronUp,
-    Home, LayoutDashboard,
+    LayoutDashboard,
 } from 'lucide-react';
 import {cn} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
@@ -110,9 +107,7 @@ export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
     const {pathname} = useLocation();
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
-    /* source of truth: prefer explicit prop, else derive from URL */
     const current = viewFromPath(pathname);
-    console.log("Current view:", current);
 
     // Auto-expand parent section when page changes
     useEffect(() => {
