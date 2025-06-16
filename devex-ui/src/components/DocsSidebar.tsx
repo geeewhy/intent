@@ -86,7 +86,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const viewFromPath = (path: string): View => {
     const match = path.match(/^\/docs\/?(.*)$/);
-    const slug = match?.[1] || 'basics/introduction';
+    const slug = match?.[1] || null;
     return slug as View;
 };
 
@@ -109,7 +109,8 @@ export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
     /* source of truth: prefer explicit prop, else derive from URL */
-    const current = activeView || viewFromPath(pathname);
+    const current = viewFromPath(pathname);
+    console.log("Current view:", current);
 
     // Auto-expand parent section when page changes
     useEffect(() => {
