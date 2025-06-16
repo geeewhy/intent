@@ -1,5 +1,5 @@
 // devex-ui/src/components/DocsSidebar.tsx
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import {
     Book,
@@ -49,6 +49,7 @@ const NAV_ITEMS: NavItem[] = [
         icon: Book,
         children: [
             {id: 'architecture/architecture-overview', label: 'Overview'},
+            {id: 'architecture/event-sourcing', label: 'Event Sourcing'},
             {id: 'architecture/cqrs-projections', label: 'CQRS & Projections'},
             {id: 'architecture/domain-modeling', label: 'Domain Modeling'},
             {id: 'architecture/temporal-workflows', label: 'Temporal Workflows'},
@@ -89,17 +90,37 @@ const viewFromPath = (path: string): View => {
     return slug as View;
 };
 
+// Function to find which parent section a page belongs to
+const findParentSection = (pageId: string): string | null => {
+    for (const item of NAV_ITEMS) {
+        if (item.id === pageId) return item.id;
+        if (item.children?.some(child => child.id === pageId)) {
+            return item.id;
+        }
+    }
+    return null;
+};
+
 /* ───────────────────────── component ───────────────────────────── */
 
 export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
     const navigate = useNavigate();
     const {pathname} = useLocation();
-    const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
-        guidelines: true, // Start with guidelines expanded
-    });
+    const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
     /* source of truth: prefer explicit prop, else derive from URL */
-    const current = viewFromPath(pathname);
+    const current = activeView || viewFromPath(pathname);
+
+    // Auto-expand parent section when page changes
+    useEffect(() => {
+        const parentSection = findParentSection(current);
+        if (parentSection) {
+            setExpandedItems(prev => ({
+                ...prev,
+                [parentSection]: true
+            }));
+        }
+    }, [current]);
 
     const toggleExpand = (id: string) => {
         setExpandedItems(prev => ({
@@ -112,8 +133,8 @@ export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
         <aside className="w-64 transition-all duration-300">
             <nav className="space-y-2 p-4">
                 {NAV_ITEMS.map(({id, label, icon: Icon, children}) => {
-                    const selected = current === id;
-                    const isExpanded = expandedItems[id];
+                    const isParentSelected = current === id;
+                    const isExpanded = expandedItems[id] || false;
                     const hasChildren = children && children.length > 0;
 
                     return (
@@ -129,7 +150,7 @@ export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
                                 }}
                                 className={cn(
                                     'w-full flex items-center gap-3 px-3 py-2 text-left transition-colors',
-                                    selected
+                                    isParentSelected
                                         ? 'text-blue-500 font-medium'
                                         : 'text-slate-300 hover:text-white',
                                 )}
@@ -146,17 +167,26 @@ export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
                             {/* Children items */}
                             {hasChildren && isExpanded && (
                                 <div className="ml-8 space-y-1">
-                                    {children.map(child => (
-                                        <button
-                                            key={child.id}
-                                            onClick={() => {
-                                                navigate(`/docs/${child.id}`);
-                                            }}
-                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-400 hover:text-white transition-colors"
-                                        >
-                                            {child.label}
-                                        </button>
-                                    ))}
+                                    {children.map(child => {
+                                        const isChildSelected = current === child.id;
+                                        return (
+                                            <button
+                                                key={child.id}
+                                                onClick={() => {
+                                                    navigate(`/docs/${child.id}`);
+                                                    onViewChange?.(child.id);
+                                                }}
+                                                className={cn(
+                                                    "w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors",
+                                                    isChildSelected 
+                                                        ? "text-blue-500 font-medium" 
+                                                        : "text-slate-400 hover:text-white"
+                                                )}
+                                            >
+                                                {child.label}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

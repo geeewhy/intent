@@ -13,6 +13,7 @@ import quickstart from '$docs/basics/quickstart.md?raw';
 
 import archOverview from '$docs/architecture/architecture-overview.md?raw';
 import cqrs from '$docs/architecture/cqrs-projections.md?raw';
+import eventSourcing from '$docs/architecture/event-sourcing.md?raw';
 import domain from '$docs/architecture/domain-modeling.md?raw';
 import temporal from '$docs/architecture/temporal-workflows.md?raw';
 import tenancy from '$docs/architecture/multi-tenancy-details.md?raw';
@@ -30,6 +31,8 @@ import noteTenancy from '$docs/reflections/note-multi-tenancy.md?raw';
 import noteObs from '$docs/reflections/note-observability.md?raw';
 import noteTemporal from '$docs/reflections/note-temporal-workflows.md?raw';
 import noteTesting from '$docs/reflections/note-testing-strategies.md?raw';
+import eventSourcingTake from '$docs/reflections/event-sourcing-take.md?raw';
+
 import {DocsFooter} from "@/components/DocsFooter.tsx";
 
 const docsMap: Record<string, string> = {
@@ -37,6 +40,7 @@ const docsMap: Record<string, string> = {
   'basics/project-structure': projectStructure,
   'basics/quickstart': quickstart,
   'architecture/architecture-overview': archOverview,
+  'architecture/event-sourcing': eventSourcing,
   'architecture/cqrs-projections': cqrs,
   'architecture/domain-modeling': domain,
   'architecture/temporal-workflows': temporal,
@@ -53,6 +57,7 @@ const docsMap: Record<string, string> = {
   'reflections/note-observability': noteObs,
   'reflections/note-temporal-workflows': noteTemporal,
   'reflections/note-testing-strategies': noteTesting,
+  'reflections/event-sourcing-take': eventSourcingTake,
 };
 
 //codebox support

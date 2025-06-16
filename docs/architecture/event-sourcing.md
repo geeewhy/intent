@@ -8,6 +8,47 @@ Event Sourcing is a fundamental architectural pattern in Intent. Instead of stor
 
 In traditional CRUD systems, you might update a record directly in a database. With event sourcing, you instead record the fact that a change occurred as an event, and then derive the current state by processing all events.
 
+For a deeper exploration, see my [additional reflection on event sourcing](../reflections/event-sourcing-take.md) or explore the foundational work of **Greg Young**, who pioneered and popularized this pattern, along with [CQRS](../reflections/note-cqrs-projections.md).
+
+## Benefits of Event Sourcing in Intent
+
+Event sourcing provides several key benefits in the Intent architecture:
+
+1. **Complete Audit Trail**: Every change is recorded as an event, providing a complete history of all changes to the system.
+
+2. **Temporal Queries**: The ability to determine the state of the system at any point in time by replaying events up to that point.
+
+3. **Event Replay**: The system can be rebuilt by replaying events, which is useful for testing, debugging, and creating new projections.
+
+4. **Separation of Concerns**: Clear separation between write and read models (CQRS), allowing each to be optimized independently.
+
+5. **Business Insight**: Events represent business activities and can be analyzed to gain insights into system usage and behavior.
+
+## Challenges and Mitigations
+
+Event sourcing also presents some challenges, which Intent addresses:
+
+1. **Performance**: Loading aggregates requires replaying events, which can be slow for aggregates with many events.
+   - **Mitigation**: Intent uses snapshots to optimize loading time.
+
+2. **Schema Evolution**: Handling changes to event schemas over time.
+   - **Mitigation**: Intent supports upcasting for both events and snapshots.
+
+3. **Eventual Consistency**: Read models may lag behind the event store.
+   - **Mitigation**: Temporal workflows ensure reliable processing of events to projections.
+
+4. **Complexity**: Event sourcing adds complexity compared to traditional CRUD approaches.
+   - **Mitigation**: Intent provides a structured framework and clear patterns to manage this complexity.
+
+## Integration with Other Patterns
+
+Event sourcing in Intent integrates with several other architectural patterns:
+
+1. **CQRS**: Events from the event store are projected to read models for querying.
+2. **Domain-Driven Design**: Events represent domain concepts and are used to rebuild aggregates.
+3. **Temporal Workflows**: Complex processes are orchestrated using events and commands.
+4. **Observability**: Events provide a basis for system monitoring and tracing.
+
 ## Event Structure
 
 Events in Intent are defined by the `Event` interface in `src/core/contracts.ts`:
@@ -199,41 +240,3 @@ Similar to events, snapshots also need to handle schema changes. Intent supports
 2. When loading a snapshot with an older schema version, the system upcasts it to the current version
 3. This is implemented in the `applySnapshotState` method of `BaseAggregate`
 
-## Benefits of Event Sourcing in Intent
-
-Event sourcing provides several key benefits in the Intent architecture:
-
-1. **Complete Audit Trail**: Every change is recorded as an event, providing a complete history of all changes to the system.
-
-2. **Temporal Queries**: The ability to determine the state of the system at any point in time by replaying events up to that point.
-
-3. **Event Replay**: The system can be rebuilt by replaying events, which is useful for testing, debugging, and creating new projections.
-
-4. **Separation of Concerns**: Clear separation between write and read models (CQRS), allowing each to be optimized independently.
-
-5. **Business Insight**: Events represent business activities and can be analyzed to gain insights into system usage and behavior.
-
-## Challenges and Mitigations
-
-Event sourcing also presents some challenges, which Intent addresses:
-
-1. **Performance**: Loading aggregates requires replaying events, which can be slow for aggregates with many events.
-   - **Mitigation**: Intent uses snapshots to optimize loading time.
-
-2. **Schema Evolution**: Handling changes to event schemas over time.
-   - **Mitigation**: Intent supports upcasting for both events and snapshots.
-
-3. **Eventual Consistency**: Read models may lag behind the event store.
-   - **Mitigation**: Temporal workflows ensure reliable processing of events to projections.
-
-4. **Complexity**: Event sourcing adds complexity compared to traditional CRUD approaches.
-   - **Mitigation**: Intent provides a structured framework and clear patterns to manage this complexity.
-
-## Integration with Other Patterns
-
-Event sourcing in Intent integrates with several other architectural patterns:
-
-1. **CQRS**: Events from the event store are projected to read models for querying.
-2. **Domain-Driven Design**: Events represent domain concepts and are used to rebuild aggregates.
-3. **Temporal Workflows**: Complex processes are orchestrated using events and commands.
-4. **Observability**: Events provide a basis for system monitoring and tracing.
