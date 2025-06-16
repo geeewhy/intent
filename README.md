@@ -43,7 +43,7 @@ Current target use cases: high-fidelity, multi-tenant, event-sourced backends wi
 **Intent** is more than a framework. It’s an event-sourced CQRS reference platform. Designed from first principles for simplicity and developer velocity in multi-tenant TypeScript backends.
 
 * **Reference Architecture:**
-  Strict hexagonal boundaries, ports/adapters separation, and vertical slicing, [DCB](https://dcb.events/) ready. Every workflow and projection is testable, composable, and observable. Patterns align with the latest event modeling literature -- no magic, no leaks.
+  Strict hexagonal boundaries, ports/adapters separation, and vertical slicing, [DCB](https://dcb.events/)-aligned. Every workflow and projection is testable, composable, and observable. Patterns align with the latest event modeling literature -- no magic, no leaks.
 
 * **Built for Safety and Evolution:**
   Automated RLS policy generation, drift detection and repair, snapshotting, and schema upcasting are not afterthoughts -- they are part of the platform’s DNA. CI lints, policy gates, and repair tools keep safety guardrails up as you move fast.
