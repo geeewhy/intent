@@ -26,7 +26,7 @@ To derive the current quantity, the application starts from zero and **applies e
 2. **Apply events one by one.**  
 3. **Arrive at the current state.**  
 
-The ordered list of events for a single entity (e.g., an order or a product) is often called an **event stream**.
+The ordered list of events for a single entity (e.g., an order or a product) is often called an **event stream**. Performance implifications are mitigated by snapshots. Drift in events mitigated by schema upcasting, a commmon pattern in event-driven systems or any system that relies on contracts.
 
 ## Benefits of Event Sourcing
 - **Complete history & audit trail:** Every change is recorded, making it easy to trace how and why something reached its current state.  
@@ -91,7 +91,17 @@ Projections (read models) interpret and **summarize event history into current s
 - CRUD systems overwrite data and lose reasoning over time.  
 - Event Sourcing **captures what happened, in what order, and why** -- enabling retrospective analysis, auditability, and richer business insights.  
 - The combination of **immutable facts + domain reasoning + understanding layers** makes Event Sourcing a true knowledge-centric architecture.
+- Both approaches have their place in system design, the right choice depends on your specific domain requirements, team expertise, and the importance of historical context to your business processes.
+- Hybrid approaches often provide the best of both worlds: using Event Sourcing for core business entities where history matters most, while employing CRUD for supporting entities where direct state access and atomic WRITE-READs are more valuable than complete history.
 
 #### Closing notes: Addressing the Complexity in Systems
 
 Event Sourcing requires deliberate structure but that doesn’t make CRUD simpler by default. CRUD systems often start lightweight but become convoluted as business logic grows. Implicit workflows, scattered conditionals, and cross-cutting concerns creep in, turning diagrams into dense webs of interactions. The simplicity is superficial: data is overwritten, intent is lost, and tracing why something happened becomes difficult. Event Sourcing embraces complexity upfront to make behavior explicit, reproducible, and evolvable.
+
+1. **Implicit vs. Explicit Knowledge**: When a system doesn't explicitly capture the "why" behind changes (intent), this knowledge often exists only in developers' minds or external documentation. As team members change or time passes, this context gets lost, making future changes riskier and more complex.
+2. **Debugging Challenges**: Without clear intent captured in the system, diagnosing issues becomes archaeological work - examining database snapshots and logs without understanding the business processes that led to the current state.
+3. **Compensating Mechanisms**: As CRUD systems grow, teams often add workarounds to capture some aspects of history and intent - like audit tables, change logs, or state transition tables. These compensating mechanisms add accidental complexity that wasn't in the original design.
+4. **Scattered Logic**: Without a clear model of business events and intent, logic that should be cohesive often gets distributed across multiple update operations, controllers, and services, making it harder to understand the system as a whole.
+5. **Cross-cutting Concerns**: Features like auditing, compliance, and analytics become increasingly difficult when intent isn't captured, leading to duplicate logic and inconsistent implementations.
+
+Event Sourcing addresses these challenges by making complexity explicit from the beginning - trading upfront design effort for long-term clarity, traceability, and evolvability. Rather than hiding complexity that will inevitably emerge, it provides a structure to manage it from the outset.

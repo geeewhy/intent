@@ -14,19 +14,19 @@
 
 ## Highlights
 
-| Capability                      | What it gives you                                                                                                                                                                                                                                                                                                        |
-|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Lossless backend processing** | Event-sourced core guarantees no data loss, even under retries, crashes, or partial failures. Structure follows DDD. Every command, event, and projection is persisted and replayable.<br/><sub>[Here's an explanation and some takeaways](docs/event-sourcing-take.md)</sub>                                            |
-| **Ports-first hexagon**         | Technology-agnostic core logic. Adapters for PostgreSQL (event store + RLS) and Temporal (workflows) plug in via explicit, testable ports.<br/><sub>[What’s a hexagonal architecture](https://en.wikipedia.org/wiki/Hexagonal_architecture_(software))</sub>                                                             |
-| **Tenant isolation by default** | Tenant IDs propagate edge → core → infra. Row isolation in DB and namespaced workflows prevent accidental cross-tenant access or leaks. <br/><sub>[See what, why and how it is implemented in Intent](docs/multi-tenancy.md)</sub>                                                                                       |
-| **Self-healing infra bootstrap** | Unified CLI flow runner sets up eventstore, scheduler, and projections interactively or in CI -- zero manual scripting, clear test feedback, and easily extendable for new providers.                                                                                                                                    |
-| **Built-in authorization** | Each projection declares access rules in metadata; they are compiled into Postgres RLS policies. CI linter blocks insecure access before it ships.                                                                                                                                                                       |
-| **Production-grade observability** | Unified structured logging with context-aware `LoggerPort`, customizable log levels, and error serialization. OpenTelemetry spans wrap all key flows; logs and traces correlate via causation/correlation IDs. Logging behavior tunable via `.env` for local vs production.                                              |
-| **Workflow-native execution**   | Commands and events are processed in durable Temporal workflows → supports back-pressure, retries, and exactly-once delivery at the source of truth.                                                                                                                                                                     |
+| Capability                      | What it gives you                                                                                                                                                                                                                                                                                              |
+|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Lossless backend processing** | Event-sourced core guarantees no data loss, even under retries, crashes, or partial failures. Structure follows DDD. Every command, event, and projection is persisted and replayable.<br/><sub>[Here's an explanation and following code](docs/architecture/event-sourcing.md)</sub>                          |
+| **Ports-first hexagon**         | Technology-agnostic core logic. Adapters for PostgreSQL (event store + RLS) and Temporal (workflows) plug in via explicit, testable ports.<br/><sub>[Read more on architecture reasoning](docs/reflections/index.md)</sub>                                                                                     |
+| **Tenant isolation by default** | Tenant IDs propagate edge → core → infra. Row isolation in DB and namespaced workflows prevent accidental cross-tenant access or leaks. <br/><sub>[See what, why and how it is implemented in Intent](docs/architecture/multi-tenancy.md)</sub>                                                                |
+| **Self-healing infra bootstrap** | Unified CLI flow runner sets up eventstore, scheduler, and projections interactively or in CI -- zero manual scripting, clear test feedback, and easily extendable for new providers.                                                                                                                          |
+| **Built-in authorization** | Each projection declares access rules in metadata; they are compiled into Postgres RLS policies. CI linter blocks insecure access before it ships.                                                                                                                                                             |
+| **Production-grade observability** | Unified structured logging with context-aware `LoggerPort`, customizable log levels, and error serialization. OpenTelemetry spans wrap all key flows; logs and traces correlate via causation/correlation IDs. Logging behavior tunable via `.env` for local vs production.                                    |
+| **Workflow-native execution**   | Commands and events are processed in durable Temporal workflows → supports back-pressure, retries, and exactly-once delivery at the source of truth.                                                                                                                                                           |
 | **Full-circle event governance** | Events flow from command → event → projection → saga with full traceability. Snapshot-aware loading and event upcasting support long-lived schemas and backward compatibility. See [ADR-017](ADRs/017-event-upcasting.md) and [ADR-010](ADRs/010-snapshot-upcasting.md) for snapshot implementation and upcasting rules. |
-| **Projection drift protection** | Tools detect schema drifts vs. history and auto-generate repair plans. Avoids full rebuilds, supports CI failure gating and controlled rewinds.                                                                                                                                                                          |
-| **Schema evolution support**    | Events are immutable, but projections and snapshots are versioned. Upcasters evolve event formats safely without breaking consumers.                                                                                                                                                                                     |
-| **Tooling for velocity**        | Includes drift scanner, RLS linter, interactive setup runner, and a DevX-UI companion with event stream viewer and command issuer to ensure reproducibility and rapid local debugging. See [tools](src/tools/README.md) and [DevX](devex-ui/README.md)                                                                   |
+| **Projection drift protection** | Tools detect schema drifts vs. history and auto-generate repair plans. Avoids full rebuilds, supports CI failure gating and controlled rewinds.                                                                                                                                                                |
+| **Schema evolution support**    | Events are immutable, but projections and snapshots are versioned. Upcasters evolve event formats safely without breaking consumers.                                                                                                                                                                           |
+| **Tooling for velocity**        | Includes drift scanner, RLS linter, interactive setup runner, and a DevX-UI companion with event stream viewer and command issuer to ensure reproducibility and rapid local debugging. See [tools](src/tools/README.md) and [DevX](devex-ui/README.md)                                                         |
 
 Deep-dives: [Reflections](docs/reflections/index.md) · [ADRs](ADRs/) · [Current state](docs/current.md) · [Roadmap](docs/next.md)
 
@@ -59,7 +59,7 @@ Current target use cases: high-fidelity, multi-tenant, event-sourced backends wi
 
 ### DevX-UI Demo
 
-You can see the demo at https://intent-demo.heart.dev
+You can see the demo at https://intent.heart.dev
 
 ---
 
@@ -241,13 +241,9 @@ docker/
 
 ## License
 
-[//]: # (We’ve open-sourced it early to align with the community and grow it in the open.)
-OSS licensing is under consideration. Until an explicit license is published, you may not use, copy, modify, distribute, or deploy this code in any production, commercial, or public context.
+Open-sourced it early to align with the community and grow it in the open.
 
 ⚠️ Intent is not a product. It’s a developer-first reference implementation of modern event-sourcing patterns with a clear architectural spine. Hosted/cloud support, multi-backend support, and full admin UI are on the roadmap.
 
-Until further notice;
-All rights reserved © DevHeart Technologies Inc.
-
-[//]: # (> Licensed under AGPL-3.0. Commercial licenses available. See [LICENSE]&#40;./LICENSE&#41;.)
-[//]: # (> By contributing, you agree to the [Contributor License Agreement]&#40;./CONTRIBUTOR_LICENSE_AGREEMENT.md&#41;.)
+> Licensed under AGPL-3.0. Commercial licenses available. See [LICENSE](./LICENSE).
+> By contributing, you agree to the [Contributor License Agreement](./CONTRIBUTOR_LICENSE_AGREEMENT.md).
