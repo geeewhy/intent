@@ -16,7 +16,7 @@ import {
 import {cn} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
 
-/* ─────────────────────── Types / constants ────────────────────── */
+// types
 
 type View = string;
 
@@ -31,6 +31,9 @@ interface NavItem {
     icon: React.ElementType;
     children?: { id: string; label: string }[];
 }
+
+// static nav
+// todo glob sync
 
 const NAV_ITEMS: NavItem[] = [
     {
@@ -101,8 +104,7 @@ const findParentSection = (pageId: string): string | null => {
     return null;
 };
 
-/* ───────────────────────── component ───────────────────────────── */
-
+// -- component
 export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
     const navigate = useNavigate();
     const {pathname} = useLocation();
