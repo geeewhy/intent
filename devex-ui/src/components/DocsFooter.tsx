@@ -1,3 +1,4 @@
+//devex-ui/src/components/DocsFooter.tsx
 import { Copyright } from 'lucide-react';
 
 export const DocsFooter = () => {

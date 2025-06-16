@@ -1,3 +1,4 @@
+//devex-ui/src/config/apiMode.ts
 // Determine API mode with cascade:
 // 1. URL param: ?apiMode=mock|real
 // 2. localStorage: api_mode

@@ -1,3 +1,4 @@
+//devex-ui/src/hooks/ws/useEventStream.ts
 import { useEffect } from 'react';
 import { isMock } from '@/config/apiMode';
 import { createEventStream } from '@/mocks/stores/event.store';
