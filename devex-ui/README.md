@@ -4,7 +4,7 @@ A developer side-panel for simulating and inspecting event-sourced systems. Supp
 
 ## Demo
 
-You can see it in action at: https://intent-demo.heart.dev/
+You can see it in action at: https://intent.heart.dev/devx
 
 ## Features
 
