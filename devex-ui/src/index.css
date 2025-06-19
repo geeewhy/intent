@@ -123,3 +123,28 @@ code[class*="language-typescript"] {
   border-right: 1px solid #404040;
 }
 
+pre {
+  border-radius: 5px;
+  background-color: #0d0d23 !important;
+}
+pre div:has(> svg[class*="flowchart"]) {
+  background-color: #111329;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+pre div:has(> svg[class*="flowchart"]) > svg {
+  max-width: 100%;
+  height: auto;
+}
+
+svg[class*="flowchart"] g.default > rect {
+  rx: 3px;
+  ry: 3px;
+}
+
+svg[class*="flowchart"] foreignObject > div {
+  border-radius: 3px;
+}

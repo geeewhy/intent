@@ -30,17 +30,17 @@ The flowchart below shows how data flows from user actions through command proce
 
 ```mermaid
 flowchart TB
-  UI["UI"]
-  APIGW["API GW / BFF / Edge"]
+  UI["Your UI"]
+  APIGW["Your API<br>(API GW / BFF / Edge)"]
   Projections(["Read Only<br>Projections"])
   Core["Core<br><code>Contains domains,<br/>handles Cmds, serves Events<br>builds PM, Saga and<br/> Projection plans</code>"]
   Workflow["Infra:<br><code>Process Workflows<br>Persist Events<br>Snapshot Aggregates</code>"]
   Router["Workflow Router"]
-  Activities["Side effect activities:<br><code>Load Aggregate</code><br><code>Apply Event</code><br><code>DispatchCommand<br>updateProjection</code>"]
+  Activities["Side effect activities:<br><code>Load Aggregate</code><br><code>Apply Event</code><br><code>DispatchCommand<br>updateProjection<br>---<br>Your activities:<br>Send emails,<br>Call LLMs,<br>...</code>"]
 
   APIGW -->|sync projections| UI
   UI -->|send commands| APIGW
-  APIGW -->|relay commands| Router
+  APIGW -->|"Scheduler.schedule(command)"| Router
   APIGW ---|stream projections| Projections
 
   Projections ---|build projections| Workflow
