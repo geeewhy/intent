@@ -1,58 +1,80 @@
 # Introduction to Intent
 
-Intent is a pragmatic, ports-first reference platform for multi-tenant, event-sourced CQRS back-ends powered by TypeScript and [Temporal](https://github.com/temporalio/temporal) for durable workflow execution. It turns event-sourcing theory into a platform you can demo in five minutes.
+**Intent** is your fast lane to building reliable, testable, multi-tenant backends in TypeScript-- powered by [Temporal](https://github.com/temporalio/temporal), CQRS, and event sourcing. It’s not a framework. It’s a **reference architecture** that doesn't just tell you what to do-- it shows you, tests it, and lints your mistakes before you ship them to production.
 
-## Who is it for?
+You can go from `git clone` to a running, observable, multi-tenant event-sourced system in under five minutes. That’s not marketing -- it’s a challenge.
 
-Intent is designed for developers building high-fidelity, multi-tenant backends with complex business logic. It's particularly well-suited for:
+---
 
-- AI orchestration systems
-- Financial applications
-- Manufacturing industries
-- Async-heavy workflows
-- SaaS platforms
-- High-complexity business domain applications
+## Who It's For
 
-Here's a comparison and perspective of Event Sourcing, the model behind Intent and traditional CRUD.
+You’re juggling complex domains. Maybe you’re:
 
-## Core Design Principles
+- Building SaaS with user-specific logic and strict data boundaries
+- Orchestrating AI/ML pipelines that fail if a single message drops
+- Writing backends where auditability, evolution, and traceability aren’t optional
+- Tired of explaining what happened when all you have is a `status = failed` row
+- Don't want to look at yet another cronjob-triggered endpoint
+ 
+Intent is for **engineers who want explicit architecture**, clean separation of concerns, and the safety net of repeatable patterns.
 
-Intent is built on several modern software design patterns:
+---
 
-- **Domain-Driven Design (DDD)**: The codebase is organized around the business domain, with clear separation between core domain logic and infrastructure concerns.
-- **Event Sourcing**: The system uses events as the source of truth, storing all changes to the application state as a sequence of events.
-- **Command Query Responsibility Segregation (CQRS)**: Commands (write operations) and queries (read operations) are separated, with different models for writing and reading data.
-- **Hexagonal Architecture**: Technology-agnostic core logic with adapters for infrastructure that plug in via explicit, testable ports.
-- **Multi-tenancy**: The system is designed to support multiple tenants, with tenant isolation at various levels.
+## What You Get
 
-## Key Capabilities
+| Feature                           | What it Does                                                                                                          |
+|-----------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| 🧱 **Event-sourced core**         | Write logic as pure command/event flows with replayable, versioned state. No mystery mutations.                       |
+| 🧠 **Policy-first multi-tenancy** | Row-level isolation, namespaced workflows, and JWT-based enforcement-- baked in.                                      |
+| 🔐 **Fine Grained Security**      | Define access policies once; Intent generates Postgres policies enforcing Row Level Security, lints violations in CI. |
+| 🌀 **Workflow orchestration**     | Durable workflows, retries, and exactly-once command processing at the source of truth.                               |
+| 🔍 **Observability baked in**     | OpenTelemetry spans + structured logging + DevX UI = no more wondering what just happened.                            |
 
-| Capability                          | What it gives you |
-|-------------------------------------|-------------------|
-| **Lossless backends**               | Guarantees no data loss, even under retries, crashes, or partial failures. Every command, event, and projection is persisted and replayable. |
-| **Built-in multi-tenant isolation** | Tenant IDs propagate edge → core → infra. Row isolation in DB and namespaced workflows prevent accidental cross-tenant access or leaks. |
-| **Automatic RLS enforcement**       | Each projection declares access rules in metadata; they are compiled into Postgres RLS policies. CI linter blocks insecure access before it ships. |
-| **Temporal workflow orchestration** | Commands and events are processed in durable Temporal workflows → supports back-pressure, retries, and exactly-once delivery at the source of truth. |
-| **Observability**                   | Unified structured logging with context-aware `LoggerPort`, customizable log levels, and error serialization. OpenTelemetry spans wrap all key flows; logs and traces correlate via causation/correlation IDs. |
+---
 
-## Key Terminology
+## Intent: In Plain Language
 
-Intent uses several key concepts that are central to its architecture:
+Intent systems are built around a simple idea:
 
-- **Commands**: Represent an intent to change the system state.
-- **Events**: Records of things that have happened in the system.
-- **Aggregates**: Clusters of domain objects treated as a single unit for data changes.
-- **Sagas**: Orchestrate complex business processes.
-- **Projections**: Update read models based on events.
+> *What if the system always remembered what happened, why it happened, and how to reason about it-- forever?*
 
-These concepts will be covered in more depth in later sections of the documentation.
+We treat **commands** as the source of intent, **events** as the record of fact, and **aggregates** as the interpreters of meaning. Instead of stuffing logic into services and routes, you build small, testable units of domain logic with full context and traceability.
 
-## Why Intent?
+---
 
-Intent is more than a framework. It's an event-sourced CQRS reference platform designed from first principles for simplicity and developer velocity in multi-tenant TypeScript backends.
+## Core Principles
 
-- **Reference Architecture**: Strict hexagonal boundaries, ports/adapters separation, and vertical slicing. Every workflow and projection is testable, composable, and observable.
-- **Built for Safety and Evolution**: Automated RLS policy generation, drift detection and repair, snapshotting, and schema upcasting are not afterthoughts -- they are part of the platform's DNA.
-- **Full-Stack Dev Experience**: The DevX companion UI, CLI flows, and local-first patterns make simulating, debugging, and evolving your event-sourced system immediate and visual.
-- **Multi-Tenant and Policy-First**: Tenant isolation and access policies are enforced from edge to core to database -- by design, not convention.
-- **Transparent, Documented, and Extensible**: Every architectural decision is captured in living ADRs. The codebase is structured for clarity, modification, and onboarding.
+Intent follows the tried-and-tested patterns-- just without drowning you in theory:
+
+- **DDD (Domain-Driven Design)** - Code structured around business logic, not HTTP handlers
+- **Event Sourcing** - Events are your source of truth. Snapshots optional.
+- **CQRS** - Separate write models from read models. Scale them independently.
+- **Hexagonal Architecture** - All core logic is tech-agnostic and testable. Infra plugs in via explicit ports.
+- **Multi-Tenancy** - Every layer-- from JWT to projections-- enforces tenant isolation by design.
+- **Security by Design** - Tenant isolation, access control, and data boundaries are enforced from domain logic to database—no afterthoughts, no shortcuts.
+---
+
+## Key Concepts
+
+You’ll see these everywhere:
+
+- **Command** - An action a user or system wants to take
+- **Event** - A factual record of what actually happened
+- **Aggregate** - The source of truth for one piece of state
+- **Saga** - A long-running business process that spans multiple commands
+- **Projection** - A read model updated by events, optimized for querying
+
+---
+
+## Why This Exists
+
+Because frankly, writing multi-tenant backends is a minefield.  
+Intent helps you:
+
+- Avoid accidental cross-tenant data leaks
+- Stop guessing what happened when things go wrong
+- Test, observe, and evolve systems (except Sundays)
+- Understand your business logic as a readable graph of facts-- not a blob of side effects
+- Ship a complete event-sourced system without duct-taping 50 libraries together
+
+<sub>disclaimer: all emdashes are converted to poor dev's emdashes.</sub>

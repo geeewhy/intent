@@ -1,33 +1,38 @@
 # Tools
 
-This directory contains various tools for managing and configuring the platform.
+This directory contains tools for managing infrastructure, enforcing consistency, and improving developer experience across the Intent platform.
 
-## Backend Tools
+## Backend Utilities
 
-| Tool                                                             | Description                                                                                 |
+These tools help you manage event-sourced infrastructure, detect and fix projection issues, and enforce access policies in CI.
+
+| Tool                                                             | Purpose                                                                                     |
 |------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| [Setup Tool](setup/README.md)                                    | Setup CLI for managing and configuring infrastructure.                                      |
-| [Projection Drift Check Tool](projections-drift-check/README.md) | Checks for drift between projection definitions in code and actual database tables.         |
-| [Projection Repair Tool](projections-repair/README.md)           | Repairs drift between projection definitions in code and actual database tables.            |
-| [Projection RLS Policy Linter](projections-lint/README.md)       | Validates the structure, completeness, and correctness of all ReadAccessPolicy definitions. |
-| [Core Domain Linter](core-lint/README.md)                        | Validates that all commands declare routing, and all role-based policies register their required roles. |
+| [Setup Tool](setup/README.md)                                    | Bootstrap or update your event store and infrastructure with a modular CLI.                |
+| [Projection Drift Checker](projections-drift-check/README.md)    | Detect mismatches between projection definitions and actual database schemas.              |
+| [Projection Drift Repairer](projections-repair/README.md)        | Auto-generate fixes for schema drift without nuking production tables.                     |
+| [RLS Policy Linter](projections-lint/README.md)                  | Ensure all projections define valid ReadAccessPolicies with no missing roles or coverage.  |
+| [Core Domain Linter](core-lint/README.md)                         | Validate that all commands are routable and role policies register the roles they require. |
+
+Each tool has its own README with usage examples and integration notes.
 
 ## DevX-UI
 
-In addition to the backend tools, we provide a Developer Experience UI (DevX-UI) for simulating and inspecting event-sourced systems. The DevX-UI is located in the `devex-ui` directory at the root of the project.
+In addition to CLI tools, Intent includes a **Developer Experience UI (DevX-UI)** for inspecting and simulating your event-sourced system. It lives in the `devex-ui` directory at the project root.
 
-### DevX-UI Features
+### Key Features
 
-- Command issuer to test your flows
-- Event stream viewer with filtering and live updates
-- Trace viewer for causation and correlation flows
-- System metrics panel (commands, events, traces, etc.)
-- Multi-tenant and role context switching
-- Realtime logs on your ops
-- Mock API layer for testing
+- Command issuer to test command handling and trace event flow
+- Live event stream viewer with filtering
+- Trace viewer showing correlation and causation paths
+- System-level metrics: events, commands, traces, workflows
+- Tenant and role simulation with context switching
+- Realtime logs on command execution and projection updates
+- Built-in mock API mode for demoing without backend dependencies
 
-For more information, see the [DevX-UI README](../../devex-ui/README.md).
+See [DevX-UI README](../../devex-ui/README.md) for setup instructions.
 
-## Usage
+## How to Use These Tools
 
-Each tool has its own README with detailed usage instructions. Click on the tool name in the table above to view its documentation.
+Each tool runs independently and has its own CLI entrypoint.  
+For help, usage examples, and CI integration tips, see the linked READMEs above.

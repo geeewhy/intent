@@ -8,6 +8,8 @@
 [![CI](https://github.com/geeewhy/intent/actions/workflows/projection-linter.yml/badge.svg)](https://github.com/geeewhy/intent/actions/workflows/projection-linter.yml)
 [![CI](https://github.com/geeewhy/intent/actions/workflows/devx-ui-build.yml/badge.svg)](https://github.com/geeewhy/intent/actions/workflows/devx-ui-build.yml)
 
+Actively maintained
+
 > **Intent** turns event-sourcing theory into a platform you can demo in five minutes. It’s a pragmatic, ports-first reference for multi-tenant, event-sourced CQRS back-ends powered by TypeScript and uses [Temporal](https://github.com/temporalio/temporal) for durable workflow execution.
 
 ---
@@ -27,8 +29,6 @@
 | **Projection drift protection**             | Tools detect schema drifts vs. history and auto-generate repair plans. Avoids full rebuilds, supports CI failure gating and controlled rewinds.                                                                                                                                                                |
 | **Schema evolution support**                | Events are immutable, but projections and snapshots are versioned. Upcasters evolve event formats safely without breaking consumers.                                                                                                                                                                           |
 | **Tooling for velocity**                    | Includes drift scanner, RLS linter, interactive setup runner, and a DevX-UI companion with event stream viewer and command issuer to ensure reproducibility and rapid local debugging. See [tools](src/tools/README.md) and [DevX](devex-ui/README.md)                                                         |
-
-Deep-dives: [Reflections](docs/reflections/index.md) · [ADRs](ADRs/) · [Current state](docs/current.md) · [Roadmap](docs/next.md)
 
 ---
 
@@ -216,6 +216,20 @@ docker/
   infra/compose.yaml  ← Postgres + Temporal services
 ```
 
+## See Also
+
+- [Architecture Overview](docs/reflections/index.md)  
+  A guided walk through Intent’s hexagonal structure, CQRS patterns, and why it was built this way.
+- [ADR Index](ADRs/)  
+  All architectural decisions made explicit. Design rationale with no hand-waving.
+- [DevX UI Docs](devex-ui/README.md)  
+  Explore commands, projections, and traces in real time through the browser companion.
+- [Tools Index](src/tools/README.md)  
+  CLI and CI tooling for projection drift, RLS enforcement, and setup flows.
+- [Roadmap](docs/next.md)  
+  Upcoming features, enhancements, and goals for scaling Intent beyond the reference model.
+
+
 ---
 
 ## Contributing
@@ -227,17 +241,10 @@ docker/
 
 ---
 
-[//]: # (## Growing ecosystem)
+Got questions or want to share what you're building with Intent?  
+Use the [Discussions tab](https://github.com/geeewhy/intent/discussions).
 
-[//]: # (- **📚 Docs site** – richer guides and ADR index *&#40;coming soon at intent.heart.dev&#41;*)
-
-[//]: # (- **🧑‍💻 Sample apps** – see [`intent-samples`]&#40;https://github.com/geeewhy/intent-samples&#41; for a multi-tenant Food Delivery app demo)
-
-[//]: # (- **📦 VS Code snippets** – install `intent-es-snippets` for boilerplate aggregate/command/event files)
-
-[//]: # (- **💬 Community chat** – join `#intent` on the **Event Sourcing Community** Slack &#40;contact `gy` at `heart` dot `dev` for invite&#41;)
-
-[//]: # (- **🛠 Third-party adapters** – early adapters for Kurrent/EventStore, MongoDB event store, AWS SNS/SQS and Kafka Consumer/Producer transports)
+---
 
 ## License
 
@@ -246,4 +253,5 @@ Open-sourced it early to align with the community and grow it in the open.
 ⚠️ Intent is not a product. It’s a developer-first reference implementation of modern event-sourcing patterns with a clear architectural spine. Hosted/cloud support, multi-backend support, and full admin UI are on the roadmap.
 
 > Licensed under AGPL-3.0. Commercial licenses available. See [LICENSE](./LICENSE).
+> Other open-source licenses are under consideration.
 > By contributing, you agree to the [Contributor License Agreement](./CONTRIBUTOR_LICENSE_AGREEMENT.md).

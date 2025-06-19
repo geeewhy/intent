@@ -1,8 +1,8 @@
-# Project Structure and Architectural Layers
+# Project Layout and How It All Fits Together
 
 This document explains how the Intent repository is organized and how the architecture is layered.
 
-## Repository Structure
+# Inside the Intent Codebase
 
 The Intent project follows a structured organization that reflects its architectural principles:
 
@@ -24,7 +24,34 @@ The Intent project follows a structured organization that reflects its architect
 └── temporal-config/            # Dynamic config for local Temporal
 ```
 
-## Architectural Layers
+## How it is wired
+
+The flowchart below shows how data flows from user actions through command processing, workflows, and projections aka. read model updates.
+
+```mermaid
+flowchart TB
+  UI["UI"]
+  APIGW["API GW / BFF / Edge"]
+  Projections(["Read Only<br>Projections"])
+  Core["Core<br><code>Contains domains,<br/>handles Cmds, serves Events<br>builds PM, Saga and<br/> Projection plans</code>"]
+  Workflow["Infra:<br><code>Process Workflows<br>Persist Events<br>Snapshot Aggregates</code>"]
+  Router["Workflow Router"]
+  Activities["Side effect activities:<br><code>Load Aggregate</code><br><code>Apply Event</code><br><code>DispatchCommand<br>updateProjection</code>"]
+
+  APIGW -->|sync projections| UI
+  UI -->|send commands| APIGW
+  APIGW -->|relay commands| Router
+  APIGW ---|stream projections| Projections
+
+  Projections ---|build projections| Workflow
+  Core ---|In: Cmd| Workflow
+  Core ---|Out: Event| Workflow
+  Router -->|start workflows| Workflow
+
+  Workflow --> Activities
+```
+
+## Codebase Layers
 
 Intent follows a hexagonal (ports-and-adapters) architecture, which is reflected in its directory structure. The codebase is organized into three main layers:
 
@@ -42,9 +69,11 @@ Key characteristics:
 - Replay-safe and testable
 - Organized into domain-specific vertical slices (e.g., `system/`, `orders/`)
 
+To see what our aggregate looks like, check out `src/core/system/aggregates/system.aggregate.ts`.
+
 ### 2. Infra (Adapter Layer) - `src/infra/`
 
-The Infra layer provides concrete implementations of the ports defined in the Core layer:
+Infra implements the actual tech, Postgres, Temporal, behind the abstract interfaces defined in Core:
 
 - **PostgreSQL adapters**: Event store and projection implementations
 - **Temporal adapters**: Workflow engine integration
@@ -75,7 +104,7 @@ Multi-tenancy and security are cross-cutting concerns that span all layers of th
 
 - **Tenant ID**: Present in all commands, events, and database tables
 - **Row-Level Security (RLS)**: Enforced at the database level to ensure tenant isolation
-- **Access Control**: Built into projections via metadata that generates RLS policies
+- **Access Control**: Every projection defines its own access rules, enforced at the DB level via RLS and CI linting.
 
 ## Key Directories in Detail
 

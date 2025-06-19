@@ -1,4 +1,4 @@
-# Quickstart Guide
+# Quickstart
 
 This guide will help you get Intent running locally in about 5 minutes.
 
@@ -13,7 +13,7 @@ Before you begin, ensure you have the following tools installed:
 | **Git** | any modern release | Needed to clone the repo. |
 | **Unix-like shell** | bash/zsh/fish | Commands assume a POSIX shell. Windows users can use WSL2 or Git Bash (untested). |
 
-## Step-by-Step Setup
+## Setup Steps
 
 Follow these steps to get Intent running locally:
 
@@ -76,7 +76,12 @@ To interact with your running Intent system, you can use the DevX UI companion:
    npm run dev
    ```
 
-3. Open the UI in your browser (typically at http://localhost:8080), but will use different port if port is occupied. Follow what your console says.
+3. Open the UI in your browser (usually http://localhost:8080). If that port is taken, the terminal will tell you where it landed.
+
+### If it worked, you'll see:
+- Active workflows in the Temporal UI
+- Workers logging incoming commands
+- DevX UI showing real-time event and projection updates
 
 The DevX UI allows you to:
 - Issue test commands
@@ -85,6 +90,9 @@ The DevX UI allows you to:
 - Explore projections
 
 For more details on using the DevX UI, see the [DevX UI documentation](../devx/devx-ui.md).
+
+### If it did not work... 
+**Please do open an issue, so we can fix it for you:** https://github.com/geeewhy/intent/issues
 
 ## Troubleshooting
 
