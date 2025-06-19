@@ -6,7 +6,7 @@ import {DocsHeader} from '@/components/DocsHeader';
 import {DocsSidebar} from '@/components/DocsSidebar';
 import {DocsFooter} from '@/components/DocsFooter';
 
-// ── Markdown imports ────────────────────────────────────────────────
+// -- Markdown imports
 import welcome from '$docs/basics/introduction.md?raw';
 import projectStructure from '$docs/basics/project-structure.md?raw';
 import quickstart from '$docs/basics/quickstart.md?raw';
@@ -33,7 +33,7 @@ import noteTemporal from '$docs/reflections/note-temporal-workflows.md?raw';
 import noteTesting from '$docs/reflections/note-testing-strategies.md?raw';
 import eventSourcingTake from '$docs/reflections/event-sourcing-take.md?raw';
 
-// ── Prism highlight setup ───────────────────────────────────────────
+// -- Prism highlight setup
 import Prism from 'prismjs';
 import 'prismjs/components/prism-typescript';
 import 'prismjs/components/prism-javascript';
@@ -41,7 +41,7 @@ import 'prismjs/themes/prism-tomorrow.css';
 import 'prismjs/plugins/line-numbers/prism-line-numbers';
 import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
 
-// ── Docs lookup table ───────────────────────────────────────────────
+// -- Docs lookup table
 const docsMap: Record<string, string> = {
     /* basics */
     'basics/introduction': welcome,
@@ -99,7 +99,7 @@ const Mermaid = ({chart}: { chart: string }) => {
     return <div ref={ref}/>;
 };
 
-// ── Docs page component ─────────────────────────────────────────────
+// -- Docs page component
 export default function DocsPage() {
     const location = useLocation();
     const slug =
