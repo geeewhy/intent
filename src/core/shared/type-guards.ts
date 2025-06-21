@@ -8,6 +8,7 @@ export function isCommand(input: any): input is Command {
         typeof input.id === 'string' &&
         typeof input.tenant_id === 'string' &&
         typeof input.type === 'string' &&
+        input.payload !== undefined &&
         'payload' in input
     );
 }

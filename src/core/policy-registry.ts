@@ -1,17 +1,16 @@
 //src/core/policy-registry.ts
 import { AccessContext } from './contracts';
 
-export type AccessPolicy = (context: AccessContext) => boolean;
-const conditionMap: Record<string, (args: AccessPolicy) => boolean> = {};
+const conditionMap: Record<string, (ctx: AccessContext) => boolean> = {};
 
-export function registerCondition(name: string, fn: (args: any) => boolean) {
+export function registerCondition(name: string, fn: (args: AccessContext) => boolean) {
     if (conditionMap[name]) {
         throw new Error(`Condition ${name} is already registered`);
     }
     conditionMap[name] = fn;
 }
 
-export function evaluateCondition(name: string, args: any): boolean {
+export function evaluateCondition(name: string, args: AccessContext): boolean {
     const fn = conditionMap[name];
     if (!fn) throw new Error(`Unknown condition: ${name}, conditions available: ${listRegisteredConditions().join(', ')}`);
     return fn(args);

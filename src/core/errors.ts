@@ -5,7 +5,6 @@ export class BusinessRuleViolation extends Error {
     constructor(public readonly message: string, details?: Record<string, unknown>, retryable = false) {
         super(message);
         this.name = 'BusinessRuleViolation'; // must be set AFTER super
-        this.message = message;
 
         // Must set these explicitly on `this`
         this.details = details;
