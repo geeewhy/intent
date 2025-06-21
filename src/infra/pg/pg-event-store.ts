@@ -105,17 +105,22 @@ export class PgEventStore implements EventStorePort {
             let numberEvents = 0;
             for (numberEvents = 0; numberEvents < events.length; numberEvents++) {
                 const evt = events[numberEvents];
+                // todo check with commit assigns path with other ports
+                //  tradeoff: pure core vs source source
+                // Aggregate-assigns / store-asserts (current):
+                //  aggregate sets evt.version
+                //  store double-checks against stream head
+                // Commit-assigns alternative:
+                //  aggregate leaves evt.version undefined
+                //  store computes next = head+1 and sets it
                 const calculatedVersion = expectedVersion + numberEvents + 1;
 
-                // In development mode, assert that the calculated version matches evt.version
-                // we have a model of aggregate assigns, store asserts...
-                // todo check with commit assigns path with other ports
-                // tradeoff pure core vs source source
-                // current lets aggregate do things with version
-                if (process.env.NODE_ENV === 'development') {
-                    if (calculatedVersion !== evt.version) {
-                        throw new Error(`Version mismatch: calculated ${calculatedVersion}, event has ${evt.version}`);
-                    }
+                // blows up early if our in-memory counter drifted
+                // todo imp. requires aggregate to be always latest
+                if (process.env.NODE_ENV !== 'production' && evt.version !== calculatedVersion) {
+                    throw new Error(
+                        `Version mismatch for ${evt.id}: expected ${calculatedVersion}, got ${evt.version}`
+                    );
                 }
 
                 await client.query(
