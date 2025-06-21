@@ -105,7 +105,18 @@ export class PgEventStore implements EventStorePort {
             let numberEvents = 0;
             for (numberEvents = 0; numberEvents < events.length; numberEvents++) {
                 const evt = events[numberEvents];
-                const version = expectedVersion + numberEvents + 1;
+                const calculatedVersion = expectedVersion + numberEvents + 1;
+
+                // In development mode, assert that the calculated version matches evt.version
+                // we have a model of aggregate assigns, store asserts...
+                // todo check with commit assigns path with other ports
+                // tradeoff pure core vs source source
+                // current lets aggregate do things with version
+                if (process.env.NODE_ENV === 'development') {
+                    if (calculatedVersion !== evt.version) {
+                        throw new Error(`Version mismatch: calculated ${calculatedVersion}, event has ${evt.version}`);
+                    }
+                }
 
                 await client.query(
                     `INSERT INTO infra.events (tenant_id, id, aggregate_id, aggregate_type,
@@ -118,7 +129,7 @@ export class PgEventStore implements EventStorePort {
                         aggregateType,
                         evt.type,
                         JSON.stringify(evt.payload),
-                        version,
+                        calculatedVersion,
                         JSON.stringify(evt.metadata ?? {}),
                         evt.metadata?.timestamp ?? new Date(),
                     ],
