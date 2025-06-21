@@ -29,6 +29,18 @@ export abstract class BaseAggregate<TState> {
         this.applyUpcastedSnapshot(upcasted);
     }
 
+    /**
+     * completes decide & execute pattern
+     * As an impure convenience function that executes a command and returns the resulting events.
+     * todo might remove. useful for orchestrators (currently saga) or core tests executing consecutive commands.
+     * @param cmd
+     */
+    execute<C extends Command = Command>(cmd: C): Event[] {
+        const events = this.handle(cmd);
+        this.fold(events);
+        return events;
+    }
+
     fold(events: Event[]) { events.forEach(e => this.apply(e)); }
 
     protected abstract applyUpcastedSnapshot(state: TState): void;

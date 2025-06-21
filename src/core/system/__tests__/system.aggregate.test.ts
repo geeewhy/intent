@@ -147,14 +147,16 @@ describe('SystemAggregate', () => {
             } as ExecuteTestPayload
         };
 
-        const events = systemAggregate.handle(command);
+        const events = systemAggregate.execute(command);
+        //alternatively:
+        //events = systemAggregate.handle(command); (decide)
+        //systemAggregate.fold(events); or .apply(event) (execute)
         expect(events).toHaveLength(1);
         expect(events[0].type).toBe(SystemEventType.TEST_EXECUTED);
         expect(events[0].payload.testId).toBe('test-id');
         expect(events[0].payload.testName).toBe('Test Name');
         expect(events[0].payload.result).toBe('success');
         expect(events[0].payload.numberExecutedTests).toBe(1);
-        systemAggregate.fold(events);
         expect(systemAggregate.numberExecutedTests).toBe(1);
     });
 
