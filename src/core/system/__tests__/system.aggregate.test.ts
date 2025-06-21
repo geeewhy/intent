@@ -154,7 +154,7 @@ describe('SystemAggregate', () => {
         expect(events[0].payload.testName).toBe('Test Name');
         expect(events[0].payload.result).toBe('success');
         expect(events[0].payload.numberExecutedTests).toBe(1);
-        systemAggregate.apply(events[0]);
+        systemAggregate.fold(events);
         expect(systemAggregate.numberExecutedTests).toBe(1);
     });
 

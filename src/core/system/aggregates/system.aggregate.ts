@@ -130,7 +130,6 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
                 causationId: cmd.id,
             }
         );
-        this.apply(event);
         return [event];
     }
 

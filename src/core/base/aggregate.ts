@@ -29,6 +29,8 @@ export abstract class BaseAggregate<TState> {
         this.applyUpcastedSnapshot(upcasted);
     }
 
+    fold(events: Event[]) { events.forEach(e => this.apply(e)); }
+
     protected abstract applyUpcastedSnapshot(state: TState): void;
 
     abstract extractSnapshotState(): TState;
