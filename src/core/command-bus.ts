@@ -76,10 +76,10 @@ export class CommandBus {
     }
 
     const cmdTenant = cmd.tenant_id;
-    const payloadTenant = (cmd.payload as any)?.tenantId;
+    const payloadTenant = (cmd.payload as any)?.tenant_id;
 
     if (payloadTenant && payloadTenant !== cmdTenant) {
-      const err = new Error(`Mismatch between command.tenant_id and payload.tenantId`);
+      const err = new Error(`Mismatch between command.tenant_id and payload.tenant_id`);
       logger?.error('Tenant mismatch', {
         commandTenant: cmdTenant,
         payloadTenant,
