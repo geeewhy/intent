@@ -21,11 +21,11 @@ import {
 import {buildEvent} from '../../shared/event-factory';
 import {isCommandAllowed} from '../../policy-registry';
 import {
-/*
-todo compile time will ignore.
-//    autoRegisteredCommandAccessConditions,
-//    SystemCommandAccessCondition,
-*/
+    /*
+    todo compile time will ignore.
+    //    autoRegisteredCommandAccessConditions,
+    //    SystemCommandAccessCondition,
+    */
     GeneratedSystemCommandConditions
 } from "../command-access";
 
@@ -122,7 +122,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
             this.id,
             this.aggregateType,
             SystemEventType.MESSAGE_LOGGED,
-            this.version,
+            this.version + 1,
             payload,
             {
                 userId: cmd.metadata?.userId,
@@ -150,7 +150,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
                 this.id,
                 this.aggregateType,
                 SystemEventType.MULTI_EVENT_EMITTED,
-                this.version + i,
+                this.version + i + 1,
                 payload,
                 {
                     userId: cmd.metadata?.userId,
@@ -191,7 +191,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
             this.id,
             this.aggregateType,
             SystemEventType.TEST_EXECUTED,
-            this.version,
+            this.version + 1,
             payload,
             {
                 userId: cmd.metadata?.userId,
@@ -225,7 +225,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
             this.id,
             this.aggregateType,
             SystemEventType.RETRYABLE_TEST_EXECUTED,
-            this.version,
+            this.version+1,
             payload,
             {
                 userId: cmd.metadata?.userId,

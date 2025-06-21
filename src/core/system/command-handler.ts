@@ -14,6 +14,6 @@ export class SystemCommandHandler implements CommandHandler<Command<any>> {
         if (!(aggregate instanceof SystemAggregate)) {
             throw new Error(`Expected SystemAggregate but got ${aggregate.constructor.name} for cmd: ${cmd.type}`);
         }
-        return aggregate.handle(cmd);
+        return aggregate.execute(cmd);
     }
 }
