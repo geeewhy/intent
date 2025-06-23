@@ -25,7 +25,7 @@ Follow these steps to get Intent running locally:
 
 2. **Start the required services using Docker**
    ```bash
-   docker compose up -d postgres temporal temporal-ui
+   docker compose up -d postgres
    ```
    This starts PostgreSQL (for the event store) and Temporal (for workflow orchestration).
 
@@ -37,9 +37,9 @@ Follow these steps to get Intent running locally:
 
 4. **Configure environment variables**
    ```bash
-   cp .env.example .env
+   cp .env.local .env
    ```
-   You can edit the `.env` file if you need to customize credentials or other settings.
+   You can edit the `.env` file if you need to customize credentials or other settings. For the first setup, highly recommended to leverage generated credentials.
 
 5. **Start the Temporal workers**
    ```bash
@@ -88,6 +88,17 @@ The DevX UI allows you to:
 - Inspect events
 - View traces
 - Explore projections
+
+### Steps to use DevX locally:
+
+To use it with real data, you'll need to:
+- Configure the DevX UI to connect to your Intent system
+- Issue commands to your system
+
+* Start admin API: `npm run api:admin`
+* Switch to real API: http://localhost:8083/devx/settings
+  * Toggle `Use real API`
+  * Enter your API URL (default http://localhost:3009)
 
 For more details on using the DevX UI, see the [DevX UI documentation](../devx/devx-ui.md).
 
