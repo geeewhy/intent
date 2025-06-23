@@ -7,10 +7,13 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+#libs and autogen
 node_modules
 dist
 dist-ssr
 *.local
+/public/sitemap.xml
+vercel.json
 
 # Editor directories and files
 .vscode/*
