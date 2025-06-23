@@ -82,12 +82,22 @@ Contact: **gy at heart dot dev**
 ```bash
 git clone https://github.com/geeewhy/intent.git
 cd intent
-docker compose up -d postgres temporal temporal-ui
-npm run setup eventstore      # creates schemas, seeds RLS
-cp .env.example .env          # edit creds if needed
+npm install
+POSTGRES_DB=mydb HOST_POSTGRES_PORT=5432 docker-compose -p intentstack up --build 
+npm run setup eventstore      # creates schemas, seeds initial RLS, generates .env
+cp .env.local .env            # edit creds if needed
 npm run dev:worker aggregates # starts the aggregates worker
 npm run dev:worker sagas      # starts the sagas worker
 ````
+
+### To run devx-ui
+
+```
+npm run api:admin
+cd devx-ui
+npm install
+VITE_API_MODE=REAL VITE_API_URL=http://localhost:3001 npm run dev
+```
 
 <details>
   <summary>.env example</summary>

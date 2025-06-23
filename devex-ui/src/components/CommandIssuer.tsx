@@ -146,10 +146,26 @@ export const CommandIssuer = () => {
                     setValidationErrors([]);
                     setInvalidFields(new Set());
                 } else {
-                    const msg =
-                        result.error?.name
+                    let msg;
+
+                    // Handle JSON string errors like {"error":"message"}
+                    if (typeof result.error === 'string') {
+                        try {
+                            const parsedError = JSON.parse(result.error);
+                            if (parsedError.error) {
+                                msg = parsedError.error;
+                            } else {
+                                msg = result.error;
+                            }
+                        } catch {
+                            msg = result.error;
+                        }
+                    } else {
+                        // Handle standard error objects
+                        msg = result.error?.name
                             ? `${result.error.name || 'Error'}: ${result.error.message}`
                             : result.error?.message ?? 'Unknown error';
+                    }
 
                     const details = result.error?.details?.message;
 

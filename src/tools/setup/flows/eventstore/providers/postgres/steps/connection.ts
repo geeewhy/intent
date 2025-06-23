@@ -17,28 +17,69 @@ export default async function step(ctx: FlowCtx): Promise<void> {
   // Get connection parameters
   const connection = await getConnectionParameters(ctx);
 
-  // Create connection pool
+  // First connect to the default 'postgres' database to check if our target database exists
   ctx.logger.info(`Connecting to PostgreSQL at ${connection.host}:${connection.port}`);
-  const pool = new pg.Pool({
+  const adminPool = new pg.Pool({
     host: connection.host,
     port: connection.port,
     user: connection.user,
     password: connection.password,
-    database: connection.database,
+    database: 'postgres', // Connect to default postgres database
   });
 
-  // Test connection
   try {
+    // Check if the target database exists
+    const dbCheckResult = await adminPool.query(
+      'SELECT 1 FROM pg_database WHERE datname = $1',
+      [connection.database]
+    );
+
+    // If database doesn't exist, create it
+    if (dbCheckResult.rowCount === 0) {
+      ctx.logger.info(`Database '${connection.database}' does not exist, creating it...`);
+      await adminPool.query(`CREATE DATABASE ${connection.database}`);
+      ctx.logger.info(`Database '${connection.database}' created successfully`);
+    } else {
+      ctx.logger.info(`Database '${connection.database}' already exists`);
+    }
+
+    // Close the admin connection
+    await adminPool.end();
+
+    // Now connect to the target database
+    const pool = new pg.Pool({
+      host: connection.host,
+      port: connection.port,
+      user: connection.user,
+      password: connection.password,
+      database: connection.database,
+    });
+
+    // Test connection to the target database
     const result = await pool.query('SELECT NOW()');
     ctx.logger.info(`Connected to PostgreSQL: ${result.rows[0].now}`);
+
+    // Check if the infra schema exists
+    const schemaCheckResult = await pool.query(
+      "SELECT 1 FROM information_schema.schemata WHERE schema_name = 'infra'"
+    );
+
+    // If schema doesn't exist, create it
+    if (schemaCheckResult.rowCount === 0) {
+      ctx.logger.info("Schema 'infra' does not exist, creating it...");
+      await pool.query('CREATE SCHEMA infra');
+      ctx.logger.info("Schema 'infra' created successfully");
+    } else {
+      ctx.logger.info("Schema 'infra' already exists");
+    }
+
+    // Store connection pool and parameters in context for use by other steps
+    ctx.vars.pool = pool;
+    ctx.vars.connection = connection;
   } catch (error) {
     ctx.logger.error(`Failed to connect to PostgreSQL: ${(error as Error).message}`);
     throw error;
   }
-
-  // Store connection pool in context for use by other steps
-  ctx.vars.pool = pool;
-  ctx.vars.connection = connection;
 
   ctx.logger.info('Database connection setup complete');
 }
@@ -81,7 +122,7 @@ async function getConnectionParameters(ctx: FlowCtx): Promise<PostgresConnection
       port: 5432,
       user: 'postgres',
       password: 'postgres',
-      database: 'eventstore',
+      database: 'intentdb',
     };
 
     // Validate connection parameters
@@ -96,7 +137,7 @@ async function getConnectionParameters(ctx: FlowCtx): Promise<PostgresConnection
     port: parseInt(await promptText('Port:', '5432'), 10),
     user: await promptText('User:', 'postgres'),
     password: await promptText('Password:', 'postgres'),
-    database: await promptText('Database:', 'eventstore'),
+    database: await promptText('Database:', 'intentdb'),
   };
 
   // Validate connection parameters

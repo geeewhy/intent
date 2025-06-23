@@ -17,14 +17,36 @@ export default async function step(ctx: FlowCtx): Promise<void> {
 
   if (adminExists && testerExists) {
     ctx.logger.info('Both DB users already exist, skipping user creation');
+
+    // Still prompt for passwords even if users exist
+    const adminUser = process.env.LOCAL_DB_ADMIN_USER || 'intent_admin_api';
+    const adminPass = await promptPassword(`Password for existing admin user (${adminUser}):`, () => true);
+    const testerUser = process.env.LOCAL_DB_TEST_USER || 'intent_test_user';
+    const testerPass = await promptPassword(`Password for existing test user (${testerUser}):`, () => true);
+
+    // Update permissions for existing users
+    ctx.logger.info('Updating permissions for existing users...');
+
+    // Permissions for admin
+    await pool.query(`GRANT USAGE ON SCHEMA public, infra TO ${adminUser}`);
+    await pool.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public, infra TO ${adminUser}`);
+    await pool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public, infra GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${adminUser}`);
+
+    // Permissions for tester
+    await pool.query(`GRANT USAGE ON SCHEMA public TO ${testerUser}`);
+    await pool.query(`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${testerUser}`);
+    await pool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO ${testerUser}`);
+
+    ctx.logger.info('Permissions updated for existing users');
+
     ctx.vars.dbUsers = {
       admin: {
-        user: process.env.LOCAL_DB_ADMIN_USER || 'intent_admin_api',
-        password: process.env.LOCAL_DB_ADMIN_PASSWORD || 'adminpassword'
+        user: adminUser,
+        password: adminPass
       },
       tester: {
-        user: process.env.LOCAL_DB_TEST_USER || 'intent_test_user',
-        password: process.env.LOCAL_DB_TEST_PASSWORD || 'testpassword'
+        user: testerUser,
+        password: testerPass
       }
     };
     return;

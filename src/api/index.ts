@@ -8,14 +8,18 @@ import { registerRoutes } from './routes';
 const app = express();
 const PORT = process.env.ADMIN_API_PORT || 3009;
 
-// Allow CORS from localhost origins
+// Allow CORS from any localhost origins
 app.use(cors({
-  origin: [
-    'http://localhost:8080',
-    'http://127.0.0.1:8080',
-    'http://localhost:8081',
-    'http://127.0.0.1:8081',
-  ],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+
+    // Allow any localhost or 127.0.0.1 origin regardless of port
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return callback(null, true);
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));

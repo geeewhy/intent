@@ -14,7 +14,7 @@ import { Logo } from './Logo';
 let tenants = ['0af03580-98d5-4884-96e4-e75168d8b887'];
 
 if (isMock) {
-    tenants = ['tenant-1','tenant-2','tenant-empty'];
+    tenants = ['0af03580-98d5-4884-96e4-e75168d8b887','5948338e-c37e-4a85-8f65-4b0bfbe95163','tenant-empty'];
 }
 
 export const Header = () => {
