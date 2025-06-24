@@ -151,7 +151,13 @@ export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
                 "md:w-64",
                 isSidebarOpen ? "w-64" : "w-0 md:w-64 overflow-hidden md:overflow-visible"
             )}>
-                <nav className="space-y-2 p-4">
+                <nav className={cn(
+                    "space-y-2 p-4",
+                    "transition-all duration-200 delay-100",
+                    isSidebarOpen 
+                        ? "opacity-100 visible" 
+                        : "opacity-0 invisible md:opacity-100 md:visible"
+                )}>
                     {NAV_ITEMS.map(({id, label, icon: Icon, children}) => {
                         const isParentSelected = current === id;
                         const isExpanded = expandedItems[id] || false;
