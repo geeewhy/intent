@@ -9,6 +9,8 @@ import {
     ChevronDown,
     ChevronUp,
     LayoutDashboard,
+    Menu,
+    X,
 } from 'lucide-react';
 import {cn} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
@@ -106,6 +108,7 @@ export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
     const navigate = useNavigate();
     const {pathname} = useLocation();
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const current = viewFromPath(pathname);
 
@@ -127,82 +130,102 @@ export const DocsSidebar = ({onViewChange, activeView}: DocsSidebarProps) => {
         }));
     };
 
+    const toggleSidebar = () => {
+        setIsSidebarOpen(!isSidebarOpen);
+    };
+
     return (
-        <aside className="w-64 transition-all duration-300">
-            <nav className="space-y-2 p-4">
-                {NAV_ITEMS.map(({id, label, icon: Icon, children}) => {
-                    const isParentSelected = current === id;
-                    const isExpanded = expandedItems[id] || false;
-                    const hasChildren = children && children.length > 0;
+        <>
+            {/* Hamburger menu button for mobile */}
+            <button 
+                onClick={toggleSidebar}
+                className="md:hidden fixed top-4 left-4 z-20 p-2 rounded-md bg-gray-800 text-white"
+                aria-label="Toggle sidebar"
+            >
+                {isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
 
-                    return (
-                        <div key={id} className="space-y-1">
-                            <button
-                                onClick={() => {
-                                    if (hasChildren) {
-                                        toggleExpand(id);
-                                    } else {
-                                        navigate(`/docs/${id}`);
-                                    }
-                                    onViewChange?.(id);
-                                }}
-                                className={cn(
-                                    'w-full flex items-center gap-3 px-3 py-2 text-left transition-colors',
-                                    isParentSelected
-                                        ? 'text-blue-500 font-medium'
-                                        : 'text-slate-300 hover:text-white',
+            {/* Sidebar */}
+            <aside className={cn(
+                "transition-all duration-300 fixed md:static top-0 left-0 h-full z-10 bg-gray-900 md:bg-transparent",
+                "md:w-64",
+                isSidebarOpen ? "w-64" : "w-0 md:w-64 overflow-hidden md:overflow-visible"
+            )}>
+                <nav className="space-y-2 p-4">
+                    {NAV_ITEMS.map(({id, label, icon: Icon, children}) => {
+                        const isParentSelected = current === id;
+                        const isExpanded = expandedItems[id] || false;
+                        const hasChildren = children && children.length > 0;
+
+                        return (
+                            <div key={id} className="space-y-1">
+                                <button
+                                    onClick={() => {
+                                        if (hasChildren) {
+                                            toggleExpand(id);
+                                        } else {
+                                            navigate(`/docs/${id}`);
+                                        }
+                                        onViewChange?.(id);
+                                    }}
+                                    className={cn(
+                                        'w-full flex items-center gap-3 px-3 py-2 text-left transition-colors',
+                                        isParentSelected
+                                            ? 'text-blue-500 font-medium'
+                                            : 'text-slate-300 hover:text-white',
+                                    )}
+                                >
+                                    <Icon className="h-5 w-5 flex-shrink-0"/>
+                                    <span className="text-sm font-medium flex-1">{label}</span>
+                                    {hasChildren && (
+                                        isExpanded ?
+                                            <ChevronUp className="h-4 w-4"/> :
+                                            <ChevronDown className="h-4 w-4"/>
+                                    )}
+                                </button>
+
+                                {/* Children items */}
+                                {hasChildren && isExpanded && (
+                                    <div className="ml-8 space-y-1">
+                                        {children.map(child => {
+                                            const isChildSelected = current === child.id;
+                                            return (
+                                                <button
+                                                    key={child.id}
+                                                    onClick={() => {
+                                                        navigate(`/docs/${child.id}`);
+                                                        onViewChange?.(child.id);
+                                                    }}
+                                                    className={cn(
+                                                        "w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors",
+                                                        isChildSelected 
+                                                            ? "text-blue-500 font-medium" 
+                                                            : "text-slate-400 hover:text-white"
+                                                    )}
+                                                >
+                                                    {child.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 )}
-                            >
-                                <Icon className="h-5 w-5 flex-shrink-0"/>
-                                <span className="text-sm font-medium flex-1">{label}</span>
-                                {hasChildren && (
-                                    isExpanded ?
-                                        <ChevronUp className="h-4 w-4"/> :
-                                        <ChevronDown className="h-4 w-4"/>
-                                )}
-                            </button>
+                            </div>
+                        );
+                    })}
 
-                            {/* Children items */}
-                            {hasChildren && isExpanded && (
-                                <div className="ml-8 space-y-1">
-                                    {children.map(child => {
-                                        const isChildSelected = current === child.id;
-                                        return (
-                                            <button
-                                                key={child.id}
-                                                onClick={() => {
-                                                    navigate(`/docs/${child.id}`);
-                                                    onViewChange?.(child.id);
-                                                }}
-                                                className={cn(
-                                                    "w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors",
-                                                    isChildSelected 
-                                                        ? "text-blue-500 font-medium" 
-                                                        : "text-slate-400 hover:text-white"
-                                                )}
-                                            >
-                                                {child.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-
-                {/* Switch to Console button at the bottom */}
-                <div className="pt-4 mt-4">
-                    <Button
-                        onClick={() => navigate('/devx')}
-                        variant="secondary"
-                        className="w-full flex items-center gap-2 justify-start text-slate-300 hover:text-white"
-                    >
-                        <LayoutDashboard className="h-4 w-4"/>
-                        <span>Launch DevX Console</span>
-                    </Button>
-                </div>
-            </nav>
-        </aside>
+                    {/* Switch to Console button at the bottom */}
+                    <div className="pt-4 mt-4">
+                        <Button
+                            onClick={() => navigate('/devx')}
+                            variant="secondary"
+                            className="w-full flex items-center gap-2 justify-start text-slate-300 hover:text-white"
+                        >
+                            <LayoutDashboard className="h-4 w-4"/>
+                            <span>Launch DevX Console</span>
+                        </Button>
+                    </div>
+                </nav>
+            </aside>
+        </>
     );
 };
