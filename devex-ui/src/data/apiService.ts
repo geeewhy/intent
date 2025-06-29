@@ -72,7 +72,7 @@ function normalizeTrace(raw: any) {
     causationId: raw.causationId || raw.causation_id,
     aggregateId: raw.aggregateId || raw.aggregate_id,
     tenantId: raw.tenantId || raw.tenant_id,
-    level: 0
+    level: raw.level ?? 0
   };
 }
 

@@ -17,17 +17,25 @@ const rowToTraceNode = (row: any) => ({
 });
 
 // Helper function to convert a command row to a TraceNode
-const rowToTraceNodeCommand = (row: any) => ({
-  id: row.id,
-  type: 'Command',
-  subtype: row.type,
-  timestamp: row.created_at,
-  correlationId: row.metadata?.correlationId,
-  causationId: undefined,
-  aggregateId: row.payload?.aggregateId,
-  tenantId: row.tenant_id,
-  level: 0
-});
+const rowToTraceNodeCommand = (row: any) => {
+  // Log the raw command row for debugging
+  console.log(`Processing command row:`, JSON.stringify(row, null, 2));
+
+  // Try to get correlationId from different possible locations
+  const correlationId = row.metadata?.correlationId || row.metadata?.['correlationId'] || row.correlationId;
+
+  return {
+    id: row.id,
+    type: 'Command',
+    subtype: row.type,
+    timestamp: row.created_at,
+    correlationId: correlationId,
+    causationId: undefined,
+    aggregateId: row.payload?.aggregateId,
+    tenantId: row.tenant_id,
+    level: 0
+  };
+};
 
 // Helper function to convert a snapshot row to a TraceNode
 const rowToTraceNodeSnapshot = (row: any) => ({
@@ -41,6 +49,50 @@ const rowToTraceNodeSnapshot = (row: any) => ({
   tenantId: row.tenant_id,
   level: 0
 });
+
+// Helper function to assign levels to trace nodes based on causation and snapshot relationships
+const assignLevels = (nodes: any[], edges: any[] = []): any[] => {
+  const idToNode = new Map(nodes.map(n => [n.id, n]));
+  const levels = new Map<string, number>();
+
+  // Create a map of snapshot backlinks (to -> from)
+  const snapshotBacklinks = new Map<string, string>();
+  for (const edge of edges) {
+    if (edge.type === 'snapshot') {
+      snapshotBacklinks.set(edge.to, edge.from);
+    }
+  }
+
+  function computeLevel(id: string): number {
+    if (levels.has(id)) return levels.get(id)!;
+
+    const node = idToNode.get(id);
+    if (!node) {
+      levels.set(id, 0);
+      return 0;
+    }
+
+    const parentId = node.causationId || (snapshotBacklinks.get(node.id) ?? null);
+    if (!parentId || !idToNode.has(parentId)) {
+      levels.set(id, 0);
+      return 0;
+    }
+
+    const parentLevel = computeLevel(parentId);
+    const level = parentLevel + 1;
+    levels.set(id, level);
+    return level;
+  }
+
+  // Compute levels for all nodes
+  nodes.forEach(node => computeLevel(node.id));
+
+  // Return a new array with updated levels
+  return nodes.map(node => ({
+    ...node,
+    level: levels.get(node.id) || 0
+  }));
+};
 
 // Helper function to generate edges between traces
 const generateEdges = (traces: { id: string; type: string; causationId?: string; aggregateId?: string }[]) => {
@@ -95,8 +147,8 @@ router.get('/api/traces/search', async (req, res) => {
     const eventsResult = await client.query(
       `SELECT * FROM infra.event_metadata 
        WHERE id::text ILIKE $1 
-       OR correlation_id ILIKE $1 
-       OR causation_id ILIKE $1 
+       OR correlation_id::text ILIKE $1 
+       OR causation_id::text ILIKE $1 
        OR aggregate_id::text ILIKE $1 
        OR type ILIKE $1
        ORDER BY created_at DESC
@@ -108,7 +160,7 @@ router.get('/api/traces/search', async (req, res) => {
     const commandsResult = await client.query(
       `SELECT * FROM infra.commands 
        WHERE id::text ILIKE $1 
-       OR metadata->>'correlationId' ILIKE $1 
+       OR metadata->>'correlationId'::text ILIKE $1 
        OR type ILIKE $1
        ORDER BY created_at DESC
        LIMIT 25`,
@@ -132,7 +184,13 @@ router.get('/api/traces/search', async (req, res) => {
       ...snapshotsResult.rows.map(rowToTraceNodeSnapshot)
     ];
 
-    res.json(traces);
+    // Generate edges between nodes
+    const edges = generateEdges(traces);
+
+    // Assign proper levels to nodes based on causation and snapshot relationships
+    const tracesWithLevels = assignLevels(traces, edges);
+
+    res.json(tracesWithLevels);
   } catch (error) {
     console.error('Error searching traces:', error);
     res.status(500).json({ error: 'Failed to search traces' });
@@ -152,22 +210,31 @@ router.get('/api/traces/correlation/:correlationId', async (req, res) => {
     // Fetch events with matching correlation_id
     const eventsResult = await client.query(
       `SELECT * FROM infra.event_metadata 
-       WHERE correlation_id = $1
+       WHERE correlation_id::text = $1
        ORDER BY created_at ASC`,
       [correlationId]
     );
 
     // Fetch commands with matching correlationId in metadata
+    // Try different ways the correlationId might be stored
     const commandsResult = await client.query(
       `SELECT * FROM infra.commands 
        WHERE metadata->>'correlationId' = $1
+       OR metadata->>'correlation_id'::text = $1
+       OR id::text = $1
        ORDER BY created_at ASC`,
       [correlationId]
     );
 
+    // Log the raw command results for debugging
+    console.log(`Raw command results for correlationId ${correlationId}:`, JSON.stringify(commandsResult.rows, null, 2));
+
     // Get all events and commands
     const events = eventsResult.rows.map(rowToTraceNode);
     const commands = commandsResult.rows.map(rowToTraceNodeCommand);
+
+    // Log the processed commands for debugging
+    console.log(`Processed commands for correlationId ${correlationId}:`, JSON.stringify(commands, null, 2));
 
     // Extract aggregate IDs from events and commands to fetch relevant snapshots
     const aggregateIds = new Set<string>();
@@ -182,7 +249,7 @@ router.get('/api/traces/correlation/:correlationId', async (req, res) => {
     if (aggregateIds.size > 0) {
       const snapshotsResult = await client.query(
         `SELECT * FROM infra.aggregates 
-         WHERE id = ANY($1)
+         WHERE id::text = ANY($1::text[])
          ORDER BY updated_at DESC`,
         [Array.from(aggregateIds)]
       );
@@ -195,7 +262,16 @@ router.get('/api/traces/correlation/:correlationId', async (req, res) => {
     // Generate edges between nodes
     const edges = generateEdges(traces);
 
-    res.json({ traces, edges });
+    // Assign proper levels to nodes based on causation and snapshot relationships
+    const tracesWithLevels = assignLevels(traces, edges);
+
+    // Log the number of commands and events for debugging
+    console.log(`Found ${commands.length} commands and ${events.length} events for correlationId: ${correlationId}`);
+
+    // Log the final response for debugging
+    console.log(`Final response for correlationId ${correlationId}:`, JSON.stringify({ traces: tracesWithLevels, edges }, null, 2));
+
+    res.json({ traces: tracesWithLevels, edges });
   } catch (error) {
     console.error('Error fetching traces by correlation:', error);
     res.status(500).json({ error: 'Failed to fetch traces by correlation' });
