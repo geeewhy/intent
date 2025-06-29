@@ -15,7 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { searchTraces, fetchTracesByCorrelation, fetchTraceById } from "@/data";
+import { searchTraces, fetchTracesByCorrelation } from "@/data";
 
 interface TraceNode {
   id: string;
@@ -44,6 +44,26 @@ interface SearchResult {
   correlationId: string;
   display: string;
 }
+
+// Helper function to identify nodes related to the selected node
+const getRelatedNodeIds = (selected: TraceNode | null, all: TraceNode[]): Set<string> => {
+  if (!selected) return new Set();
+
+  const relatedIds = new Set<string>();
+
+  if (selected.type === 'Command') {
+    // highlight events caused by this command
+    all.forEach(node => {
+      if (node.causationId === selected.id) relatedIds.add(node.id);
+    });
+  } else if (selected.type === 'Event' && selected.causationId) {
+    // highlight the command that caused this event
+    const cmd = all.find(n => n.id === selected.causationId && n.type === 'Command');
+    if (cmd) relatedIds.add(cmd.id);
+  }
+
+  return relatedIds;
+};
 
 export const TraceViewer = () => {
   const [params, setParams] = useSearchParams();
@@ -123,6 +143,26 @@ export const TraceViewer = () => {
     try {
       // Load traces for the selected correlation ID
       const correlationId = selectedResult.correlationId;
+
+      // If correlationId is undefined, perform fallback search instead
+      if (!correlationId) {
+        console.warn('CorrelationId is undefined, performing fallback search instead');
+        const searchResults = await searchTraces(resultId);
+        if (searchResults.length > 0) {
+          // Find the exact match if possible
+          const exactMatch = searchResults.find(t => t.id === resultId);
+          const traceToShow = exactMatch || searchResults[0];
+
+          // Set the trace and edges
+          setTraces([traceToShow]);
+          setEdges([]);
+          setSelectedNode(traceToShow);
+        } else {
+          console.warn('No traces found for ID:', resultId);
+        }
+        return;
+      }
+
       const { traces: filteredTraces, edges: newEdges } = await fetchTracesByCorrelation(correlationId);
 
       setTraces(filteredTraces);
@@ -167,6 +207,9 @@ export const TraceViewer = () => {
   const isNodeSelected = (nodeId: string) => {
     return selectedTraceId === nodeId;
   };
+
+  // Calculate related node IDs based on selected node
+  const relatedNodeIds = getRelatedNodeIds(selectedNode, traces);
 
   return (
     <div className="space-y-6">
@@ -254,17 +297,28 @@ export const TraceViewer = () => {
                           <div className="flex items-center gap-6 flex-wrap">
                             {traces.filter(t => t.level === level).map((node, index) => (
                               <div key={node.id} className="flex items-center gap-2">
+                                {/* Selection state logic:
+                                  1. If node.id === selectedNode.id: orange border (primary selection)
+                                  2. If node is related to selected node: yellow border (related)
+                                  3. Otherwise: default slate border
+                                  4. Background color based on node type (Command, Event, Snapshot)
+                                */}
                                 <div
-                                  className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                                    selectedNode?.id === node.id 
-                                      ? 'border-orange-400 shadow-lg' 
+                                  className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all
+                                  ${selectedNode?.id === node.id
+                                    ? 'border-orange-400 shadow-lg'
+                                    : relatedNodeIds.has(node.id)
+                                      ? 'border-yellow-400 shadow shadow-yellow-500/30'
                                       : 'border-slate-600 hover:border-slate-500'
                                   } ${
                                     isNodeSelected(node.id)
                                       ? 'bg-yellow-500 bg-opacity-30 border-yellow-400'
                                       : `${getNodeColor(node.type)} bg-opacity-20`
                                   }`}
-                                  onClick={() => setSelectedNode(node)}
+                                  onClick={() => {
+                                    setSelectedNode(node);
+                                    setSelectedTraceId(node.id); // for URL sync and selection logic
+                                  }}
                                 >
                                   <div className="flex items-center gap-2">
                                     {getNodeIcon(node.type)}
@@ -278,9 +332,12 @@ export const TraceViewer = () => {
                                     </div>
                                   </div>
                                 </div>
-                                {/* Arrow to next level if there's a causation relationship */}
-                                {edges.some(e => e.from === node.id) && (
+                                {/* Arrow to next level based on edge type */}
+                                {edges.some(e => e.from === node.id && e.type === 'causation') && (
                                   <ArrowDownCircle className="h-4 w-4 text-slate-500" />
+                                )}
+                                {edges.some(e => e.from === node.id && e.type === 'snapshot') && (
+                                  <ArrowDown01 className="h-4 w-4 text-purple-500" />
                                 )}
                               </div>
                             ))}
@@ -387,6 +444,10 @@ export const TraceViewer = () => {
                 <div className="flex items-center gap-2 text-sm">
                   <ArrowRight className="h-3 w-3 text-slate-500" />
                   <span className="text-white">Causation Flow</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <ArrowDown01 className="h-3 w-3 text-purple-500" />
+                  <span className="text-white">Snapshot Flow</span>
                 </div>
               </CardContent>
             </Card>

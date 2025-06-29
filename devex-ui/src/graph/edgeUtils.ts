@@ -1,5 +1,5 @@
 //devex-ui/src/graph/edgeUtils.ts
-export interface Edge { from:string; to:string; type:'causation' }
+export interface Edge { from:string; to:string; type:'causation' | 'snapshot' }
 
 export function generateEdges(
   traces:{ id:string; causationId?:string }[]

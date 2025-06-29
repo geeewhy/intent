@@ -126,7 +126,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
             payload,
             {
                 userId: cmd.metadata?.userId,
-                correlationId: cmd.metadata?.correlationId,
+                correlationId: cmd.metadata?.correlationId ?? cmd.id,
                 causationId: cmd.id,
             }
         );
@@ -154,7 +154,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
                 payload,
                 {
                     userId: cmd.metadata?.userId,
-                    correlationId: cmd.metadata?.correlationId,
+                    correlationId: cmd.metadata?.correlationId ?? cmd.id,
                     causationId: cmd.id,
                 }
             );
@@ -195,7 +195,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
             payload,
             {
                 userId: cmd.metadata?.userId,
-                correlationId: cmd.metadata?.correlationId,
+                correlationId: cmd.metadata?.correlationId ?? cmd.id,
                 causationId: cmd.id,
             }
         );
@@ -229,7 +229,7 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
             payload,
             {
                 userId: cmd.metadata?.userId,
-                correlationId: cmd.metadata?.correlationId,
+                correlationId: cmd.metadata?.correlationId ?? cmd.id,
                 causationId: cmd.id,
             }
         );
