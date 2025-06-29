@@ -88,13 +88,16 @@ export const TraceViewer = () => {
 
     try {
       const traces = await searchTraces(query);
-      const results: SearchResult[] = traces.map(trace => ({
-        id: trace.id,
-        type: trace.type,
-        subtype: trace.subtype,
-        correlationId: trace.correlationId,
-        display: `${trace.type} - ${trace.subtype} (${trace.id})`
-      }));
+      // Filter out traces without correlationId and map to SearchResult
+      const results: SearchResult[] = traces
+        .filter(trace => !!trace.correlationId) // Only include traces with a correlationId
+        .map(trace => ({
+          id: trace.id,
+          type: trace.type,
+          subtype: trace.subtype,
+          correlationId: trace.correlationId,
+          display: `${trace.type} - ${trace.subtype} (${trace.id})`
+        }));
 
       setSearchResults(results);
       setShowResults(results.length > 0);
@@ -138,28 +141,16 @@ export const TraceViewer = () => {
 
     setSelectedTraceId(resultId);
     setShowResults(false);
-    setShowDiagram(true);
 
     try {
       // Load traces for the selected correlation ID
       const correlationId = selectedResult.correlationId;
 
-      // If correlationId is undefined, perform fallback search instead
+      // If correlationId is undefined, notify the user and don't proceed
       if (!correlationId) {
-        console.warn('CorrelationId is undefined, performing fallback search instead');
-        const searchResults = await searchTraces(resultId);
-        if (searchResults.length > 0) {
-          // Find the exact match if possible
-          const exactMatch = searchResults.find(t => t.id === resultId);
-          const traceToShow = exactMatch || searchResults[0];
-
-          // Set the trace and edges
-          setTraces([traceToShow]);
-          setEdges([]);
-          setSelectedNode(traceToShow);
-        } else {
-          console.warn('No traces found for ID:', resultId);
-        }
+        console.warn('No correlationId — cannot render trace diagram');
+        alert('This item cannot be visualized as it has no correlation ID. Please select a different item.');
+        setShowDiagram(false);
         return;
       }
 
@@ -167,14 +158,19 @@ export const TraceViewer = () => {
 
       setTraces(filteredTraces);
       setEdges(newEdges);
+      setShowDiagram(true); // Ensure diagram is shown in success path
 
       // Auto-select the clicked result
       const selectedTrace = filteredTraces.find(t => t.id === resultId);
       if (selectedTrace) {
         setSelectedNode(selectedTrace);
+      } else if (filteredTraces.length > 0) {
+        // If the selected trace is not found in the results, select the first one
+        setSelectedNode(filteredTraces[0]);
       }
     } catch (error) {
       console.error('Failed to load trace details:', error);
+      setShowDiagram(false); // Hide diagram on error
     }
   };
 
