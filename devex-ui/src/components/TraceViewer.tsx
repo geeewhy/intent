@@ -15,7 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { searchTraces, fetchTracesByCorrelation, fetchTraceById } from "@/data";
+import { searchTraces, fetchTracesByCorrelation } from "@/data";
 
 interface TraceNode {
   id: string;
@@ -123,6 +123,26 @@ export const TraceViewer = () => {
     try {
       // Load traces for the selected correlation ID
       const correlationId = selectedResult.correlationId;
+
+      // If correlationId is undefined, perform fallback search instead
+      if (!correlationId) {
+        console.warn('CorrelationId is undefined, performing fallback search instead');
+        const searchResults = await searchTraces(resultId);
+        if (searchResults.length > 0) {
+          // Find the exact match if possible
+          const exactMatch = searchResults.find(t => t.id === resultId);
+          const traceToShow = exactMatch || searchResults[0];
+
+          // Set the trace and edges
+          setTraces([traceToShow]);
+          setEdges([]);
+          setSelectedNode(traceToShow);
+        } else {
+          console.warn('No traces found for ID:', resultId);
+        }
+        return;
+      }
+
       const { traces: filteredTraces, edges: newEdges } = await fetchTracesByCorrelation(correlationId);
 
       setTraces(filteredTraces);
@@ -278,9 +298,12 @@ export const TraceViewer = () => {
                                     </div>
                                   </div>
                                 </div>
-                                {/* Arrow to next level if there's a causation relationship */}
-                                {edges.some(e => e.from === node.id) && (
+                                {/* Arrow to next level based on edge type */}
+                                {edges.some(e => e.from === node.id && e.type === 'causation') && (
                                   <ArrowDownCircle className="h-4 w-4 text-slate-500" />
+                                )}
+                                {edges.some(e => e.from === node.id && e.type === 'snapshot') && (
+                                  <ArrowDown01 className="h-4 w-4 text-purple-500" />
                                 )}
                               </div>
                             ))}
@@ -387,6 +410,10 @@ export const TraceViewer = () => {
                 <div className="flex items-center gap-2 text-sm">
                   <ArrowRight className="h-3 w-3 text-slate-500" />
                   <span className="text-white">Causation Flow</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <ArrowDown01 className="h-3 w-3 text-purple-500" />
+                  <span className="text-white">Snapshot Flow</span>
                 </div>
               </CardContent>
             </Card>

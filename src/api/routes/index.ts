@@ -5,6 +5,7 @@ import metricsRoutes from './metrics';
 import commandsRoutes from './commands';
 import eventsRoutes from './events';
 import logsRoutes from './logs';
+import traceRoutes from './traces';
 import accessLogMiddleware from '../middlewares/accessLog';
 
 /**
@@ -32,6 +33,9 @@ export const registerRoutes = (app: Express): void => {
 
   // Register logs routes
   app.use(logsRoutes);
+
+  // Register trace routes
+  app.use(traceRoutes);
 };
 
 export default registerRoutes;

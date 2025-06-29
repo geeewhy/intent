@@ -2,6 +2,9 @@
 import { apiClient, API_CONFIG } from './api';
 import type { Event, Command, CommandResult, CommandSchema } from './types';
 import type { LogLine } from './mockLogs';
+import { isMock } from '@/config/apiMode';
+import { findTracesByCorrelationId, searchTracesFullText, traceStore } from '@/mocks/stores/trace.store';
+import { generateEdges } from '@/graph/edgeUtils';
 
 // Events API
 export const fetchEvents = async (tenantId: string, limit = 50): Promise<Event[]> => {
@@ -58,17 +61,40 @@ export const fetchRecentCommands = async (limit = 10) => {
 };
 
 // Traces API
+// Helper function to normalize trace data from API
+function normalizeTrace(raw: any) {
+  return {
+    id: raw.id,
+    type: raw.type || 'Event',
+    subtype: raw.subtype || raw.type,
+    timestamp: raw.timestamp || raw.created_at,
+    correlationId: raw.correlationId || raw.correlation_id,
+    causationId: raw.causationId || raw.causation_id,
+    aggregateId: raw.aggregateId || raw.aggregate_id,
+    tenantId: raw.tenantId || raw.tenant_id,
+    level: 0
+  };
+}
+
 export const searchTraces = async (query: string) => {
-  return apiClient.get(`${API_CONFIG.endpoints.traces}/search`, { query });
+  if (isMock) return searchTracesFullText(query);
+  const raw = await apiClient.get(`${API_CONFIG.endpoints.traces}/search`, { query });
+  return raw.map(normalizeTrace);
 };
 
 export const fetchTracesByCorrelation = async (correlationId: string) => {
-  return apiClient.get(`${API_CONFIG.endpoints.traces}/correlation/${correlationId}`);
+  if (isMock) {
+    const traces = findTracesByCorrelationId(correlationId);
+    const edges = generateEdges(traces);
+    return { traces, edges };
+  }
+  const raw = await apiClient.get(`${API_CONFIG.endpoints.traces}/correlation/${correlationId}`);
+  return {
+    traces: raw.traces.map(normalizeTrace),
+    edges: raw.edges
+  };
 };
 
-export const fetchTraceById = async (traceId: string) => {
-  return apiClient.get(`${API_CONFIG.endpoints.traces}/${traceId}`);
-};
 
 export const fetchLogs = (tenant: string, limit=50) =>
   apiClient.get<LogLine[]>(API_CONFIG.endpoints.logs, { tenant_id: tenant, limit: limit+'' });
