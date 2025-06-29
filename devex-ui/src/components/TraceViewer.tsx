@@ -297,6 +297,12 @@ export const TraceViewer = () => {
                           <div className="flex items-center gap-6 flex-wrap">
                             {traces.filter(t => t.level === level).map((node, index) => (
                               <div key={node.id} className="flex items-center gap-2">
+                                {/* Selection state logic:
+                                  1. If node.id === selectedNode.id: orange border (primary selection)
+                                  2. If node is related to selected node: yellow border (related)
+                                  3. Otherwise: default slate border
+                                  4. Background color based on node type (Command, Event, Snapshot)
+                                */}
                                 <div
                                   className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all
                                   ${selectedNode?.id === node.id
@@ -309,7 +315,10 @@ export const TraceViewer = () => {
                                       ? 'bg-yellow-500 bg-opacity-30 border-yellow-400'
                                       : `${getNodeColor(node.type)} bg-opacity-20`
                                   }`}
-                                  onClick={() => setSelectedNode(node)}
+                                  onClick={() => {
+                                    setSelectedNode(node);
+                                    setSelectedTraceId(node.id); // for URL sync and selection logic
+                                  }}
                                 >
                                   <div className="flex items-center gap-2">
                                     {getNodeIcon(node.type)}
