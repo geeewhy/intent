@@ -79,7 +79,10 @@ function normalizeTrace(raw: any) {
 export const searchTraces = async (query: string) => {
   if (isMock) return searchTracesFullText(query);
   const raw = await apiClient.get(`${API_CONFIG.endpoints.traces}/search`, { query });
-  return raw.map(normalizeTrace);
+  // Filter out snapshots from search results
+  return raw
+    .filter(trace => trace.type !== 'Snapshot')
+    .map(normalizeTrace);
 };
 
 export const fetchTracesByCorrelation = async (correlationId: string) => {

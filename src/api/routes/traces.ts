@@ -3,6 +3,64 @@ import pool from '../db';
 
 const router = Router();
 
+async function fetchTracesByCorrelation(correlationId: string, client: any) {
+  // Fetch events with matching correlation_id
+  const eventsResult = await client.query(
+    `SELECT * FROM infra.event_metadata 
+     WHERE correlation_id::text = $1
+     ORDER BY created_at ASC`,
+    [correlationId]
+  );
+
+  // Fetch commands with matching correlationId in metadata
+  // Try different ways the correlationId might be stored
+  const commandsResult = await client.query(
+    `SELECT * FROM infra.commands 
+     WHERE metadata->>'correlationId' = $1
+     OR metadata->>'correlation_id'::text = $1
+     OR id::text = $1
+     ORDER BY created_at ASC`,
+    [correlationId]
+  );
+
+  // Get all events and commands
+  const events = eventsResult.rows.map(rowToTraceNode);
+  const commands = commandsResult.rows.map(rowToTraceNodeCommand);
+
+  // Extract aggregate IDs from events and commands to fetch relevant snapshots
+  const aggregateIds = new Set<string>();
+  const tenantIds = new Set<string>();
+
+  [...events, ...commands].forEach(n => {
+    if (n.aggregateId) aggregateIds.add(n.aggregateId);
+    if (n.tenantId) tenantIds.add(n.tenantId);
+  });
+
+  // Fetch snapshots for the involved aggregates, filtered by tenant IDs
+  let snapshots: any[] = [];
+  if (aggregateIds.size && tenantIds.size) {
+    const snapshotsResult = await client.query(
+      `SELECT * FROM infra.aggregates 
+       WHERE id::text = ANY($1::text[])
+       AND tenant_id = ANY($2::uuid[])
+       ORDER BY updated_at DESC`,
+      [Array.from(aggregateIds), Array.from(tenantIds)]
+    );
+    snapshots = snapshotsResult.rows.map(rowToTraceNodeSnapshot);
+  }
+
+  // Combine all results - Commands should appear before Events at the same level
+  const traces = [...commands, ...events, ...snapshots];
+
+  // Generate edges between nodes
+  const edges = generateEdges(traces);
+
+  // Assign proper levels to nodes based on causation and snapshot relationships
+  const tracesWithLevels = assignLevels(traces, edges);
+
+  return { traces: tracesWithLevels, edges };
+}
+
 // Helper function to convert an event row to a TraceNode
 const rowToTraceNode = (row: any) => ({
   id: row.id,
@@ -207,71 +265,7 @@ router.get('/api/traces/correlation/:correlationId', async (req, res) => {
 
   const client = await pool.connect();
   try {
-    // Fetch events with matching correlation_id
-    const eventsResult = await client.query(
-      `SELECT * FROM infra.event_metadata 
-       WHERE correlation_id::text = $1
-       ORDER BY created_at ASC`,
-      [correlationId]
-    );
-
-    // Fetch commands with matching correlationId in metadata
-    // Try different ways the correlationId might be stored
-    const commandsResult = await client.query(
-      `SELECT * FROM infra.commands 
-       WHERE metadata->>'correlationId' = $1
-       OR metadata->>'correlation_id'::text = $1
-       OR id::text = $1
-       ORDER BY created_at ASC`,
-      [correlationId]
-    );
-
-    // Log the raw command results for debugging
-    console.log(`Raw command results for correlationId ${correlationId}:`, JSON.stringify(commandsResult.rows, null, 2));
-
-    // Get all events and commands
-    const events = eventsResult.rows.map(rowToTraceNode);
-    const commands = commandsResult.rows.map(rowToTraceNodeCommand);
-
-    // Log the processed commands for debugging
-    console.log(`Processed commands for correlationId ${correlationId}:`, JSON.stringify(commands, null, 2));
-
-    // Extract aggregate IDs from events and commands to fetch relevant snapshots
-    const aggregateIds = new Set<string>();
-    [...events, ...commands].forEach(item => {
-      if (item.aggregateId) {
-        aggregateIds.add(item.aggregateId);
-      }
-    });
-
-    // Fetch snapshots for the involved aggregates
-    let snapshots: any[] = [];
-    if (aggregateIds.size > 0) {
-      const snapshotsResult = await client.query(
-        `SELECT * FROM infra.aggregates 
-         WHERE id::text = ANY($1::text[])
-         ORDER BY updated_at DESC`,
-        [Array.from(aggregateIds)]
-      );
-      snapshots = snapshotsResult.rows.map(rowToTraceNodeSnapshot);
-    }
-
-    // Combine all results - Commands should appear before Events at the same level
-    const traces = [...commands, ...events, ...snapshots];
-
-    // Generate edges between nodes
-    const edges = generateEdges(traces);
-
-    // Assign proper levels to nodes based on causation and snapshot relationships
-    const tracesWithLevels = assignLevels(traces, edges);
-
-    // Log the number of commands and events for debugging
-    console.log(`Found ${commands.length} commands and ${events.length} events for correlationId: ${correlationId}`);
-
-    // Log the final response for debugging
-    console.log(`Final response for correlationId ${correlationId}:`, JSON.stringify({ traces: tracesWithLevels, edges }, null, 2));
-
-    res.json({ traces: tracesWithLevels, edges });
+    return res.json(await fetchTracesByCorrelation(correlationId, client));
   } catch (error) {
     console.error('Error fetching traces by correlation:', error);
     res.status(500).json({ error: 'Failed to fetch traces by correlation' });
