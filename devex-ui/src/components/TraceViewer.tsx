@@ -45,6 +45,26 @@ interface SearchResult {
   display: string;
 }
 
+// Helper function to identify nodes related to the selected node
+const getRelatedNodeIds = (selected: TraceNode | null, all: TraceNode[]): Set<string> => {
+  if (!selected) return new Set();
+
+  const relatedIds = new Set<string>();
+
+  if (selected.type === 'Command') {
+    // highlight events caused by this command
+    all.forEach(node => {
+      if (node.causationId === selected.id) relatedIds.add(node.id);
+    });
+  } else if (selected.type === 'Event' && selected.causationId) {
+    // highlight the command that caused this event
+    const cmd = all.find(n => n.id === selected.causationId && n.type === 'Command');
+    if (cmd) relatedIds.add(cmd.id);
+  }
+
+  return relatedIds;
+};
+
 export const TraceViewer = () => {
   const [params, setParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(() => params.get('q') || "");
@@ -188,6 +208,9 @@ export const TraceViewer = () => {
     return selectedTraceId === nodeId;
   };
 
+  // Calculate related node IDs based on selected node
+  const relatedNodeIds = getRelatedNodeIds(selectedNode, traces);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -275,9 +298,11 @@ export const TraceViewer = () => {
                             {traces.filter(t => t.level === level).map((node, index) => (
                               <div key={node.id} className="flex items-center gap-2">
                                 <div
-                                  className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                                    selectedNode?.id === node.id 
-                                      ? 'border-orange-400 shadow-lg' 
+                                  className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all
+                                  ${selectedNode?.id === node.id
+                                    ? 'border-orange-400 shadow-lg'
+                                    : relatedNodeIds.has(node.id)
+                                      ? 'border-yellow-400 shadow shadow-yellow-500/30'
                                       : 'border-slate-600 hover:border-slate-500'
                                   } ${
                                     isNodeSelected(node.id)
