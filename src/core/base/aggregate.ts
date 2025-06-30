@@ -76,6 +76,14 @@ export abstract class BaseAggregate<TState> {
     abstract apply(event: any, isSnapshot?: boolean): void;
 
     abstract handle(command: any): Event[];
+
+    getVersion():number {
+        return this.version;
+    };
+
+    public getId(): UUID {
+        return this.id;
+    }
 }
 
 /**

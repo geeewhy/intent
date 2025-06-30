@@ -277,12 +277,4 @@ export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {
 
         return state;
     }
-
-    public getId(): UUID {
-        return this.id;
-    }
-
-    public getVersion(): number {
-        return this.version;
-    }
 }
