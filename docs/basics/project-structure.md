@@ -110,7 +110,7 @@ Multi-tenancy and security are cross-cutting concerns that span all layers of th
 
 ### `src/core/`
 
-- `src/core/aggregates.ts`: Base aggregate class and registry
+- `src/core/base/aggregate.ts`: Base aggregate class and registry
 - `src/core/contracts.ts`: Core interfaces for commands, events, etc.
 - `src/core/command-bus.ts`: Command routing and handling
 - `src/core/event-bus.ts`: Event routing and handling

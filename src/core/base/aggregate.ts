@@ -2,6 +2,15 @@
 import {UUID, Event, Command} from "../contracts";
 
 /**
+ * Interface for BaseAggregate
+ */
+export interface AggregateClass {
+    new (id: string): any;
+    create: (cmd: any) => any;
+    rehydrate: (events: any[]) => any;
+}
+
+/**
  * Generic base class for aggregates
  */
 export abstract class BaseAggregate<TState> {

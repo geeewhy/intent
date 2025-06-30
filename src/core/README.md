@@ -31,7 +31,7 @@ Defines the core interfaces for the ES architecture:
 - `CommandHandler`: For handling specific command types
 - `EventHandler`: For handling specific event types
 
-### 2. Aggregates (`aggregates.ts`, `base/aggregate.ts`)
+### 2. Aggregates (`base/aggregate.ts`)
 - `BaseAggregate`: Abstract base class for all aggregates
 - Implements event application, state extraction, and snapshotting
 - Handles commands and produces events

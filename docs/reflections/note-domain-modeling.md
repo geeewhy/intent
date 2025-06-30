@@ -120,7 +120,7 @@ export class SystemCommandHandler implements CommandHandler<Command<any>> {
 
 ## Aggregate Registry
 
-The system maintains a registry of aggregate types in `src/core/aggregates.ts`:
+The system maintains a registry of aggregate types in `src/core/registry.ts`:
 
 ```typescript
 export const AggregateRegistry: Record<string, AggregateClass> = {

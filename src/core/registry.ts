@@ -1,6 +1,6 @@
 //src/core/registry.ts
 import { CommandHandler, EventHandler, SagaDefinition, ReadModelUpdaterPort, UUID } from './contracts';
-import { AggregateClass } from './aggregates';
+import { AggregateClass } from './base/aggregate';
 import { z } from 'zod';
 
 export interface CommandTypeMeta {
