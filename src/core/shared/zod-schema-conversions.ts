@@ -28,11 +28,32 @@ export function zodToJsonSchema(schema: z.ZodTypeAny, name?: string): any {
 
   return zodTypeToJsonType(schema);
 }
-
 /**
  * Helper: Convert Zod type to JSON Schema type
  */
 function zodTypeToJsonType(zodType: z.ZodTypeAny): any {
+  // First handle preprocessed fields by checking _def structure
+  if (zodType._def && zodType._def.effect?.type === 'preprocess') {
+    // For preprocessed boolean fields
+    if (zodType._def.schema instanceof z.ZodBoolean) {
+      return {
+        type: 'boolean',
+        format: 'boolean'
+      };
+    }
+    // For preprocessed date fields
+    else if (zodType._def.schema instanceof z.ZodDate) {
+      return {
+        type: 'string',
+        format: 'date'
+      };
+    }
+    // For other preprocessed types, pass through to the inner schema
+    else if (zodType._def.schema) {
+      return zodTypeToJsonType(zodType._def.schema);
+    }
+  }
+
   if (zodType instanceof z.ZodString) {
     const checks = zodType._def.checks || [];
     const formatCheck = checks.find((c: any) => c.kind === 'uuid' || c.kind === 'email');
@@ -49,7 +70,10 @@ function zodTypeToJsonType(zodType: z.ZodTypeAny): any {
   }
 
   if (zodType instanceof z.ZodBoolean) {
-    return { type: 'boolean' };
+    return {
+      type: 'boolean',
+      format: 'boolean'  // Add explicit boolean format
+    };
   }
 
   if (zodType instanceof z.ZodArray) {
@@ -84,10 +108,36 @@ function zodTypeToJsonType(zodType: z.ZodTypeAny): any {
     };
   }
 
+  if (zodType instanceof z.ZodDate) {
+    return {
+      type: 'string',
+      format: 'date'  // Add explicit date format
+    };
+  }
+
+  if (zodType instanceof z.ZodDefault) {
+    // For fields with default values, extract the inner type
+    return zodTypeToJsonType(zodType._def.innerType);
+  }
+
   if (zodType instanceof z.ZodAny) {
     return {};
   }
 
+  // Fallback for unhandled types - check for common type indicators in _def
+  if (zodType._def) {
+    // Try to infer boolean type from structure
+    if (zodType._def.typeName === 'ZodBoolean' ||
+        (zodType._def.schema && zodType._def.schema._def?.typeName === 'ZodBoolean')) {
+      return {
+        type: 'boolean',
+        format: 'boolean'
+      };
+    }
+  }
+
+  // Final fallback
+  console.warn('Unhandled Zod type:', zodType);
   return {};
 }
 

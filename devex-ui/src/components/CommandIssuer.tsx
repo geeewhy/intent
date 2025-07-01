@@ -267,6 +267,35 @@ export const CommandIssuer = () => {
                         />
                     </div>
                 );
+            // Inside the renderFormField function, update the boolean case with strict equality checking
+            case 'boolean':
+                return (
+                    <div key={key} className="flex items-center gap-3">
+                        <Label htmlFor={key}
+                               className={`${isInvalid ? 'text-red-400' : 'text-slate-300'} min-w-[100px] text-sm`}>
+                            {key} {required && <span className="text-red-400">*</span>}
+                            {isInvalid && <span className="ml-1">⚠️</span>}
+                        </Label>
+                        <div className="flex items-center gap-2">
+                            <Select
+                                value={value === true ? "true" : value === false ? "false" : ""}
+                                onValueChange={(val) => {
+                                    // Use strict type conversion
+                                    const boolValue = val === "true" ? true : val === "false" ? false : null;
+                                    handleFormDataChange(key, boolValue);
+                                }}
+                            >
+                                <SelectTrigger className={`bg-slate-800 ${isInvalid ? 'border-red-500' : 'border-slate-700'} text-slate-100 w-[180px] h-8`}>
+                                    <SelectValue placeholder="false" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-slate-800 border-slate-700">
+                                    <SelectItem value="true" className="text-slate-100 hover:bg-slate-700">true</SelectItem>
+                                    <SelectItem value="false" className="text-slate-100 hover:bg-slate-700">false</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                );
             case 'object':
                 return (
                     <div key={key} className="space-y-2">
@@ -322,6 +351,31 @@ export const CommandIssuer = () => {
     const toggleCommandExpansion = (commandId: string) => {
         setExpandedCommand(expandedCommand === commandId ? null : commandId);
     };
+
+    const [example, setExample] = useState<string | null>(null);
+
+    useEffect(() => {
+      if (selectedCommandSchema?.schema) {
+        setExample(JSON.stringify(makeExample(selectedCommandSchema.schema), null, 2));
+      } else {
+        setExample(null);
+      }
+    }, [selectedCommandSchema]);
+
+    // Add this in the useEffect where you initialize the form from the example
+    useEffect(() => {
+        if (example && Object.keys(formData).length === 0) {
+            try {
+                const parsed = typeof example === 'string' ? JSON.parse(example) : example;
+                
+                // Initialize form with example data, ensuring boolean values are preserved
+                setFormData(parsed);
+                setPayload(JSON.stringify(parsed, null, 2));
+            } catch (e) {
+                console.error('Failed to parse example:', e);
+            }
+        }
+    }, [example, formData]);
 
     return (
         <div className="space-y-6">
