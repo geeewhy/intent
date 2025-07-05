@@ -45,7 +45,7 @@ const NAV_ITEMS = [
     { id: 'traces', label: 'Trace Viewer', icon: GitBranch },
     { id: 'aggregates', label: 'Aggregates', icon: Package, requiresFlag: 'aggregates' },
     { id: 'rewind', label: 'Projection Rewind', icon: Rewind, requiresFlag: 'rewind' },
-    { id: 'status', label: 'System Status', icon: AlertTriangle },
+    { id: 'status', label: 'System Status', icon: AlertTriangle, requiresFlag: 'status' },
     { id: 'ai', label: 'AI Companion', icon: Bot, requiresFlag: 'ai' },
     { id: 'settings', label: 'Settings', icon: Settings },
 ] as const;
