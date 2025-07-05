@@ -9,13 +9,15 @@
 import minimist from 'minimist';
 import * as fs from 'fs';
 import * as path from 'path';
+import '../../core/initialize';          // side-effects populate the registry
+import { getAllProjections, ProjectionDefinition } from '../../core/registry';
 import {runMigrations} from '../../infra/projections/migrations-pg';
 import {createPool} from '../../infra/projections/pg-pool';
-import {scanProjections} from '../../infra/projections/migrations-pg/scanner';
+import { createPgUpdaterFor } from '../../infra/projections/pg-updater';
 import * as dotenv from 'dotenv';
 import {Pool, PoolClient} from 'pg';
 import QueryStream from 'pg-query-stream';
-import {sql} from "slonik";
+import {sql, DatabasePool} from "slonik";
 
 dotenv.config();
 
@@ -167,14 +169,24 @@ async function streamDelta(
     console.log(`[DELTA] Finished delta streaming events for ${eventTypes.join(',')}`);
 }
 
-//--- discover projections via scanner
-const scanned = scanProjections();                 // authoritative list
-const metaById = new Map(scanned.map(p => [p.name, p]));
-const metaByTable = new Map(
-    scanned.flatMap(p => p.tables.map(t => [t, p] as const))
-);
+//--- discover projections via registry
+const projections = getAllProjections();             // { id -> ProjectionDefinition }
 
-function loadRegistry(pMeta: typeof scanned[number]) {
+const byId = new Map(Object.entries(projections));    // id -> def
+const byTable = new Map<string, [string, ProjectionDefinition]>();
+for (const [id, def] of Object.entries(projections))
+    def.tables.forEach(t => byTable.set(t.name, [id, def]));
+
+/** @deprecated – no longer used by repair tool */
+interface ProjectionMeta {
+    name: string;
+    dir: string;
+    migrationsDir: string;
+    tables: string[];
+}
+
+/** @deprecated – no longer used by repair tool */
+function loadRegistry(pMeta: ProjectionMeta) {
     const registerFile = path.join(pMeta.dir, 'register.ts');
     if (!fs.existsSync(registerFile))
         throw new Error(`register.ts missing for projection '${pMeta.name}' (${registerFile})`);
@@ -254,39 +266,85 @@ export async function main() {
             );
 
             for (const projection of projections) {
-                const p = metaById.get(projection.projection);
-                if (!p) {
+                const def = byId.get(projection.projection);
+                if (!def) {
                     console.error(`Projection '${projection.projection}' not recognised`);
                 } else {
-                    targets.push(...loadRegistry(p));
+                    targets.push({
+                        meta: {
+                            tables: def.tables.map(t => t.name),
+                            eventTypes: def.eventTypes,
+                            original: def
+                        },
+                        projectionId: projection.projection,
+                        def
+                    });
                 }
             }
         } else {
             // Old format with single table
             const tables: string[] = drift.filter((e: any) => e.issues?.length).map((e: any) => e.table);
             tables.forEach(t => {
-                const p = metaByTable.get(t);
-                if (!p) console.error(`Table '${t}' not recognised`);
-                else targets.push(...loadRegistry(p));
+                const entry = byTable.get(t);
+                if (!entry) console.error(`Table '${t}' not recognised`);
+                else {
+                    const [id, def] = entry;
+                    targets.push({
+                        meta: {
+                            tables: def.tables.map(t => t.name),
+                            eventTypes: def.eventTypes,
+                            original: def
+                        },
+                        projectionId: id,
+                        def
+                    });
+                }
             });
         }
     } else if (argv.table) {
-        const p = metaByTable.get(argv.table);
-        if (!p) {
+        const entry = byTable.get(argv.table);
+        if (!entry) {
             console.error(`Unknown table '${argv.table}'`);
             process.exit(1);
         }
-        targets = loadRegistry(p);
+        const [id, def] = entry;
+        targets.push({
+            meta: {
+                tables: def.tables.map(t => t.name),
+                eventTypes: def.eventTypes,
+                original: def
+            },
+            projectionId: id,
+            def
+        });
     } else if (argv.projection) {
-        const p = metaById.get(argv.projection);
-        if (!p) {
+        const def = byId.get(argv.projection);
+        if (!def) {
             console.error(`Unknown projection '${argv.projection}'`);
             process.exit(1);
         }
-        targets = loadRegistry(p);
+        targets.push({
+            meta: {
+                tables: def.tables.map(t => t.name),
+                eventTypes: def.eventTypes,
+                original: def
+            },
+            projectionId: argv.projection,
+            def
+        });
     } else if (argv.all) {
-        // Only process projections with tables that have migration files
-        scanned.filter(p => p.tables.length > 0).forEach(p => targets.push(...loadRegistry(p)));
+        // Process all projections from the registry
+        for (const [id, def] of byId.entries()) {
+            targets.push({
+                meta: {
+                    tables: def.tables.map(t => t.name),
+                    eventTypes: def.eventTypes,
+                    original: def
+                },
+                projectionId: id,
+                def
+            });
+        }
     } else {
         console.error('Must specify --table, --projection, --all, or --drift-report');
         process.exit(1);
@@ -302,7 +360,7 @@ export async function main() {
     for (const t of targets) {
         const pg = new Pool(poolConnectionConfig);
         const poolClient = await pg.connect();
-        let projectionPool = null;
+        let projectionPool: DatabasePool | null = null;
 
         try {
             // Process each table in the projection
@@ -322,7 +380,17 @@ export async function main() {
                     // Don't pass the Slonik pool to runMigrations, let it create its own pg Pool
                     await runMigrations(['--rebuild-from-table', table]); // full rebuild
                 }
-                const handlers = t.registerHandlers(projectionPool);
+
+                // Create handlers on the fly
+                const updaterCache: Record<string, ReturnType<typeof createPgUpdaterFor>> = {};
+                const getUpdater = (tbl: string) => {
+                    if (!projectionPool) {
+                        throw new Error('projectionPool is null');
+                    }
+                    return updaterCache[tbl] ?? (updaterCache[tbl] = createPgUpdaterFor(tbl, projectionPool));
+                };
+
+                const handler = t.def.factory(getUpdater);
 
                 let count = 0;
 
@@ -331,7 +399,7 @@ export async function main() {
                     : streamEvents(t.meta.eventTypes, replay);
 
                 async function replay(ev: any) {
-                    for (const h of handlers) if (h.supportsEvent(ev)) await h.on(ev);
+                    if (handler.supportsEvent(ev)) await handler.on(ev);
                     count++;
                 }
 

@@ -5,7 +5,9 @@
  */
 
 import {createPool} from '../../infra/projections/pg-pool';
-import {globSync} from 'glob';
+import '../../core/initialize';          // side-effects populate the registry
+import { getAllProjections } from '../../core/registry';
+import {globSync} from 'glob';  // @deprecated - kept for other tools
 import {sql} from 'slonik';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -50,10 +52,27 @@ interface ProjectionMetadata {
 }
 
 /**
- * Dynamically find all projection files and extract their metadata
+ * Build projection metadata from the registry
  * @returns Array of projection metadata objects
  */
 async function findProjectionMetadata(): Promise<ProjectionMetadata[]> {
+    const projections = getAllProjections();
+    const metadata = Object.entries(projections).map(([id, def]) => ({
+        name: id,
+        tables: def.tables,
+        projectionFile: '' // No longer needed but kept for compatibility
+    }));
+
+    console.log(`Found ${metadata.length} projection(s) in registry`);
+
+    return metadata;
+}
+
+/** 
+ * @deprecated - No longer used, kept for reference
+ * Original implementation that used glob scanning
+ */
+async function _findProjectionMetadataLegacy(): Promise<ProjectionMetadata[]> {
     const metadata: ProjectionMetadata[] = [];
 
     // Find all projection files using glob

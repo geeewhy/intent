@@ -15,5 +15,5 @@
 | l    | N/A     | **Observability & Prometheus**                  | Wire infrastructure-level metrics into Prometheus; finalize OpenTelemetry spans across Temporal flows.               |
 | l    | N/A     | **Example App Using SDK**                       | Demonstrate best practices, event-driven patterns, client SDK usage, and observability in action.                    |
 | xl   | N/A     | **Process Managers / cross slice/domain (PMs)** | Implement for complex stateful orchestration scenarios, enabling clearer sagas and robust workflows.                 |
-| xl   | N/A     | **AI-Aided Event Modeling (Optional)**          | Use AI integration (Miro/DSL) for generating contracts and workflows, ensuring structural correctness.               |
+| xl   | N/A     | **AI-Aided Event Modeling  **                   | Use AI integration (Miro/DSL) for generating contracts and workflows, ensuring structural correctness.               |
 | xl   | N/A     | **Codegen & Boilerplate Automation**            | Automate repetitive domain code (event handlers, aggregates) to accelerate development velocity.                     |
