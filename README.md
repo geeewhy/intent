@@ -212,7 +212,7 @@ C4Container
 
 ## Project layout
 
-See [docs/structure.md](docs/structure.md) for the full tree.
+See [docs/basics/project-structure.md](docs/basics/project-structure.md) for the full tree.
 
 ```
 src/
