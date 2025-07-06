@@ -2,6 +2,13 @@
 
 /*
 NOT TESTED
+
+IMPORTANT:
+ - snapshot cadence should be optional and configurable, for most aggregates you won’t need snapshots. 500 is an OK number.
+ - Snapshots are inline (type === "Snapshot"). Loader scans backwards once, then replays forward from lastRevision+1. Pattern what Greg Young suggested.
+ - Cross-stream transactions are avoided. All writes (events + optional snapshot) happen in the same appendToStream call, preserving atomicity with expectedRevision.
+ - no RLS, can be replaced by ACL
+ - tenancy lock via stream ids
 */
 
 /*
