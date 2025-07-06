@@ -7,6 +7,7 @@ import { Command, Event, CommandHandler } from './contracts';
 import {log, createLoggerForCommandHandler} from './logger';
 import {BaseAggregate} from "./base/aggregate";
 import { getAllCommandHandlers, DomainRegistry } from './registry';
+import {BusinessRuleViolation} from "./errors";
 
 /**
  * Command bus
@@ -62,7 +63,7 @@ export class CommandBus {
           error: validationError,
           issues: validationError.errors || validationError.issues
         });
-        throw new Error(`Command payload validation failed: ${validationError.message}`);
+        throw new BusinessRuleViolation(`Command payload validation failed: ${validationError.message}`, validationError);
       }
     } else {
       logger?.warn('No schema found for command type', { commandType: cmd.type });
