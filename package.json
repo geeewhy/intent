@@ -13,7 +13,7 @@
     "start:command-pump": "node dist/infra/pg/command-pump.js",
     "api:admin": "ts-node-dev --respawn --transpile-only src/api/index.ts",
     "api:admin:watch": "ts-node-dev --respawn --watch --transpile-only src/api/index.ts",
-    "dev:worker": "ts-node-dev --respawn --transpile-only src/worker.ts",
+    "dev:worker": "ts-node-dev --respawn --transpile-only src/infra/worker.ts",
     "test": "jest",
     "test:core": "npx jest --selectProjects core --testPathPattern",
     "test:integration": "npx jest --selectProjects integration --testPathPattern",

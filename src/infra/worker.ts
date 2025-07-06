@@ -2,10 +2,10 @@
 import {Worker} from '@temporalio/worker';
 import dotenv from 'dotenv';
 import path from 'path';
-import * as coreActivities from './infra/temporal/activities/coreActivities';
-import * as workflows from './infra/temporal/workflows';
-import {setLoggerAccessor, log} from './core/logger';
-import {stdLogger} from './infra/logger/stdLogger';
+import * as coreActivities from './temporal/activities/coreActivities';
+import * as workflows from './temporal/workflows';
+import {setLoggerAccessor, log} from '../core/logger';
+import {stdLogger} from './logger/stdLogger';
 
 // bail out with error message and exit
 function bail(message: string, meta?: unknown): never {
@@ -61,7 +61,7 @@ async function run() {
     const workers = await Promise.all(
         activeTenants.map(async () => {
             const taskQueue = customTaskQueue || 'aggregates';
-            const workflowsPath = path.resolve(__dirname, 'infra/temporal/workflows');
+            const workflowsPath = path.resolve(__dirname, 'temporal/workflows');
             return Worker.create({
                 workflowsPath, // register all workflows
                 activities,

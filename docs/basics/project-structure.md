@@ -18,9 +18,9 @@ The Intent project follows a structured organization that reflects its architect
 ├── src/                        # Source code
 │   ├── core/                   # Domain logic
 │   ├── infra/                  # Infrastructure adapters
+│   │   └── worker.ts           # Temporal worker bootstrap
 │   ├── tools/                  # Developer tools
-│   ├── server.ts               # Optional HTTP entry-point
-│   └── worker.ts               # Temporal worker bootstrap
+│   └── server.ts               # Optional HTTP entry-point
 └── temporal-config/            # Dynamic config for local Temporal
 ```
 

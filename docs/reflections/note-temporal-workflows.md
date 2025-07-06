@@ -26,7 +26,7 @@ In Intent, activities are defined in `src/infra/temporal/activities/` and includ
 
 Workers are processes that execute workflow and activity code. They poll task queues for work and execute the corresponding code.
 
-Intent includes a worker implementation in `src/worker.ts` that registers workflows and activities with Temporal.
+Intent includes a worker implementation in `src/infra/worker.ts` that registers workflows and activities with Temporal.
 
 ## Implementation Details
 

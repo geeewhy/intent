@@ -32,7 +32,7 @@ In Intent, activities are defined in `src/infra/temporal/activities/` and serve 
 
 Workers are processes that execute workflow and activity code. They poll task queues for work and execute the corresponding code.
 
-Intent includes a worker implementation in `src/worker.ts` that registers workflows and activities with Temporal. The worker can be started with:
+Intent includes a worker implementation in `src/infra/worker.ts` that registers workflows and activities with Temporal. The worker can be started with:
 
 ```bash
 npm run dev:worker aggregates  # starts the aggregates worker
@@ -96,10 +96,10 @@ export async function loadAggregate(
 ): Promise<BaseAggregate<any>> {
     // 1. Try to load the latest snapshot
     const snapshot = await eventStore.loadLatestSnapshot(tenantId, aggregateType, aggregateId);
-    
+
     // 2. Determine the starting version
     const startingVersion = snapshot ? snapshot.version : 0;
-    
+
     // 3. Load events after the snapshot version
     const events = await eventStore.loadEvents(
         tenantId,
@@ -107,7 +107,7 @@ export async function loadAggregate(
         aggregateId,
         startingVersion
     );
-    
+
     // 4. Create or rehydrate the aggregate
     let aggregate;
     if (snapshot) {
@@ -122,14 +122,14 @@ export async function loadAggregate(
         // Aggregate doesn't exist yet
         throw new Error(`Aggregate ${aggregateType}:${aggregateId} not found`);
     }
-    
+
     // 5. Apply any events after the snapshot
     if (snapshot) {
         for (const event of events) {
             aggregate.apply(event);
         }
     }
-    
+
     return aggregate;
 }
 ```
@@ -161,7 +161,7 @@ export async function applyEvents(
     // 1. Validate events
     // 2. Append events to the event store
     await eventStore.appendEvents(tenantId, events);
-    
+
     // 3. Optionally create a snapshot
     if (shouldCreateSnapshot(events)) {
         await snapshotAggregate(tenantId, aggregateType, aggregateId);
@@ -234,7 +234,7 @@ export class WorkflowRouter {
     async on(event: Event): Promise<void> {
         // Find all event handlers that support this event
         const handlers = this.findEventHandlers(event);
-        
+
         // Process the event with each handler
         for (const handler of handlers) {
             await handler.on(event);
@@ -253,7 +253,7 @@ This router ensures that:
 
 ## Workers
 
-Workers are the processes that execute workflow and activity code. Intent's worker implementation is in `src/worker.ts`:
+Workers are the processes that execute workflow and activity code. Intent's worker implementation is in `src/infra/worker.ts`:
 
 ```typescript
 async function startWorker() {
@@ -328,7 +328,7 @@ To extend Intent with new workflows or activities:
 
 1. **Define a new activity**: Create a new function in `src/infra/temporal/activities/` and register it in the worker
 2. **Define a new workflow**: Create a new function in `src/infra/temporal/workflows/` that orchestrates activities
-3. **Register with the worker**: Update `src/worker.ts` to include the new workflow or activity
+3. **Register with the worker**: Update `src/infra/worker.ts` to include the new workflow or activity
 4. **Invoke the workflow**: Use the Temporal client to start the workflow
 
 For example, to add a new workflow for a custom long-running saga:
