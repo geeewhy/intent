@@ -6,6 +6,7 @@
 import { Command, Event, UUID } from './contracts';
 import {CommandResult} from "../infra/contracts";
 
+
 /**
  * Inbound port for handling commands
  */
@@ -133,4 +134,33 @@ export interface LoggerPort {
   error(message: string, context?: Record<string, unknown>): void;
   debug(message: string, context?: Record<string, unknown>): void;
   child(context: Record<string, unknown>): LoggerPort;
+}
+
+export interface EventStoreQueryPort {
+  /** every id exists for the given aggregate type */
+  existsAll(type: string, ids: UUID[], tenant: UUID): Promise<boolean>;
+  /** single-id convenience */
+  existsOne(type: string, id: UUID, tenant: UUID): Promise<boolean>;
+}
+
+export interface PortContainers {
+  eventStore: EventStorePort;
+  queryPort:  EventStoreQueryPort;
+}
+
+let provided: PortContainers | null = null;
+
+export function providePorts(i: PortContainers) {
+  if (provided) throw new Error('Infrastructure already provided');
+  provided = i;
+}
+
+export function getEventStore(): EventStorePort {
+  if (!provided) throw new Error('Infra not provided');
+  return provided.eventStore;
+}
+
+export function getQueryPort(): EventStoreQueryPort {
+  if (!provided) throw new Error('Infra not provided');
+  return provided.queryPort;
 }

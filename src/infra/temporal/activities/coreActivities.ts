@@ -12,12 +12,21 @@ import {PgCommandStore} from '../../pg/pg-command-store';
 import {createPool} from '../../projections/pg-pool';
 import {initializeCore} from '../../../core/initialize';
 import {DomainRegistry} from '../../../core/registry';
+import { EventStoreQueryAdapter } from '../../services/event-store-query';
+import { providePorts } from '../../../core/ports';
 
 let router: WorkflowRouter;
 
 // inits, activities are init at worker runtime
 dotenv.config();
 const projectionPool = createPool();
+
+// Infrastructure bootstrap
+const eventStore = new PgEventStore();
+const pgCommandStore = new PgCommandStore();
+const queryPort = new EventStoreQueryAdapter(eventStore);
+
+providePorts({ eventStore, queryPort });
 
 void initializeCore();
 
@@ -56,11 +65,6 @@ export async function routeCommand(command: Command): Promise<CommandResult> {
     }
     return router.handle(command);
 }
-
-
-// Initialize the event store
-const eventStore = new PgEventStore();
-const pgCommandStore = new PgCommandStore();
 
 /**
  * Dispatch a command by inserting it into the `commands` table
