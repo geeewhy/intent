@@ -2,8 +2,8 @@
 import {
     registerCondition,
     registerCommandConditionsFromModel,
-} from '../policy-registry';
-import { AccessContext } from '../contracts';
+} from '../../policy-registry';
+import { AccessContext } from '../../contracts';
 import { SystemRole } from './contracts';
 
 // manual semantic conditions

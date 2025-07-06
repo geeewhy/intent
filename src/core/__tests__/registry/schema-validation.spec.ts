@@ -1,6 +1,6 @@
 import { DomainRegistry } from '../../../core/registry';
-import { SystemCommandType, SystemEventType } from '../../../core/system/contracts';
-import { commandPayloadSchemas, eventPayloadSchemas } from '../../../core/system/payload-schemas';
+import { SystemCommandType, SystemEventType } from '../../example-slices/system/contracts';
+import { commandPayloadSchemas, eventPayloadSchemas } from '../../example-slices/system/payload-schemas';
 
 describe('Schema Validation', () => {
   // Initialize the registry

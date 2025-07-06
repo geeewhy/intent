@@ -54,13 +54,13 @@ The Tooling layer provides developer utilities and CI/CD helpers to ensure the s
 | Concept             | Description                                                           | Implementation                                                       |
 |---------------------|-----------------------------------------------------------------------|----------------------------------------------------------------------|
 | Registry            | Access to all core domain objects                                     | Defined in `src/core/registry.ts`                                    |
-| Aggregate           | A cluster of domain objects treated as a single unit for data changes | Defined in `src/core/base/aggregate.ts`                              |
+| Aggregate           | A cluster of domain objects treated as a single unit for data changes | Defined in `src/core/shared/aggregate.ts`                              |
 | Command             | An intent to change the system state                                  | Represented by the `Command` interface in `src/core/contracts.ts`    |
 | Command Bus         | Routes commands to appropriate handlers                               | Implemented in `src/core/command-bus.ts`                             |
 | Event               | A record of something that happened in the system                     | Represented by the `Event` interface in `src/core/contracts.ts`      |
 | Event Bus           | Routes events to interested handlers                                  | Implemented in `src/core/event-bus.ts`                               |
 | Event Store         | Persists events as the source of truth                                | Implemented in `src/infra/pg/pg-event-store.ts`                      |
-| Projection          | Updates read models based on events                                   | Implemented in various files under `src/core/*/read-models/`         |
+| Projection          | Updates read models based on events                                   | Implemented in various files under `src/core/slices/*/read-models/` and `src/core/example-slices/*/read-models/` |
 | Saga/Process        | Orchestrates complex business processes                               | Defined by the `SagaDefinition` interface in `src/core/contracts.ts` |
 | Temporal Activities | Durable operations that can be retried                                |
 | Temporal Workflows  | Orchestrates activities in a reliable way                             |

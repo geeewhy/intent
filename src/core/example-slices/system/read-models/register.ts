@@ -1,9 +1,9 @@
 //src/core/system/read-models/register.ts
 import { DatabasePool } from 'slonik';
-import { EventHandler, ReadModelUpdaterPort } from '../../contracts';
-import { createPgUpdaterFor } from '../../../infra/projections/pg-updater';
+import { EventHandler, ReadModelUpdaterPort } from '../../../contracts';
+import { createPgUpdaterFor } from '../../../../infra/projections/pg-updater';
 import { createSystemStatusProjection, projectionMeta } from './system-status.projection';
-import { registerProjection } from '../../registry';
+import { registerProjection } from '../../../registry';
 
 /**
  * Registers all projection definitions for the system slice

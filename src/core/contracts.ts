@@ -1,6 +1,6 @@
 //src/core/contracts.ts
 
-import {BaseAggregate} from "./base/aggregate";
+import {BaseAggregate} from "./shared/aggregate";
 
 export type UUID = string;
 

@@ -7,7 +7,7 @@ import {Pool, PoolClient} from 'pg';
 import {Event, UUID} from '../../core/contracts';
 import {log} from '../../core/logger';
 import {EventStorePort} from '../../core/ports';
-import {BaseAggregate, Snapshot} from '../../core/base/aggregate';
+import {BaseAggregate, Snapshot} from '../../core/shared/aggregate';
 import {upcastEvent} from "../../core/shared/event-upcaster";
 
 export const SNAPSHOT_EVERY = 2; // Number of events after which to take a snapshot

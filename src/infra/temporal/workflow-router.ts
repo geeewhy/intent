@@ -5,7 +5,7 @@ import {Command, Event, UUID} from '../../core/contracts';
 import {log} from '../../core/logger';
 import {CommandHandler} from '../../core/contracts';
 import {EventHandler} from '../../core/contracts';
-import {BaseAggregate} from "../../core/base/aggregate";
+import {BaseAggregate} from "../../core/shared/aggregate";
 import {CommandResult} from "../contracts";
 
 // Get the saga registry from the central registry

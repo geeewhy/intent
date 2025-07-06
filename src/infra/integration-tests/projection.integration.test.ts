@@ -1,7 +1,7 @@
 import {v4 as uuidv4} from 'uuid';
 import {Scheduler} from '../temporal/scheduler';
 import {Command} from '../../core/contracts';
-import {SystemCommandType} from '../../core/system/contracts';
+import {SystemCommandType} from '../../core/example-slices/system/contracts';
 import {createPool} from '../projections/pg-pool';
 import {sql} from 'slonik';
 import {waitForNewEvents, wait} from './utils';

@@ -1,8 +1,8 @@
 // src/core/system/aggregates/system.aggregate.ts
 
-import {AccessContext, Command, Event} from '../../contracts';
-import {BaseAggregate} from '../../base/aggregate';
-import {BusinessRuleViolation} from '../../errors';
+import {AccessContext, Command, Event} from '../../../contracts';
+import {BaseAggregate} from '../../../shared/aggregate';
+import {BusinessRuleViolation} from '../../../errors';
 import {
     UUID,
     SystemCommandType,
@@ -18,8 +18,8 @@ import {
     TestExecutedPayload,
     RetryableTestExecutedPayload
 } from '../contracts';
-import {buildEvent} from '../../shared/event-factory';
-import {isCommandAllowed} from '../../policy-registry';
+import {buildEvent} from '../../../shared/event-factory';
+import {isCommandAllowed} from '../../../policy-registry';
 import {
     /*
     todo compile time will ignore.

@@ -1,5 +1,5 @@
 // core/system/read-models/read-access.ts
-import { AccessContext } from '../../contracts';
+import { AccessContext } from '../../../contracts';
 import {SystemRole} from '../contracts';
 
 export const SystemReadModelScopes = {

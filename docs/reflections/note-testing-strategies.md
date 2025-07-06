@@ -13,19 +13,19 @@ Unit tests focus on testing individual components in isolation, typically mockin
 Key unit test examples:
 
 1. **Base Component Tests**: Testing the core abstractions and base classes
-   - `src/core/base/__tests__/aggregate.test.ts`: Tests for the BaseAggregate class
+   - `src/core/shared/__tests__/aggregate.test.ts`: Tests for the BaseAggregate class
 
 2. **Domain Component Tests**: Testing domain-specific implementations
-   - `src/core/system/__tests__/system.aggregate.test.ts`: Tests for the SystemAggregate class
-   - `src/core/system/__tests__/system-status.projection.test.ts`: Tests for the system status projection
-   - `src/core/system/__tests__/system.saga.test.ts`: Tests for the system saga
+   - `src/core/example-slices/system/__tests__/system.aggregate.test.ts`: Tests for the SystemAggregate class
+   - `src/core/example-slices/system/__tests__/system-status.projection.test.ts`: Tests for the system status projection
+   - `src/core/example-slices/system/__tests__/system.saga.test.ts`: Tests for the system saga
 
 #### Example: BaseAggregate Unit Tests
 
 The BaseAggregate tests demonstrate a thorough approach to unit testing:
 
 ```typescript
-// From src/core/base/__tests__/aggregate.test.ts
+// From src/core/shared/__tests__/aggregate.test.ts
 describe('BaseAggregate', () => {
   describe('toSnapshot', () => {
     it('should create a snapshot with the correct structure', () => {
@@ -60,7 +60,7 @@ This test follows the Arrange-Act-Assert pattern and tests a specific functional
 The SystemAggregate tests show how domain-specific behavior is tested:
 
 ```typescript
-// From src/core/system/__tests__/system.aggregate.test.ts
+// From src/core/example-slices/system/__tests__/system.aggregate.test.ts
 test('should execute a test and increment numberExecutedTests', () => {
   const command = {
     id: 'test-id',
@@ -197,7 +197,7 @@ This ensures that each test starts with a clean state and that resources are pro
 The tests use helper functions and factories to generate test data:
 
 ```typescript
-// From src/core/base/__tests__/aggregate.test.ts
+// From src/core/shared/__tests__/aggregate.test.ts
 static createItemAddedEvent(aggregateId: UUID, item: string): Event<ItemAddedPayload> {
   return {
     id: `event-${Math.random().toString(36).substring(2, 9)}`,
@@ -218,7 +218,7 @@ This makes tests more readable and reduces duplication.
 The tests verify that errors are thrown when expected:
 
 ```typescript
-// From src/core/system/__tests__/system.aggregate.test.ts
+// From src/core/example-slices/system/__tests__/system.aggregate.test.ts
 test('should throw error on simulate failure', () => {
   const command = {
     id: 'test-id',

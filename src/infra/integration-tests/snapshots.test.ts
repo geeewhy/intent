@@ -2,7 +2,7 @@
 import {v4 as uuidv4} from 'uuid';
 import {Scheduler} from '../temporal/scheduler';
 import {Command} from '../../core/contracts';
-import {SystemCommandType, SystemEventType} from '../../core/system';
+import {SystemCommandType, SystemEventType} from '../../core/example-slices/system';
 import {waitForNewEvents, waitForSnapshot} from './utils';
 import {PgEventStore} from '../pg/pg-event-store';
 

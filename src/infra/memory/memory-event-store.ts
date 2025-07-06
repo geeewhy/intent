@@ -4,7 +4,7 @@
 
 import { Event, UUID } from '../../core/contracts';
 import { EventStorePort } from '../../core/ports';
-import { BaseAggregate, Snapshot } from '../../core/base/aggregate';
+import { BaseAggregate, Snapshot } from '../../core/shared/aggregate';
 
 export const SNAPSHOT_EVERY = 2;
 

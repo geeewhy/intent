@@ -76,7 +76,7 @@ export interface EventHandler<E extends Event = Event> {
 
 ### Projection Implementation
 
-Projections are typically implemented in domain-specific files under `src/core/*/read-models/`. For example, the system status projection in `src/core/system/read-models/system-status.projection.ts`:
+Projections are typically implemented in domain-specific files under `src/core/slices/*/read-models/` and `src/core/example-slices/*/read-models/`. For example, the system status projection in `src/core/example-slices/system/read-models/system-status.projection.ts`:
 
 ```typescript
 export function createSystemStatusProjection(
@@ -112,7 +112,7 @@ Projections are registered and loaded dynamically in `src/infra/projections/load
 ```typescript
 export async function loadAllProjections(pool: DatabasePool): Promise<EventHandler[]> {
   const slices = await Promise.all([
-    import('../../core/system/read-models/register').then(r => r.registerSystemProjections(pool)),
+    import('../../core/example-slices/system/read-models/register').then(r => r.registerSystemProjections(pool)),
     // Add more slices here as they are implemented
   ]);
 

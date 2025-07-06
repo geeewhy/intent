@@ -1,7 +1,7 @@
 //src/core/system/command-handler.ts
-import { CommandHandler } from '../contracts';
-import { Command, Event } from '../contracts';
-import { BaseAggregate } from '../base/aggregate';
+import { CommandHandler } from '../../contracts';
+import { Command, Event } from '../../contracts';
+import { BaseAggregate } from '../../shared/aggregate';
 import { SystemAggregate } from './aggregates/system.aggregate';
 import {SystemCommandType} from "./contracts";
 

@@ -8,7 +8,7 @@ Domain-Driven Design (DDD) is a core architectural approach in Intent. The syste
 
 ### BaseAggregate Abstract Class
 
-The foundation of domain modeling in the system is the `BaseAggregate` abstract class defined in `src/core/base/aggregate.ts`:
+The foundation of domain modeling in the system is the `BaseAggregate` abstract class defined in `src/core/shared/aggregate.ts`:
 
 ```typescript
 export abstract class BaseAggregate<TState> {
@@ -43,7 +43,7 @@ Key features of the `BaseAggregate` class:
 
 ### Concrete Aggregate Example: SystemAggregate
 
-The `SystemAggregate` class in `src/core/system/aggregates/system.aggregate.ts` demonstrates how to implement a concrete aggregate:
+The `SystemAggregate` class in `src/core/example-slices/system/aggregates/system.aggregate.ts` demonstrates how to implement a concrete aggregate:
 
 ```typescript
 export class SystemAggregate extends BaseAggregate<SystemSnapshotState> {

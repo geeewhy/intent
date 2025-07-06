@@ -2,9 +2,7 @@
 import {Worker} from '@temporalio/worker';
 import dotenv from 'dotenv';
 import path from 'path';
-import * as system from './core/system';
 import * as coreActivities from './infra/temporal/activities/coreActivities';
-import * as domainActivities from './core/activities';
 import * as workflows from './infra/temporal/workflows';
 import {setLoggerAccessor, log} from './core/logger';
 import {stdLogger} from './infra/logger/stdLogger';
@@ -34,9 +32,7 @@ function assertUtc(): void {
 }
 
 const activities = {
-    ...system.activities,
     ...coreActivities,
-    ...domainActivities,
 };
 
 dotenv.config();

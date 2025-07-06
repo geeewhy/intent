@@ -67,9 +67,9 @@ The Core layer contains pure business logic, organized around the domain:
 Key characteristics:
 - No dependency on infrastructure
 - Replay-safe and testable
-- Organized into domain-specific vertical slices (e.g., `system/`, `orders/`)
+- Organized into domain-specific vertical slices in the `slices/` directory with example implementations in `example-slices/`
 
-To see what our aggregate looks like, check out `src/core/system/aggregates/system.aggregate.ts`.
+To see what our aggregate looks like, check out `src/core/example-slices/system/aggregates/system.aggregate.ts`.
 
 ### 2. Infra (Adapter Layer) - `src/infra/`
 
@@ -110,11 +110,12 @@ Multi-tenancy and security are cross-cutting concerns that span all layers of th
 
 ### `src/core/`
 
-- `src/core/base/aggregate.ts`: Base aggregate class and registry
+- `src/core/shared/aggregate.ts`: Base aggregate class and registry
 - `src/core/contracts.ts`: Core interfaces for commands, events, etc.
 - `src/core/command-bus.ts`: Command routing and handling
 - `src/core/event-bus.ts`: Event routing and handling
-- `src/core/*/read-models/`: Projection definitions for each domain
+- `src/core/slices/*/read-models/`: Projection definitions for domain slices
+- `src/core/example-slices/*/read-models/`: Example projection definitions
 
 ### `src/infra/`
 

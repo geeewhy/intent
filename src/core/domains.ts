@@ -1,5 +1,5 @@
 // core/domains.ts
-import { systemSagaRegistry, SystemCommandHandler } from './system';
+import { systemSagaRegistry, SystemCommandHandler } from './example-slices/system';
 import { CommandBus } from './command-bus';
 
 export const SagaRegistry = {

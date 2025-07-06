@@ -64,7 +64,7 @@ This test follows the Arrange-Act-Assert pattern and tests a specific functional
 These tests verify domain-specific implementations:
 
 ```typescript
-// From src/core/system/__tests__/system.aggregate.test.ts
+// From src/core/example-slices/system/__tests__/system.aggregate.test.ts
 test('should execute a test and increment numberExecutedTests', () => {
   const command = {
     id: 'test-id',
@@ -120,7 +120,7 @@ test('can dispatch a command and get events', async () => {
   };
 
   const result = await dispatchCommand(cmd);
-  
+
   expect(result.status).toBe('success');
   expect(result.events).toHaveLength(1);
   expect(result.events[0].type).toBe(SystemEventType.TEST_EXECUTED);
@@ -273,7 +273,7 @@ This makes tests more readable and reduces duplication.
 Tests verify that errors are thrown when expected:
 
 ```typescript
-// From src/core/system/__tests__/system.aggregate.test.ts
+// From src/core/example-slices/system/__tests__/system.aggregate.test.ts
 test('should throw error on simulate failure', () => {
   const command = {
     id: 'test-id',
@@ -412,7 +412,7 @@ describe('MyNewFeature', () => {
       // Expect your event or failure modes
     });
   });
-  
+
   // Cleanup code
 });
 ```

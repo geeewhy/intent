@@ -7,7 +7,7 @@ import {
   registerCommandType,
   registerEventType,
   registerRoles,
-} from '../registry';
+} from '../../registry';
 import { SystemAggregate } from './aggregates/system.aggregate';
 import { SystemCommandHandler } from './command-handler';
 import { systemSagaRegistry } from './sagas/saga-registry';

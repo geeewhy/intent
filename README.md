@@ -214,18 +214,6 @@ C4Container
 
 See [docs/basics/project-structure.md](docs/basics/project-structure.md) for the full tree.
 
-```
-src/
-  core/            ← aggregates, commands, events, ports
-  infra/
-    pg/            ← Postgres adapter
-    temporal/      ← workflows + activities
-    projections/   ← RLS helpers, Kysely/Slonik impls
-  tools/           ← Tooling, setup & projection tooling, ...
-docker/
-  infra/compose.yaml  ← Postgres + Temporal services
-```
-
 ## See Also
 
 - [Architecture Overview](docs/reflections/index.md)  

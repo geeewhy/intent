@@ -5,7 +5,7 @@
 
 import { Command, Event, CommandHandler } from './contracts';
 import {log, createLoggerForCommandHandler} from './logger';
-import {BaseAggregate} from "./base/aggregate";
+import {BaseAggregate} from "./shared/aggregate";
 import { getAllCommandHandlers, DomainRegistry } from './registry';
 import {BusinessRuleViolation} from "./errors";
 

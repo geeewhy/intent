@@ -1,5 +1,5 @@
 // core/system/sagas/saga-registry.ts
-import { Command, Event, SagaDefinition } from '../../contracts';
+import { Command, Event, SagaDefinition } from '../../../contracts';
 import { SystemSaga } from './system.saga';
 
 export const systemSagaRegistry: Record<string, SagaDefinition> = {
